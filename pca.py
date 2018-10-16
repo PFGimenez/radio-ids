@@ -1,11 +1,20 @@
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+import os
+
+data = [np.fromfile("data/"+fname, dtype=np.dtype('float64')) for fname in os.listdir("data")]
+data = np.concatenate(data)
+print(data.shape)
+#data = data.reshape(50,-1)
+data = data.reshape(-1,1500)
+print(data.shape)
+print(data)
 
 # the minimal amount of variance explained
-n_components = 0.95
+n_components = 0.99
 
-train_data = np.random.random(1000000).reshape(10000,100)
+train_data = data
 test_data = train_data
 
 # Standardize the dataset (mean = 0, variance = 1)
