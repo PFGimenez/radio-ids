@@ -26,4 +26,3 @@ class HMM(AnomalyDetector):
         print(z)
 
 # evaluation : model.score(X) / model.score(X[:-1])
-

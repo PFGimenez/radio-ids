@@ -11,7 +11,9 @@ class Varmax(AnomalyDetector):
         self._varmax = None
 
     def learn(self, data, exo=None):
-        self._varmax = sm.tsa.VARMAX(data, exo, self._order).fit()
+        self._varmax = sm.tsa.VARMAX(data, exo, self._order, enforce_stationarity=False).fit()
+        print(self._varmax.summary())
 
     def predict(self, data):
+#        self._varmax.predict()
         pass # TODO
