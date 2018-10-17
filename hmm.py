@@ -4,24 +4,25 @@
 
 import numpy as np
 from hmmlearn import hmm
-from anomalydetector import *
+from anomalydetector import AnomalyDetector
 
 class HMM(AnomalyDetector):
     """
         Hidden markov chain
     """
     def __init__(self, nb_states):
-        self._nb_states = 5
+        self._nb_states = nb_states
+        self._model = None
 
-    def learn(self, data, exo):
+    def learn(self, data, exo=None):
 #x = np.random.random(1000).reshape(-1,5)
 #print(x)
-        model = hmm.GaussianHMM(_nb_states, "full")
-        model.fit(data)
+        self._model = hmm.GaussianHMM(self._nb_states, "full")
+        self._model.fit(data)
 
     def predict(self, data):
         # TODO
-        z = model.predict(data)
+        z = self._model.predict(data)
         print(z)
 
 # evaluation : model.score(X) / model.score(X[:-1])
