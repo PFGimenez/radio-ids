@@ -2,7 +2,6 @@ import os
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import scale
 from sklearn.model_selection import train_test_split
 from varmax import Varmax
 from armax import Armax
@@ -129,13 +128,15 @@ def do_PCA(data, n_components):
 #    print("Variance explanation : "+str(pca.explained_variance_ratio_))
     return (train_pca, pca.fit_transform(test_data))
 
+def evaluate(detector, test_data):
+    for i in range(len(test_data) - 1):
+        prediction = detector.predict(test_data[:i],test_data[i + 1])
+
 # New train set with reduced features
 #np.savetxt("mini.csv", read_files("mini-data"), delimiter=",")
 
 #(g_train_data, g_test_data) = do_PCA(split_data(read_files("mini-data")), explained_variance)
-data = split_data(read_files("mini-data"))
-
-(g_train_data, g_test_data) = do_PCA(data, explained_variance)
+(g_train_data, g_test_data) = do_PCA(split_data(read_file("data/1530056352292")), explained_variance)
 
 print("Learning…")
 detector.learn(g_train_data, None)

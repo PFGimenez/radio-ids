@@ -13,8 +13,11 @@ class AnomalyDetector(ABC):
         pass
 
     @abstractmethod
-    def predict(self, data):
+    def predict(self, data, obs):
         """
             Predict whether there is an anomaly or not
+            data: previous observations
+            obs: observation to evaluate
+            Returns true iff the observation is an anomaly
         """
         pass

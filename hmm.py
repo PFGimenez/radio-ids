@@ -20,7 +20,7 @@ class HMM(AnomalyDetector):
         self._model = hmm.GaussianHMM(self._nb_states, "full")
         self._model.fit(data)
 
-    def predict(self, data):
+    def predict(self, data, obs):
         # TODO
         z = self._model.predict(data)
         print(z)
