@@ -1,6 +1,17 @@
 import statsmodels.api as sm
 import numpy as np
+from anomalydetector import *
 
-y = np.random.randn(100)
-u = np.random.randn(100, 2)
-armax = sm.tsa.ARMA(y, order=(3, 3), exog=u).fit()
+class Armax(AnomalyDetector):
+    """
+        ARMAX model
+    """
+
+    def __init__(self):
+        self._armax = None
+
+    def learn(self, data, exo):
+        self._armax = sm.tsa.ARMA(data, order=(3, 3), exog=exo).fit()
+
+    def predict(self, data):
+        pass # TODO

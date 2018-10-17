@@ -1,33 +1,51 @@
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from armax import Armax
+from hmm import HMM
+from anomalydetector import *
 import os
 
-data = [np.fromfile("data/"+fname, dtype=np.dtype('float64')) for fname in os.listdir("data")]
-data = np.concatenate(data)
-print(data.shape)
+detector = Armax()
+
+os.chdir("mini-data")
+#data = [np.fromfile(fname, dtype=np.dtype('float64')) for fname in os.listdir()]
+#data = np.concatenate(data)
+data = np.fromfile("1530056352292", dtype=np.dtype('float64'))
+
+print("Files read" + str(data.shape))
 #data = data.reshape(50,-1)
 data = data.reshape(-1,1500)
-print(data.shape)
-print(data)
 
+#print("Creating train and test set")
+[train_data, test_data] = train_test_split(data)
+print("Train set: " + str(train_data.shape))
+print("Test set: " + str(test_data.shape))
+
+print("Features number before PCA : " + str(data.shape[1]))
+print("Computing PCA…")
 # the minimal amount of variance explained
-n_components = 0.99
+n_components = 0.95
 
-train_data = data
-test_data = train_data
+#train_data = data
+#test_data = train_data
 
 # Standardize the dataset (mean = 0, variance = 1)
 # Necessary for the PCA to be useful
 scaler = StandardScaler()
 scaler.fit(train_data)
 
-
+# Both dataset are normalized (necessary for the test set?)
 train_data = scaler.transform(train_data)
 test_data = scaler.transform(test_data)
 
+# Doing PCA
 pca = PCA(n_components, svd_solver="full")
 
-x2 = pca.fit_transform(train_data)
-print(pca.explained_variance_ratio_)
-print(x2.shape)
+# New train set with reduced features
+train_pca = pca.fit_transform(train_data)
+print("Features number after PCA : " + str(train_pca.shape[1]))
+
+print("Learning…")
+detector.learn(data, None)
