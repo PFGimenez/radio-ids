@@ -2,12 +2,12 @@ import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from armax import Armax
+from varmax import Varmax
 from hmm import HMM
 from anomalydetector import *
 import os
 
-detector = Armax()
+detector = Varmax((3,3))
 
 os.chdir("mini-data")
 #data = [np.fromfile(fname, dtype=np.dtype('float64')) for fname in os.listdir()]

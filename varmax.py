@@ -2,16 +2,15 @@ import statsmodels.api as sm
 import numpy as np
 from anomalydetector import *
 
-class Armax(AnomalyDetector):
+class Varmax(AnomalyDetector):
     """
-        ARMAX model
+        VARMAX model
     """
-
-    def __init__(self):
-        self._armax = None
+    def __init__(self, order):
+        self._order = order
 
     def learn(self, data, exo):
-        self._armax = sm.tsa.ARMA(data, order=(3, 3), exog=exo).fit()
+        self._varmax = sm.tsa.VARMAX(data, exo, self._order).fit()
 
     def predict(self, data):
         pass # TODO
