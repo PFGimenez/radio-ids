@@ -1,7 +1,8 @@
 import statsmodels.api as sm
-from sklearn.preprocessing import StandardScaler
+#from sklearn.preprocessing import StandardScaler
 import numpy as np
 from anomalydetector import AnomalyDetector
+import pickle
 
 class Armax(AnomalyDetector):
     """
@@ -9,23 +10,25 @@ class Armax(AnomalyDetector):
         Since ARMAX are univariate, learn one model for each feature
     """
 
-    def __init__(self, order):
+    def __init__(self, order, distance, threshold):
         self._order = order
         self._armax = None
+        self._distance = distance
+        self._threshold = threshold
 
     def learn(self, data, exo=None):
         # First, we de-mean the data
-        scaler = StandardScaler(with_std = False)
-        scaler.fit(data)
-        data = scaler.transform(data)
-
-        self._armax = [sm.tsa.ARMA(data[:,i], self._order, exo).fit()
+        # In fact, it's useless if the data come from a PCA
+#        scaler = StandardScaler(with_std=False)
+#        scaler.fit(data)
+#        data = scaler.transform(data)
+        self._armax = [sm.tsa.ARMA(data[:, i], self._order, exo).fit()
                        for i in range(data.shape[1])]
 #        print(self._armax.summary())
 
     def predict(self, data, obs):
         # If there is not enough previous observations
-        if len(data) < order[0]:
+        if len(data) < max(order[0], order[1]):
             return False # by default, not an anomaly
-        pass # TODO
-
+        prediction = [self._armax.predict(data[:, i]) for i in range(data.shape[1])]
+        return self._distance(prediction, obs) > self._threshold

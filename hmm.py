@@ -10,7 +10,7 @@ class HMM(AnomalyDetector):
     """
         Hidden markov chain
     """
-    def __init__(self, nb_states):
+    def __init__(self, nb_states, threshold):
         self._nb_states = nb_states
         self._model = None
 

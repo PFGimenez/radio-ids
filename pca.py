@@ -1,16 +1,18 @@
 import os
 import numpy as np
+import pickle
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.metrics.pairwise import manhattan_distances, euclidean_distances
 from varmax import Varmax
 from armax import Armax
 from hmm import HMM
 from anomalydetector import AnomalyDetector
 
-detector = Armax((10, 3))
+detector = Armax((20, 10), manhattan_distances, 10)
 #detector = Varmax((3, 0))
-#detector = HMM(5)
+#detector = HMM(5, 0.1)
 
 explained_variance = 0.95
 
@@ -18,39 +20,24 @@ explained_variance = 0.95
 #i_blocs = [(0, 500), (500, 1000), (1000, 1250), (1250, 1500), (1000, 1500)]
 #frame_shape = (50, 1500)
 #directory = "data"
+# def read_files_format(directory, i_blocs, frame_shape):
+#     num = 0
+#     files = sorted(os.listdir(path))
+#     for f in files:
+#         f = path + "/" + f
+#         if os.path.isfile(f):
+#             array = np.fromfile(f, dtype='float64')
+#             array = np.reshape(array, frame_shape)
+#             for i in range(len(i_blocs)):
+#                 i_bloc = i_blocs[i]
+#                 array[0,0] = array[0,2]
+#                 array[0,1] = array[0,2]
 
-
-def read_files_format(directory, i_blocs, frame_shape):
-    num = 0
-    files = sorted(os.listdir(path))
-    for f in files:
-        f = path + "/" + f
-        if os.path.isfile(f):
-            array = np.fromfile(f, dtype='float64')
-            array = np.reshape(array, frame_shape)
-            for i in range(len(i_blocs)):
-                i_bloc = i_blocs[i]
-                #for time in range(frame_shape[0]):
-                #    for freq in range(i_bloc[0], i_bloc[1]):
-                #        cumul = cumul + array[time][freq]
-                #value = np.max(array[i_bloc[0]:i_bloc[1], ])
-                #value = array[:, i_bloc[0]:i_bloc[1]].shape[0]
-                array[0,0] = array[0,2]
-                array[0,1] = array[0,2]
-
-                value = np.max(array[:, i_bloc[0]:i_bloc[1]])
-                value = (value + 80) * 255 / 80.0
-
-                #value = np.mean(array[:, i_bloc[0]:i_bloc[1]])
-                #value = (value + 80) * 255 / 80.0
-
-                #value = np.max(np.max(array[time][i_bloc[0]:i_bloc[1]]) for time in range(frame_shape[0]))
-                #cumul = np.sum(np.sum(array[time][i_bloc[0]:i_bloc[1]]) for time in range(frame_shape[0]))
-                #print cumul
-                time_series[i] = np.append(time_series[i], value)
-                #print [len(x) for x in time_series]
-            print(num)
-            num = num + 1
+#                 value = np.max(array[:, i_bloc[0]:i_bloc[1]])
+#                 value = (value + 80) * 255 / 80.0
+#                 time_series[i] = np.append(time_series[i], value)
+#             print(num)
+#             num = num + 1
 
 def read_file(filename):
     """
@@ -58,6 +45,7 @@ def read_file(filename):
     """
     print("Reading data file " + filename)
     data = np.fromfile(filename, dtype=np.dtype('float64'))
+    print(data.reshape(-1,1500)[:,1])
     return data.reshape(-1, 1500)
 
 def read_files(directory):
@@ -90,7 +78,7 @@ def center(data):
     """
     train_data = data[0]
     test_data = data[1]
-    scaler = StandardScaler(with_std = False)
+
     scaler.fit(train_data)
 
     # Both dataset are normalized (necessary for the test set?)
@@ -128,17 +116,23 @@ def do_PCA(data, n_components):
 #    print("Variance explanation : "+str(pca.explained_variance_ratio_))
     return (train_pca, pca.fit_transform(test_data))
 
-def evaluate(detector, test_data):
+def evaluate(detector, test_data, distance):
     for i in range(len(test_data) - 1):
-        prediction = detector.predict(test_data[:i],test_data[i + 1])
+        prediction = detector.predict(test_data[:i], test_data[i + 1], distance)
 
 # New train set with reduced features
-#np.savetxt("mini.csv", read_files("mini-data"), delimiter=",")
+#np.savetxt("mini-pca.csv", do_PCA(split_data(read_files("mini-data")), explained_variance)[0], delimiter=",")
 
-#(g_train_data, g_test_data) = do_PCA(split_data(read_files("mini-data")), explained_variance)
-(g_train_data, g_test_data) = do_PCA(split_data(read_file("data/1530056352292")), explained_variance)
+
+
+(g_train_data, g_test_data) = do_PCA(split_data(read_files("mini-data")), explained_variance)
+#(g_train_data, g_test_data) = do_PCA(split_data(read_file("data/1530056352292")), explained_variance)
 
 print("Learning…")
-detector.learn(g_train_data, None)
+detector.learn(g_train_data[:,1].reshape(-1,1))
+print("Saving…")
+pickle.dump(detector, open('armax','wb'))
+print("Loading…")
+detector = pickle.load(open('armax','rb'))
 print("Predicting…")
 #detector.predict(g_test_data)
