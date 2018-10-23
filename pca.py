@@ -125,7 +125,7 @@ def evaluate(detector, test_data, distance):
 
 
 
-(g_train_data, g_test_data) = do_PCA(split_data(read_files("mini-data")), explained_variance)
+(g_train_data, g_test_data) = do_PCA(split_data(read_files("data-test")), explained_variance)
 #(g_train_data, g_test_data) = do_PCA(split_data(read_file("data/1530056352292")), explained_variance)
 
 print("Learning…")
