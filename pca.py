@@ -7,10 +7,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import manhattan_distances, euclidean_distances
 from varmax import Varmax
 from armax import Armax
+from autoencodercnn import CNN
 from hmm import HMM
 from anomalydetector import AnomalyDetector
 
-detector = Armax((20, 10), manhattan_distances, 10)
+#detector = Armax((20, 10), manhattan_distances, 10)
 #detector = Varmax((3, 0))
 #detector = HMM(5, 0.1)
 
@@ -125,14 +126,21 @@ def evaluate(detector, test_data, distance):
 
 
 
-(g_train_data, g_test_data) = do_PCA(split_data(read_files("data-test")), explained_variance)
+#(g_train_data, g_test_data) = do_PCA(split_data(read_files("data-test")), explained_variance)
+
+# NO PCA
+(g_train_data, g_test_data) = split_data(read_files("data-test"))
 #(g_train_data, g_test_data) = do_PCA(split_data(read_file("data/1530056352292")), explained_variance)
+
+detector = CNN(g_train_data.shape)
+
+# TODO pour CNN : réduire la taille des données (retirer les features inutiles ou découper par canaux)
 
 print("Learning…")
 detector.learn(g_train_data[:,1].reshape(-1,1))
 print("Saving…")
-pickle.dump(detector, open('armax','wb'))
+#pickle.dump(detector, open('armax','wb'))
 print("Loading…")
-detector = pickle.load(open('armax','rb'))
+#detector = pickle.load(open('armax','rb'))
 print("Predicting…")
 #detector.predict(g_test_data)
