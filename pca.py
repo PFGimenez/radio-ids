@@ -87,6 +87,45 @@ def center(data):
     test_data = scaler.transform(test_data)
     return (train_data, test_data)
 
+def detect_signal(data, minimal_size_f, minimal_size_t, maximal_pause_size_f, maximal_pause_size_t, rising_threshold, falling_threshold, size_before_f, size_before_t, size_after_f, size_after_t):
+    """
+        Isole des rectangles 2D de signal
+    """
+    rectangles = []
+    for i in range(2):
+        lines = data[i]
+        for j in lines.shape[0]:
+            intervals_t.append(detect_signal_1D(lines[j,:], minimal_size_t, maximal_pause_size_t, rising_threshold, falling_threshold, size_before_t, size_after_t))
+        for j in lines.shape[1]:
+            intervals_f.append(detect_signal_1D(lines[:,j], minimal_size_f, maximal_pause_size_f, rising_threshold, falling_threshold, size_before_f, size_after_f))
+
+def detect_signal_1D(data, minimal_size, maximal_pause_size, rising_threshold, falling_threshold, size_before, size_after):
+    """
+        Isole une plage 1D (temps ou fréquence) de signal
+    """
+    out = []
+    start = None
+    last_powerful = None
+    for i in range(len(data)):
+        last_one = (i == len(data) - 1)
+        if data[i] > rising_threshold and start == None:
+            # Nouveau début de frame ?
+            start = i
+            last_powerful = i
+        elif start != None and data[i] > falling_threshold:
+            # Dès qu'on repasse au-dessus du seuil de fin
+            last_powerful = i
+        if start != None and (data[i] <= falling_threshold or last_one):
+            # Ce n'est plus puissant
+            if i - last_powerful > maximal_pause_size or last_one:
+                # Pause trop longue : frame terminée
+                if last_powerful - start + 1 >= minimal_size:
+                    first = max(start - size_before, 0)
+                    last = min(len(data) - 1, last_powerful + size_after)
+                    out.append((first, last))
+                start = None
+                last_powerful = None
+    return out
 
 def standardize(data):
     """
@@ -132,12 +171,15 @@ def evaluate(detector, test_data, distance):
 (g_train_data, g_test_data) = split_data(read_files("data-test"))
 #(g_train_data, g_test_data) = do_PCA(split_data(read_file("data/1530056352292")), explained_variance)
 
-detector = CNN(g_train_data.shape)
+#test = [10, 10, 1, 10, 10, 10, 10, 1, 1, 1, 1, 10, 1, 1, 1, 10, 10, 10, 10, 10, 1, 1, 1, 1, 1, 1, 10, 10]
+#out = detect_signal_1D(test, 2, 2, 5, 5, 1, 1)
+
+#detector = CNN(g_train_data.shape)
 
 # TODO pour CNN : réduire la taille des données (retirer les features inutiles ou découper par canaux)
 
 print("Learning…")
-detector.learn(g_train_data[:,1].reshape(-1,1))
+#detector.learn(g_train_data[:,1].reshape(-1,1))
 print("Saving…")
 #pickle.dump(detector, open('armax','wb'))
 print("Loading…")
