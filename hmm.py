@@ -5,6 +5,7 @@
 import numpy as np
 from hmmlearn import hmm
 from anomalydetector import AnomalyDetector
+from preprocess import do_PCA
 
 class HMM(AnomalyDetector):
     """
@@ -13,6 +14,9 @@ class HMM(AnomalyDetector):
     def __init__(self, nb_states, threshold):
         self._nb_states = nb_states
         self._model = None
+
+    def preprocess(self, data):
+        return do_PCA(data, 0.95)
 
     def learn(self, data, exo=None):
 #x = np.random.random(1000).reshape(-1,5)

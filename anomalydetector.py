@@ -6,6 +6,13 @@ class AnomalyDetector(ABC):
     """
 
     @abstractmethod
+    def preprocess(self, data):
+        """
+            Preprocess the train and test test
+        """
+        pass
+
+    @abstractmethod
     def learn(self, data, exo=None):
         """
             Learn from data
@@ -20,4 +27,12 @@ class AnomalyDetector(ABC):
             obs: observation to evaluate
             Returns true iff the observation is an anomaly
         """
+        pass
+
+    @abstractmethod
+    def save(self, filename):
+        pass
+
+    @abstractmethod
+    def load(self, filename):
         pass

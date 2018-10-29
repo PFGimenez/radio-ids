@@ -2,6 +2,7 @@ import statsmodels.api as sm
 #from sklearn.preprocessing import StandardScaler
 import numpy as np
 from anomalydetector import AnomalyDetector
+from preprocess import do_PCA
 
 class Varmax(AnomalyDetector):
     """
@@ -10,6 +11,9 @@ class Varmax(AnomalyDetector):
     def __init__(self, order):
         self._order = order
         self._varmax = None
+
+    def preprocess(self, data):
+        return do_PCA(data, 0.95)
 
     def learn(self, data, exo=None):
         # First, we de-mean the data

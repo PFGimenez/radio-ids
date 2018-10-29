@@ -1,0 +1,105 @@
+import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+import math
+from keras import backend as K
+
+def center(data):
+    """
+        Center the data (mean = 0)
+    """
+    train_data = data[0]
+    test_data = data[1]
+
+    scaler.fit(train_data)
+
+    # Both dataset are normalized (necessary for the test set?)
+    train_data = scaler.transform(train_data)
+    test_data = scaler.transform(test_data)
+    return (train_data, test_data)
+
+def detect_signal(data, minimal_size_f, minimal_size_t, maximal_pause_size_f, maximal_pause_size_t, rising_threshold, falling_threshold, size_before_f, size_before_t, size_after_f, size_after_t):
+    """
+        Isole des rectangles 2D de signal
+    """
+    rectangles = []
+    intervals_t.append(detect_signal_1D(lines[j,:], minimal_size_t, maximal_pause_size_t, rising_threshold, falling_threshold, size_before_t, size_after_t))
+    intervals_f.append(detect_signal_1D(lines[:,j], minimal_size_f, maximal_pause_size_f, rising_threshold, falling_threshold, size_before_f, size_after_f))
+    changed = True
+    while changed:
+        pass # TODO ?
+
+def detect_signal_1D(data, minimal_size, maximal_pause_size, rising_threshold, falling_threshold, size_before, size_after):
+    """
+        Isole une plage 1D (temps ou fréquence) de signal
+    """
+    out = []
+    start = None
+    last_powerful = None
+    for i in range(len(data)):
+        last_one = (i == len(data) - 1)
+        if data[i] > rising_threshold and start == None:
+            # Nouveau début de frame ?
+            start = i
+            last_powerful = i
+        elif start != None and data[i] > falling_threshold:
+            # Dès qu'on repasse au-dessus du seuil de fin
+            last_powerful = i
+        if start != None and (data[i] <= falling_threshold or last_one):
+            # Ce n'est plus puissant
+            if i - last_powerful > maximal_pause_size or last_one:
+                # Pause trop longue : frame terminée
+                if last_powerful - start + 1 >= minimal_size:
+                    first = max(start - size_before, 0)
+                    last = min(len(data) - 1, last_powerful + size_after)
+                    out.append((first, last))
+                start = None
+                last_powerful = None
+    return out
+
+def standardize(data):
+    """
+        Standardize the dataset (mean = 0, variance = 1)
+    """
+    train_data = data[0]
+    test_data = data[1]
+    scaler = StandardScaler()
+    scaler.fit(train_data)
+
+    # Both dataset are normalized (necessary for the test set?)
+    train_data = scaler.transform(train_data)
+    test_data = scaler.transform(test_data)
+    return (train_data, test_data)
+
+def do_PCA(data, n_components):
+    """
+        do the PCA
+        n_components is the minimal amount of variance explained
+    """
+    train_data = data[0]
+    test_data = data[1]
+    before = train_data.shape[1]
+    print("Computing PCA…")
+    pca = PCA(n_components, svd_solver="full")
+    train_pca = pca.fit_transform(train_data)
+    print("Features number: " + str(before) + " -> " + str(train_pca.shape[1]))
+#    print("Variance explanation : "+str(pca.explained_variance_ratio_))
+    return (train_pca, pca.fit_transform(test_data))
+
+def decompose(data, shape, overlap):
+    shape_x = shape[0]
+    shape_y = shape[1]
+    step_x = round(shape_x * (1 - overlap))
+    step_y = round(shape_y * (1 - overlap))
+    x = math.floor((data.shape[0] - shape_x) / step_x) + 1
+    y = math.floor((data.shape[1] - shape_y) / step_y) + 1
+    out = np.empty((x, y, shape_x, shape_y))
+    for i in range(x):
+        for j in range(y):
+            out[i,j] = data[i * step_x : i * step_x + shape_x, j * step_y : j * step_y + shape_y]
+    if K.image_data_format() == 'channels_first':
+        return out.reshape(x*y, 1, shape_x, shape_y)
+    else:
+        return out.reshape(x*y, shape_x, shape_y, 1)
+
+

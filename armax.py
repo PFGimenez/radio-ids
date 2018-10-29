@@ -1,8 +1,8 @@
 import statsmodels.api as sm
-#from sklearn.preprocessing import StandardScaler
 import numpy as np
 from anomalydetector import AnomalyDetector
 import pickle
+from preprocess import do_PCA
 
 class Armax(AnomalyDetector):
     """
@@ -15,6 +15,9 @@ class Armax(AnomalyDetector):
         self._armax = None
         self._distance = distance
         self._threshold = threshold
+
+    def preprocess(self, data):
+        return do_PCA(data, 0.95)
 
     def learn(self, data, exo=None):
         # First, we de-mean the data

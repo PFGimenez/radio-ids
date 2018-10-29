@@ -4,41 +4,52 @@ from keras.models import Model
 from keras.layers import Input, Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
 from keras import backend as K
+from preprocess import *
+from keras.models import load_model
+
 
 class CNN(AnomalyDetector):
     """
         Autoencoder convoluted neural network
     """
 
-    def __init__(self, shape):
-        shape=(256,256)
+    def preprocess(self, data):
+        return [decompose(data[0], self._shape, self._overlap),
+                decompose(data[1], self._shape, self._overlap)]
+
+    def __init__(self, shape, overlap):
+        self._shape = shape
+        self._overlap = overlap
         if K.image_data_format() == 'channels_first':
             input_shape = (1, shape[0], shape[1])
         else:
             input_shape = (shape[0], shape[1], 1)
         input_tensor = Input(shape = input_shape)
 
-        m = Conv2D(32, (3, 3), activation='relu', padding='same')(input_tensor)
         # Nouveau réseau de neurones
-        print("shape ",str(input_shape))
         # L'extraction de features se fait avec Conv2D -> augmentation des dimensions
         # MaxPooling permet de réduire les dimensions
         # Toujours utiliser une activation "relu"
+        m = Conv2D(32, (3, 3), activation='relu', padding='same')(input_tensor)
         m = Conv2D(16, 3, activation='relu', padding='same', input_shape=input_shape)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Conv2D(8, 3, activation='relu', padding='same')(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(8, 3, activation='relu', padding='same')(m)
+        m = Conv2D(4, 3, activation='relu', padding='same')(m)
+        m = MaxPooling2D(pool_size=(2,2))(m)
+        m = Conv2D(2, 3, activation='relu', padding='same')(m)
 
         # la couche de features
         m = MaxPooling2D(pool_size=(2,2))(m)
-        self._code = m
+        self._coder = Model(input_tensor, m)
 
         # Permet d'éviter l'overfitting
         m = Dropout(0.5)(m)
 
         # Maintenant on reconstitue l'image initiale
-        m = Conv2D(8, 3, activation='relu', padding='same')(m)
+        m = Conv2D(2, 3, activation='relu', padding='same')(m)
+        m = UpSampling2D((2,2))(m)
+        m = Conv2D(4, 3, activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
         m = Conv2D(8, 3, activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
@@ -57,10 +68,18 @@ class CNN(AnomalyDetector):
 
     def learn(self, data, exo=None):
         # TODO : construire les images
-
         train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
-        self._autoencoder = self._autoencoder.fit(train_X, train_ground, batch_size=128,epochs=50,verbose=1,validation_data=(valid_X, valid_ground))
+        self._autoencoder.fit(train_X, train_ground, batch_size=128,epochs=1000,verbose=1,validation_data=(valid_X, valid_ground))
 
+    def save(self, filename):
+        self._coder.save(filename)
+
+    def load(self, filename):
+        self._coder = load_model(filename)
+
+    def extract_features(self, data_train, data_test):
+        return (self._coder.predict(data_train).reshape(data_train.shape[0], -1),
+                self._coder.predict(data_test).reshape(data_test.shape[0], -1))
 
     def predict(self, data, obs):
         pass

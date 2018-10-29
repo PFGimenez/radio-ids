@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import manhattan_distances, euclidean_distances
 from anomalydetector import AnomalyDetector
 
-detector = Armax((20, 10), manhattan_distances, 10)
+#detector = Armax((20, 10), manhattan_distances, 10)
 #detector = Varmax((3, 0))
 #detector = HMM(5, 0.1)
 
@@ -51,9 +51,19 @@ def read_files(directory):
     """
         Read all files from a directory
     """
-    print("Reading data files in directory " + directory)
+
+    print("Reading data files from directory " + directory)
+    owd = os.getcwd()
     os.chdir(directory)
-    data = [np.fromfile(fname, dtype=np.dtype('float64')) for fname in os.listdir()]
+    files_list = sorted(os.listdir())
+    data = []
+    i = 0
+    for fname in files_list:
+        if i % 100 == 0:
+            print(i,"/",len(files_list))
+        i += 1
+        data.append(np.fromfile(fname, dtype=np.dtype('float64')))
+    os.chdir(owd)
     print(str(len(data)) + " files read")
     data = np.concatenate(data)
 
@@ -76,30 +86,37 @@ def evaluate(detector, test_data, distance):
     for i in range(len(test_data) - 1):
         prediction = detector.predict(test_data[:i], test_data[i + 1], distance)
 
-# New train set with reduced features
-#np.savetxt("mini-pca.csv", do_PCA(split_data(read_files("mini-data")), explained_variance)[0], delimiter=",")
+directory = "mini-data"
+directory = "/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"
 
+autoenc = CNN((256,1488), 0.8)
+(g_train_data, g_test_data) = autoenc.preprocess(split_data(read_files(directory)))
 
-#detector = CNN((256,256))
+try:
+    print("Loading autoencoder…")
+    autoenc.load("test.h5")
+except Exception as e:
+    print("Loading failed:",e)
+    print("Learning autoencoder…")
+    autoenc.learn(g_train_data)
+    print("Saving autoencoder…")
+    autoenc.save("test.h5")
 
-#(g_train_data, g_test_data) = do_PCA(split_data(read_files("data-test")), explained_variance)
+print(g_train_data.shape)
+(g_train_data, g_test_data) = autoenc.extract_features(g_train_data, g_test_data)
+print(g_train_data.shape)
 
-(g_train_data, g_test_data) = detector.preprocess(split_data(read_files("data-test")))
-# NO PCA
-(g_train_data, g_test_data) = split_data(read_files("data-test"))
-#(g_train_data, g_test_data) = do_PCA(split_data(read_file("data/1530056352292")), explained_variance)
+#try:
+#    print("Loading detector…")
+#    detector.load("detector")
+#except Exception as e:
+#    print("Loading failed:",e)
+#    print("Learning detector…")
+#    autoenc.learn(g_train_data)
+#    print("Saving detector…")
+#    autoenc.save("detector")
 
-#test = [10, 10, 1, 10, 10, 10, 10, 1, 1, 1, 1, 10, 1, 1, 1, 10, 10, 10, 10, 10, 1, 1, 1, 1, 1, 1, 10, 10]
-#out = detect_signal_1D(test, 2, 2, 5, 5, 1, 1)
-
-
-# TODO pour CNN : réduire la taille des données (retirer les features inutiles ou découper par canaux)
-
-print("Learning…")
-#detector.learn(g_train_data[:,1].reshape(-1,1))
-print("Saving…")
 #pickle.dump(detector, open('armax','wb'))
-print("Loading…")
 #detector = pickle.load(open('armax','rb'))
 print("Predicting…")
 #detector.predict(g_test_data)
