@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pickle
 from varmax import Varmax
@@ -8,6 +7,7 @@ from hmm import HMM
 from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import manhattan_distances, euclidean_distances
 from anomalydetector import AnomalyDetector
+from preprocess import *
 
 #detector = Armax((20, 10), manhattan_distances, 10)
 #detector = Varmax((3, 0))
@@ -38,49 +38,6 @@ explained_variance = 0.95
 #             print(num)
 #             num = num + 1
 
-def read_file(filename):
-    """
-        Read one file
-    """
-    print("Reading data file " + filename)
-    data = np.fromfile(filename, dtype=np.dtype('float64'))
-    print(data.reshape(-1,1500)[:,1])
-    return data.reshape(-1, 1500)
-
-def read_files(directory):
-    """
-        Read all files from a directory
-    """
-
-    print("Reading data files from directory " + directory)
-    owd = os.getcwd()
-    os.chdir(directory)
-    files_list = sorted(os.listdir())
-    data = []
-    i = 0
-    for fname in files_list:
-        if i % 100 == 0:
-            print(i,"/",len(files_list))
-        i += 1
-        data.append(np.fromfile(fname, dtype=np.dtype('float64')))
-    os.chdir(owd)
-    print(str(len(data)) + " files read")
-    data = np.concatenate(data)
-
-#    print("Files read" + str(data.shape))
-#data = data.reshape(50,-1)
-    return data.reshape(-1, 1500)
-
-def split_data(data):
-    """
-        Split into train set and test set
-    """
-#print("Creating train and test set")
-    [train_data, test_data] = train_test_split(data)
-    print("Train set: " + str(train_data.shape))
-    print("Test set: " + str(test_data.shape))
-    return (train_data, test_data)
-
 
 def evaluate(detector, test_data, distance):
     for i in range(len(test_data) - 1):
@@ -90,7 +47,9 @@ directory = "mini-data"
 directory = "/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"
 
 autoenc = CNN((256,1488), 0.8)
-(g_train_data, g_test_data) = autoenc.preprocess(split_data(read_files(directory)))
+data = split_data(read_files(directory))
+g_train_data = autoenc.preprocess(data[0])
+g_test_data = autoenc.preprocess(data[1])
 
 try:
     print("Loading autoencoder…")

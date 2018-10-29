@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
@@ -101,5 +102,50 @@ def decompose(data, shape, overlap):
         return out.reshape(x*y, 1, shape_x, shape_y)
     else:
         return out.reshape(x*y, shape_x, shape_y, 1)
+
+def read_file(filename):
+    """
+        Read one file
+    """
+    print("Reading data file " + filename)
+    data = np.fromfile(filename, dtype=np.dtype('float64'))
+    print(data.reshape(-1,1500)[:,1])
+    return data.reshape(-1, 1500)
+
+def get_files_names(directory_list):
+    names = [os.listdir(d) for d in directory_list]
+    names = [j for i in names for j in i]
+    return names
+
+def read_files(directory):
+    """
+        Read all files from a directory
+    """
+
+    print("Reading data files from directory " + directory)
+    files_list = sorted(os.listdir(directory))
+    data = []
+    i = 0
+    for fname in files_list:
+        if i % 100 == 0:
+            print(i,"/",len(files_list))
+        i += 1
+        data.append(np.fromfile(fname, dtype=np.dtype('float64')))
+    print(str(len(data)) + " files read")
+    data = np.concatenate(data)
+
+#    print("Files read" + str(data.shape))
+#data = data.reshape(50,-1)
+    return data.reshape(-1, 1500)
+
+def split_data(data):
+    """
+        Split into train set and test set
+    """
+#print("Creating train and test set")
+    [train_data, test_data] = train_test_split(data)
+    print("Train set: " + str(train_data.shape))
+    print("Test set: " + str(test_data.shape))
+    return (train_data, test_data)
 
 

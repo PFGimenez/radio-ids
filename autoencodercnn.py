@@ -6,7 +6,22 @@ from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
 from keras import backend as K
 from preprocess import *
 from keras.models import load_model
+from keras.utils import Sequence
 
+class Batch_Generator(Sequence):
+
+    def __init__(self, filenames, batch_size, autoencoder):
+        self.filenames = filenames
+        self.batch_size = batch_size
+        self.autoencoder = autoencoder
+
+    def __len__(self):
+        return np.ceil(len(self.filenames) / float(self.batch_size))
+
+    def __getitem__(self, idx):
+        batch_x = self.filenames[idx * self.batch_size:(idx + 1) * self.batch_size]
+        out = np.array([self.autoencoder.preprocess(read_file(file_name)) for file_name in batch_x])
+        return out, out
 
 class CNN(AnomalyDetector):
     """
@@ -67,6 +82,7 @@ class CNN(AnomalyDetector):
         self._autoencoder.summary()
 
     def learn(self, data, exo=None):
+        self._generator = Batch_Generator(filenames, batch_size, self)
         # TODO : construire les images
         train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
         self._autoencoder.fit(train_X, train_ground, batch_size=128,epochs=1000,verbose=1,validation_data=(valid_X, valid_ground))
