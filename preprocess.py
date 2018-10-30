@@ -107,14 +107,13 @@ def read_file(filename):
     """
         Read one file
     """
-    print("Reading data file " + filename)
+#    print("Reading data file " + filename)
     data = np.fromfile(filename, dtype=np.dtype('float64'))
-    print(data.reshape(-1,1500)[:,1])
+#    print(data.reshape(-1,1500)[:,1])
     return data.reshape(-1, 1500)
 
 def get_files_names(directory_list):
-    names = [os.listdir(d) for d in directory_list]
-    names = [j for i in names for j in i]
+    names = [os.path.join(d, s) for d in directory_list for s in os.listdir(d)]
     return names
 
 def read_files(directory):

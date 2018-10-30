@@ -44,12 +44,9 @@ def evaluate(detector, test_data, distance):
         prediction = detector.predict(test_data[:i], test_data[i + 1], distance)
 
 directory = "mini-data"
-directory = "/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"
+directory = ["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"]
 
-autoenc = CNN((256,1488), 0.8)
-data = split_data(read_files(directory))
-g_train_data = autoenc.preprocess(data[0])
-g_test_data = autoenc.preprocess(data[1])
+autoenc = CNN((48,1488), 0.8)
 
 try:
     print("Loading autoencoder…")
@@ -57,13 +54,12 @@ try:
 except Exception as e:
     print("Loading failed:",e)
     print("Learning autoencoder…")
-    autoenc.learn(g_train_data)
+    print("Learning from files in",directory)
+    filenames = get_files_names(directory)
+    autoenc.learn_autoencoder(filenames, 32)
     print("Saving autoencoder…")
     autoenc.save("test.h5")
-
-print(g_train_data.shape)
-(g_train_data, g_test_data) = autoenc.extract_features(g_train_data, g_test_data)
-print(g_train_data.shape)
+#    (g_train_data, g_test_data) = autoenc.extract_features(g_train_data, g_test_data)
 
 #try:
 #    print("Loading detector…")
