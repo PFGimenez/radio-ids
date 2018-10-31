@@ -8,10 +8,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import manhattan_distances, euclidean_distances
 from anomalydetector import AnomalyDetector
 from preprocess import *
+import random
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import AxesGrid
 
 #detector = Armax((20, 10), manhattan_distances, 10)
 #detector = Varmax((3, 0))
-#detector = HMM(5, 0.1)
+detector = HMM(5, 0.1)
 
 explained_variance = 0.95
 
@@ -43,10 +46,13 @@ def evaluate(detector, test_data, distance):
     for i in range(len(test_data) - 1):
         prediction = detector.predict(test_data[:i], test_data[i + 1], distance)
 
-directory = "mini-data"
-directory = ["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"]
+np.random.seed()
+random.seed()
 
-autoenc = CNN((48,1488), 0.8)
+directory = "mini-data"
+autoenc_learning_directory = ["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"]
+
+autoenc = CNN((48,1500), 0.8)
 
 try:
     print("Loading autoencoder…")
@@ -54,11 +60,41 @@ try:
 except Exception as e:
     print("Loading failed:",e)
     print("Learning autoencoder…")
-    print("Learning from files in",directory)
-    filenames = get_files_names(directory)
+    print("Learning from files in",autoenc_learning_directory)
+    filenames = get_files_names(autoenc_learning_directory)
     autoenc.learn_autoencoder(filenames, 32)
     print("Saving autoencoder…")
     autoenc.save("test.h5")
+
+fig = plt.figure()
+grid = AxesGrid(fig, 111,
+                                nrows_ncols=(1, 2),
+                                axes_pad=0.05,
+                                share_all=True,
+                                label_mode="L",
+                                cbar_location="right",
+                                cbar_mode="single",
+                                aspect = True
+                                )
+
+
+data = read_files("data-test")
+im = grid[0].imshow(data[0,:,:], cmap='hot', interpolation='nearest', aspect='auto')
+data_reconstructed = autoenc.reconstruct(data)
+
+im = grid[1].imshow(data_reconstructed[0,:,:], cmap='hot', interpolation='nearest', aspect='auto')
+for cax in grid.cbar_axes:
+    cax.toggle_label(False)
+grid.cbar_axes[0].colorbar(im)
+#data = autoenc.extract_features(data)
+#plt.imshow(data[0,:].reshape(5,15), cmap='hot', interpolation='nearest')
+plt.show()
+
+#plt.imshow(data[0,:,:] - data_reconstructed[0,:,:], cmap='hot', interpolation='nearest', aspect='auto')
+#print(data.shape)
+#print(data)
+print("Learning detector")
+#detector.learn(data)
 #    (g_train_data, g_test_data) = autoenc.extract_features(g_train_data, g_test_data)
 
 #try:
@@ -74,4 +110,6 @@ except Exception as e:
 #pickle.dump(detector, open('armax','wb'))
 #detector = pickle.load(open('armax','rb'))
 print("Predicting…")
+#index = 10
+#detector.predict(data[0:index,:], data[index,:])
 #detector.predict(g_test_data)

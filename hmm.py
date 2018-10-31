@@ -29,4 +29,9 @@ class HMM(AnomalyDetector):
         z = self._model.predict(data)
         print(z)
 
+    def save(self, filename):
+        pass
+
+    def load(self, filename):
+        pass
 # evaluation : model.score(X) / model.score(X[:-1])

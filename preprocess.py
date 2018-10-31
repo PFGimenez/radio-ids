@@ -129,13 +129,12 @@ def read_files(directory):
         if i % 100 == 0:
             print(i,"/",len(files_list))
         i += 1
-        data.append(np.fromfile(fname, dtype=np.dtype('float64')))
+        data.append(np.fromfile(os.path.join(directory, fname), dtype=np.dtype('float64')).reshape(-1,1500))
     print(str(len(data)) + " files read")
-    data = np.concatenate(data)
 
 #    print("Files read" + str(data.shape))
 #data = data.reshape(50,-1)
-    return data.reshape(-1, 1500)
+    return np.array(data)
 
 def split_data(data):
     """
