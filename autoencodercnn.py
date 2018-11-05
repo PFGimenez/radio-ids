@@ -11,7 +11,9 @@ import math
 
 class Batch_Generator(Sequence):
 
-    def __init__(self, filenames, batch_size, input_shape):
+    def __init__(self, filenames, batch_size, input_shape, val_min, val_max):
+        self._min = val_min
+        self._max = val_max
         self.filenames = filenames
         self.batch_size = batch_size
         self._input_shape = input_shape
@@ -23,20 +25,20 @@ class Batch_Generator(Sequence):
 
     def __getitem__(self, idx):
         batch_x = self.filenames[idx * self.batch_size : (idx + 1) * self.batch_size]
-        out = np.array([self._process(read_file(file_name)) for file_name in batch_x])
+        out = np.array([crop_sample(normalize(read_file(file_name), self._min, self._max), self._size_x, self._size_y).reshape(self._input_shape) for file_name in batch_x])
         return out, out
 
-    def _process(self, data):
-        max = 0
-        min = -150
-        data = (data - min) / (max - min)
-        return self._crop_sample(data).reshape(self._input_shape)
+#    def _process(self, data):
+#        max = 0
+#        min = -150
+#        data = (data - min) / (max - min)
+#        return self._crop_sample(data).reshape(self._input_shape)
 
-    def _crop_sample(self, data):
-        shape_x = data.shape[0]
-        shape_y = data.shape[1]
-        return data[int((shape_x - self._size_x) / 2) : int((shape_x + self._size_x) / 2),
-                    int((shape_y - self._size_y) / 2) : int((shape_y + self._size_y) / 2)]
+#    def _crop_sample(self, data):
+#        shape_x = data.shape[0]
+#        shape_y = data.shape[1]
+#        return data[int((shape_x - self._size_x) / 2) : int((shape_x + self._size_x) / 2),
+#                    int((shape_y - self._size_y) / 2) : int((shape_y + self._size_y) / 2)]
 
 
 class CNN:
@@ -47,7 +49,9 @@ class CNN:
     def decompose(self, data):
         return decompose(data, self._shape, self._overlap)
 
-    def __init__(self, shape, overlap):
+    def __init__(self, shape, overlap, val_min, val_max):
+        self._min = val_min
+        self._max = val_max
         self._shape = shape
         self._overlap = overlap
         self._input_shape = None
@@ -102,11 +106,11 @@ class CNN:
 
     def learn_autoencoder(self, filenames, batch_size):
         [training_filenames, validation_filenames] = train_test_split(filenames)
-        training_batch_generator = Batch_Generator(training_filenames, batch_size, self._input_shape)
-        validation_batch_generator = Batch_Generator(validation_filenames, batch_size, self._input_shape)
+        training_batch_generator = Batch_Generator(training_filenames, batch_size, self._input_shape, self._min, self._max)
+        validation_batch_generator = Batch_Generator(validation_filenames, batch_size, self._input_shape, self._min, self._max)
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
         self._autoencoder.fit_generator(generator=training_batch_generator,
-                                        epochs=5,
+                                        epochs=1000,
                                         verbose=1,
                                         validation_data=validation_batch_generator,
                                         use_multiprocessing=True,
@@ -125,7 +129,7 @@ class CNN:
     def reconstruct(self, data):
         data = self._crop_samples(data)
         data = self._add_samples(data)
-        return self._reverse_process(self._autoencoder.predict(self._process(data)).reshape(-1, self._input_shape[0], self._input_shape[1]))
+        return denormalize(self._autoencoder.predict(normalize(data, self._min, self._max)).reshape(-1, self._input_shape[0], self._input_shape[1]), self._min, self._max)
 
     def extract_features(self, data):
         print(data.shape)
@@ -147,14 +151,14 @@ class CNN:
                     int((shape_x - self._size_x) / 2) : int((shape_x + self._size_x) / 2),
                     int((shape_y - self._size_y) / 2) : int((shape_y + self._size_y) / 2)]
 
-    def _reverse_process(self, data):
-        max = 0
-        min = -150
-        return data * (max - min) + min
+#    def _reverse_process(self, data):
+#        max = 0
+#        min = -150
+#        return data * (max - min) + min
 
-    def _process(self, data):
-        max = 0
-        min = -150
-        return (data - min) / (max - min)
+#    def _process(self, data):
+#        max = 0
+#        min = -150
+#        return (data - min) / (max - min)
 
 

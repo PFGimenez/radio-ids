@@ -52,7 +52,7 @@ random.seed()
 directory = "mini-data"
 autoenc_learning_directory = ["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"]
 
-autoenc = CNN((48,1500), 0.8)
+autoenc = CNN((48,1500), 0.8, -150, 0)
 
 try:
     print("Loading autoencoder…")
@@ -67,25 +67,25 @@ except Exception as e:
     autoenc.save("test.h5")
 
 fig = plt.figure()
-grid = AxesGrid(fig, 111,
-                                nrows_ncols=(1, 2),
-                                axes_pad=0.05,
-                                share_all=True,
-                                label_mode="L",
-                                cbar_location="right",
-                                cbar_mode="single",
-                                aspect = True
-                                )
+# grid = AxesGrid(fig, 111,
+#                                 nrows_ncols=(1, 2),
+#                                 axes_pad=0.05,
+#                                 share_all=True,
+#                                 label_mode="L",
+#                                 cbar_location="right",
+#                                 cbar_mode="single",
+#                                 aspect = True
+#                                 )
 
 
 data = read_files("data-test")
-im = grid[0].imshow(data[0,:,:], cmap='hot', interpolation='nearest', aspect='auto')
+#plt.imshow(data[0,:,:], cmap='hot', interpolation='nearest', aspect='auto')
 data_reconstructed = autoenc.reconstruct(data)
 
-im = grid[1].imshow(data_reconstructed[0,:,:], cmap='hot', interpolation='nearest', aspect='auto')
-for cax in grid.cbar_axes:
-    cax.toggle_label(False)
-grid.cbar_axes[0].colorbar(im)
+plt.imshow(np.concatenate((data_reconstructed[0,:,:], data[0,:,:])), cmap='hot', interpolation='nearest', aspect='auto')
+#for cax in grid.cbar_axes:
+#    cax.toggle_label(False)
+#grid.cbar_axes[0].colorbar(im)
 #data = autoenc.extract_features(data)
 #plt.imshow(data[0,:].reshape(5,15), cmap='hot', interpolation='nearest')
 plt.show()

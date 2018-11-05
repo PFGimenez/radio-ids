@@ -5,6 +5,18 @@ from sklearn.preprocessing import StandardScaler
 import math
 from keras import backend as K
 
+def normalize(data, val_min, val_max):
+    return (data - val_min) / (val_max - val_min)
+
+def denormalize(data, val_min, val_max):
+    return data * (val_max - val_min) + val_min
+
+def crop_sample(data, size_x, size_y):
+        shape_x = data.shape[0]
+        shape_y = data.shape[1]
+        return data[int((shape_x - size_x) / 2) : int((shape_x + size_x) / 2),
+                    int((shape_y - size_y) / 2) : int((shape_y + size_y) / 2)]
+
 def center(data):
     """
         Center the data (mean = 0)
