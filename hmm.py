@@ -6,6 +6,7 @@ import numpy as np
 from hmmlearn import hmm
 from anomalydetector import AnomalyDetector
 from preprocess import do_PCA
+from sklearn.externals import joblib
 
 class HMM(AnomalyDetector):
     """
@@ -21,17 +22,17 @@ class HMM(AnomalyDetector):
     def learn(self, data, exo=None):
 #x = np.random.random(1000).reshape(-1,5)
 #print(x)
-        self._model = hmm.GaussianHMM(self._nb_states, "full")
+        self._model = hmm.GaussianHMM(self._nb_states, "full", verbose=True)
         self._model.fit(data)
+        print(self._model.decode(data))
+        print(self._model.covars_)
 
     def predict(self, data, obs):
-        # TODO
-        z = self._model.predict(data)
-        print(z)
+        return self._model.score(np.concatenate((data,np.expand_dims(obs, axis=0)))) - self._model.score(data)
+        # evaluation : P(X) / P(X[:-1])
 
     def save(self, filename):
-        pass
+        joblib.dump(self._model, "hmm.pkl")
 
     def load(self, filename):
-        pass
-# evaluation : model.score(X) / model.score(X[:-1])
+        self._model = joblib.load("filename.pkl")

@@ -109,7 +109,7 @@ class CNN:
         validation_batch_generator = Batch_Generator(validation_filenames, batch_size, self._input_shape, self._min, self._max)
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
         self._autoencoder.fit_generator(generator=training_batch_generator,
-                                        epochs=1000,
+                                        epochs=100,
                                         verbose=1,
                                         validation_data=validation_batch_generator,
                                         use_multiprocessing=True,
