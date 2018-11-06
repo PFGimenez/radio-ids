@@ -70,27 +70,26 @@ class CNN:
         m = Conv2D(32, (5, 3), activation='relu', padding='same')(input_tensor)
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Conv2D(16, (5, 3), activation='relu', padding='same', input_shape=self._input_shape)(m)
-#        m = MaxPooling2D(pool_size=(2,2))(m)
-#        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
+        m = MaxPooling2D(pool_size=(2,2))(m)
+        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
 #        m = MaxPooling2D(pool_size=(2,2))(m)
 #        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
-#        m = MaxPooling2D(pool_size=(2,3))(m)
-#        m = Conv2D(1, (5, 3), activation='relu', padding='same')(m)
-
-        # la couche de features
-#        m = MaxPooling2D(pool_size=(2,5))(m)
+        m = MaxPooling2D(pool_size=(2,3))(m)
+        m = Conv2D(2, (5, 3), activation='relu', padding='same')(m)
+        m = MaxPooling2D(pool_size=(2,5))(m)
         self._coder = Model(input_tensor, m)
 
         # Permet d'éviter l'overfitting
-#        m = Dropout(0.5)(m)
+        m = Dropout(0.5)(m)
 
         # Maintenant on reconstitue l'image initiale
-#        m = Conv2D(1, (5, 3), activation='relu', padding='same')(m)
 #        m = UpSampling2D((2,5))(m)
 #        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
-#        m = UpSampling2D((2,3))(m)
-#        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
-#        m = UpSampling2D((2,2))(m)
+        m = UpSampling2D((2,5))(m)
+        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
+        m = UpSampling2D((2,3))(m)
+        m = Conv2D(16, (5, 3), activation='relu', padding='same')(m)
+        m = UpSampling2D((2,2))(m)
         m = Conv2D(32, (5, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
 

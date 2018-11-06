@@ -53,7 +53,6 @@ directory = "mini-data"
 autoenc_learning_directory = ["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"]
 
 autoenc = CNN((48,1500), 0.8, -150, 0)
-
 try:
     print("Loading autoencoder…")
     autoenc.load("test.h5")
@@ -82,7 +81,7 @@ data = read_files("data-test")
 #plt.imshow(data[0,:,:], cmap='hot', interpolation='nearest', aspect='auto')
 data_reconstructed = autoenc.reconstruct(data)
 
-plt.imshow(np.concatenate((data_reconstructed[0,:,:], data[0,:,:])), cmap='hot', interpolation='nearest', aspect='auto')
+plt.imshow(np.concatenate((data_reconstructed[0,:,:], -150*np.ones(data[0,:,:].shape), data[0,:,:])), cmap='hot', interpolation='nearest', aspect='auto')
 #for cax in grid.cbar_axes:
 #    cax.toggle_label(False)
 #grid.cbar_axes[0].colorbar(im)
