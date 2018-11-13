@@ -124,8 +124,8 @@ def read_file(filename):
 #    print(data.reshape(-1,1500)[:,1])
     return data.reshape(-1, 1500)
 
-def get_files_names(directory_list):
-    names = [os.path.join(d, s) for d in directory_list for s in os.listdir(d)]
+def get_files_names(directory_list, pattern=""):
+    names = [os.path.join(d, s) for d in directory_list for s in os.listdir(d) if pattern in s]
     return names
 
 def read_files(directory):

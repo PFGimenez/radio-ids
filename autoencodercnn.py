@@ -1,5 +1,11 @@
 from sklearn.model_selection import train_test_split
 from anomalydetector import AnomalyDetector
+
+import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
+
 from keras.models import Model
 from keras.layers import Input, Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
@@ -24,9 +30,13 @@ class Batch_Generator(Sequence):
         return int(np.ceil(len(self.filenames) / float(self.batch_size)))
 
     def __getitem__(self, idx):
-        batch_x = self.filenames[idx * self.batch_size : (idx + 1) * self.batch_size]
-        out = np.array([crop_sample(normalize(read_file(file_name), self._min, self._max), self._size_x, self._size_y).reshape(self._input_shape) for file_name in batch_x])
-        return out, out
+        try:
+            batch_x = self.filenames[idx * self.batch_size : (idx + 1) * self.batch_size]
+            out = np.array([crop_sample(normalize(read_file(file_name), self._min, self._max), self._size_x, self._size_y).reshape(self._input_shape) for file_name in batch_x])
+            return out, out
+        except ValueError as e:
+            print(e, batch_x)
+            raise
 
 #    def _process(self, data):
 #        max = 0
@@ -71,7 +81,7 @@ class CNN:
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Conv2D(16, (5, 3), activation='relu', padding='same', input_shape=self._input_shape)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
+        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
 #        m = MaxPooling2D(pool_size=(2,2))(m)
 #        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
         m = MaxPooling2D(pool_size=(2,3))(m)
@@ -83,10 +93,10 @@ class CNN:
         m = Dropout(0.5)(m)
 
         # Maintenant on reconstitue l'image initiale
-#        m = UpSampling2D((2,5))(m)
-#        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,5))(m)
-        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
+        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
+#        m = UpSampling2D((2,5))(m)
+#        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,3))(m)
         m = Conv2D(16, (5, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
@@ -99,7 +109,7 @@ class CNN:
         self._autoencoder = Model(input_tensor, decoded)
 
         self._autoencoder.compile(loss='mean_squared_error',
-                    optimizer='adadelta')
+                                  optimizer='adam')
 
         self._autoencoder.summary()
 
@@ -109,7 +119,7 @@ class CNN:
         validation_batch_generator = Batch_Generator(validation_filenames, batch_size, self._input_shape, self._min, self._max)
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
         self._autoencoder.fit_generator(generator=training_batch_generator,
-                                        epochs=100,
+                                        epochs=500,
                                         verbose=1,
                                         validation_data=validation_batch_generator,
                                         use_multiprocessing=True,

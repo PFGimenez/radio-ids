@@ -50,9 +50,8 @@ np.random.seed()
 random.seed()
 
 directory = "mini-data"
-autoenc_learning_directory = ["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"]
-
-
+#autoenc_learning_directory = ["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"]
+autoenc_learning_directory = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
 data = read_files("data-test")
 print(data.shape)
 dataLearn = data[0:20,0:20,0:10].reshape(-1, 10)
