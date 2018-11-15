@@ -11,11 +11,14 @@ def normalize(data, val_min, val_max):
 def denormalize(data, val_min, val_max):
     return data * (val_max - val_min) + val_min
 
+def crop_all(data, size_x, size_y):
+    return np.array([crop_sample(s, size_x, size_y) for s in data])
+
 def crop_sample(data, size_x, size_y):
-        shape_x = data.shape[0]
-        shape_y = data.shape[1]
-        return data[int((shape_x - size_x) / 2) : int((shape_x + size_x) / 2),
-                    int((shape_y - size_y) / 2) : int((shape_y + size_y) / 2)]
+    shape_x = data.shape[0]
+    shape_y = data.shape[1]
+    return data[int((shape_x - size_x) / 2) : int((shape_x + size_x) / 2),
+                int((shape_y - size_y) / 2) : int((shape_y + size_y) / 2)]
 
 def center(data):
     """
@@ -99,7 +102,7 @@ def do_PCA(data, n_components):
 #    print("Variance explanation : "+str(pca.explained_variance_ratio_))
     return (train_pca, pca.fit_transform(test_data))
 
-def decompose(data, shape, overlap):
+def decompose(data, shape, overlap=0):
     shape_x = shape[0]
     shape_y = shape[1]
     step_x = round(shape_x * (1 - overlap))

@@ -17,9 +17,10 @@ import math
 
 class Batch_Generator(Sequence):
 
-    def __init__(self, filenames, batch_size, input_shape, val_min, val_max):
+    def __init__(self, filenames, batch_size, input_shape, val_min, val_max, overlap):
         self._min = val_min
         self._max = val_max
+        self._overlap = overlap
         self.filenames = filenames
         self.batch_size = batch_size
         self._input_shape = input_shape
@@ -32,8 +33,21 @@ class Batch_Generator(Sequence):
     def __getitem__(self, idx):
         try:
             batch_x = self.filenames[idx * self.batch_size : (idx + 1) * self.batch_size]
-            out = np.array([crop_sample(normalize(read_file(file_name), self._min, self._max), self._size_x, self._size_y).reshape(self._input_shape) for file_name in batch_x])
-            return out, out
+#            out = np.array([crop_sample(normalize(read_file(file_name), self._min, self._max), self._size_x, self._size_y).reshape(self._input_shape) for file_name in batch_x])
+#            print(len(batch_x), self._overlap, self._size_x, self._size_y, self._input_shape)
+            out = [decompose(
+#                crop_sample(
+                    normalize(
+                        read_file(file_name)
+                        , self._min, self._max),
+#                    self._size_x, self._size_y),
+                self._input_shape, self._overlap)
+#            .reshape(self._input_shape)
+            for file_name in batch_x]
+#            print(out)
+            out = np.concatenate(out)
+#            print(out.shape)
+            return out, out # parce que la sortie et l'entrée de l'autoencoder doivent être identiques
         except ValueError as e:
             print(e, batch_x)
             raise
@@ -81,23 +95,23 @@ class CNN:
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Conv2D(16, (5, 3), activation='relu', padding='same', input_shape=self._input_shape)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
+        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
 #        m = MaxPooling2D(pool_size=(2,2))(m)
 #        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
-        m = MaxPooling2D(pool_size=(2,3))(m)
-        m = Conv2D(2, (5, 3), activation='relu', padding='same')(m)
-        m = MaxPooling2D(pool_size=(2,5))(m)
+        m = MaxPooling2D(pool_size=(1,2))(m)
+        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
+        m = MaxPooling2D(pool_size=(1,2))(m)
         self._coder = Model(input_tensor, m)
 
         # Permet d'éviter l'overfitting
         m = Dropout(0.5)(m)
 
         # Maintenant on reconstitue l'image initiale
-        m = UpSampling2D((2,5))(m)
-        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
+        m = UpSampling2D((1,2))(m)
+        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
 #        m = UpSampling2D((2,5))(m)
 #        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
-        m = UpSampling2D((2,3))(m)
+        m = UpSampling2D((1,2))(m)
         m = Conv2D(16, (5, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
         m = Conv2D(32, (5, 3), activation='relu', padding='same')(m)
@@ -115,11 +129,11 @@ class CNN:
 
     def learn_autoencoder(self, filenames, batch_size):
         [training_filenames, validation_filenames] = train_test_split(filenames)
-        training_batch_generator = Batch_Generator(training_filenames, batch_size, self._input_shape, self._min, self._max)
-        validation_batch_generator = Batch_Generator(validation_filenames, batch_size, self._input_shape, self._min, self._max)
+        training_batch_generator = Batch_Generator(training_filenames, batch_size, self._input_shape, self._min, self._max, self._overlap)
+        validation_batch_generator = Batch_Generator(validation_filenames, batch_size, self._input_shape, self._min, self._max, self._overlap)
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
         self._autoencoder.fit_generator(generator=training_batch_generator,
-                                        epochs=500,
+                                        epochs=100,
                                         verbose=1,
                                         validation_data=validation_batch_generator,
                                         use_multiprocessing=True,
@@ -159,15 +173,4 @@ class CNN:
         return data[:,
                     int((shape_x - self._size_x) / 2) : int((shape_x + self._size_x) / 2),
                     int((shape_y - self._size_y) / 2) : int((shape_y + self._size_y) / 2)]
-
-#    def _reverse_process(self, data):
-#        max = 0
-#        min = -150
-#        return data * (max - min) + min
-
-#    def _process(self, data):
-#        max = 0
-#        min = -150
-#        return (data - min) / (max - min)
-
 

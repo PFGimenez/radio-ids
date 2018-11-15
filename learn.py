@@ -58,7 +58,7 @@ dataLearn = data[0:20,0:20,0:10].reshape(-1, 10)
 print(dataLearn.shape)
 detector.learn(dataLearn)
 print(detector.predict(dataLearn, data[21,0:20,0:10].reshape(-1,10)[1]))
-autoenc = CNN((48,1500), 0.8, -150, 0)
+autoenc = CNN((16,1472), 0.8, -150, 0)
 try:
     print("Loading autoencoder…")
     autoenc.load("test.h5")
@@ -82,7 +82,7 @@ fig = plt.figure()
 #                                 aspect = True
 #                                 )
 
-data = read_files("data-test2")
+data = crop_all(read_files("data-test2"), 16, 1472)
 #data = read_files("/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_02_October")
 #plt.imshow(data[0,:,:], cmap='hot', interpolation='nearest', aspect='auto')
 data_reconstructed = autoenc.reconstruct(data)
