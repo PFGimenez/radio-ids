@@ -29,6 +29,10 @@ class AnomalyDetector(ABC):
         """
         pass
 
+    def predict_list(self, data):
+        l = data.shape[0]
+        return self.predict(data[0:l-1,:], data[l-1,:].reshape(-1))
+
     @abstractmethod
     def save(self, filename):
         pass

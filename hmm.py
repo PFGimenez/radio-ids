@@ -20,14 +20,20 @@ class HMM(AnomalyDetector):
         return do_PCA(data, 0.95)
 
     def learn(self, data, exo=None):
-#x = np.random.random(1000).reshape(-1,5)
-#print(x)
         self._model = hmm.GaussianHMM(self._nb_states, "full", verbose=True)
+#        self._model = hmm.GMMHMM(self._nb_states, n_mix=5, covariance_type="full", verbose=True)
         self._model.fit(data)
-        print(self._model.decode(data))
-        print(self._model.covars_)
+#        print(self._model.decode(data))
+#        print(self._model.covars_)
+
+    def predict_list(self, data):
+        if len(data) == 1:
+            return self._model.score(data)
+        return self._model.score(data) - self._model.score(data[0:len(data)-1,:])
 
     def predict(self, data, obs):
+        if len(data) == 1:
+            return self._model.score(data)
         return self._model.score(np.concatenate((data,np.expand_dims(obs, axis=0)))) - self._model.score(data)
         # evaluation : P(X) / P(X[:-1])
 

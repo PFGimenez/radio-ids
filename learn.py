@@ -1,5 +1,4 @@
 import numpy as np
-import pickle
 from varmax import Varmax
 from armax import Armax
 from autoencodercnn import CNN
@@ -52,7 +51,7 @@ random.seed()
 directory = "mini-data"
 #autoenc_learning_directory = ["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_01_October"]
 autoenc_learning_directory = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
-data = read_files("data-test")
+data = read_directory("data-test")
 print(data.shape)
 dataLearn = data[0:20,0:20,0:10].reshape(-1, 10)
 print(dataLearn.shape)
@@ -82,8 +81,8 @@ fig = plt.figure()
 #                                 aspect = True
 #                                 )
 
-data = crop_all(read_files("data-test2"), 16, 1472)
-#data = read_files("/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_02_October")
+data = crop_all(read_directory("data-test2"), 16, 1472)
+#data = read_directory("/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_02_October")
 #plt.imshow(data[0,:,:], cmap='hot', interpolation='nearest', aspect='auto')
 data_reconstructed = autoenc.reconstruct(data)
 

@@ -102,7 +102,7 @@ def do_PCA(data, n_components):
 #    print("Variance explanation : "+str(pca.explained_variance_ratio_))
     return (train_pca, pca.fit_transform(test_data))
 
-def decompose(data, shape, overlap=0):
+def decompose_raw(data, shape, overlap=0):
     shape_x = shape[0]
     shape_y = shape[1]
     step_x = round(shape_x * (1 - overlap))
@@ -113,6 +113,18 @@ def decompose(data, shape, overlap=0):
     for i in range(x):
         for j in range(y):
             out[i,j] = data[i * step_x : i * step_x + shape_x, j * step_y : j * step_y + shape_y]
+    print(out.shape)
+    return out
+
+def decompose(data, shape, overlap=0):
+    out = decompose_raw(data, shape, overlap)
+    shape_x = shape[0]
+    shape_y = shape[1]
+    step_x = round(shape_x * (1 - overlap))
+    step_y = round(shape_y * (1 - overlap))
+    x = math.floor((data.shape[0] - shape_x) / step_x) + 1
+    y = math.floor((data.shape[1] - shape_y) / step_y) + 1
+
     if K.image_data_format() == 'channels_first':
         return out.reshape(x*y, 1, shape_x, shape_y)
     else:
@@ -131,25 +143,38 @@ def get_files_names(directory_list, pattern=""):
     names = [os.path.join(d, s) for d in directory_list for s in os.listdir(d) if pattern in s]
     return names
 
-def read_files(directory):
-    """
-        Read all files from a directory
-    """
-
-    print("Reading data files from directory " + directory)
-    files_list = sorted(os.listdir(directory))
+def read_files(files_list):
     data = []
     i = 0
     for fname in files_list:
         if i % 100 == 0:
             print(i,"/",len(files_list))
         i += 1
-        data.append(np.fromfile(os.path.join(directory, fname), dtype=np.dtype('float64')).reshape(-1,1500))
+        data.append(np.fromfile(fname, dtype=np.dtype('float64')).reshape(-1,1500))
     print(str(len(data)) + " files read")
 
 #    print("Files read" + str(data.shape))
 #data = data.reshape(50,-1)
     return np.array(data)
+
+def read_directories(directories):
+    """
+        Read all files from several directories
+    """
+    # TODO not tested
+    out = []
+    for d in directories:
+        out.append(read_directory(d))
+    return np.concatenate(out)
+
+def read_directory(directory):
+    """
+        Read all files from a directory
+    """
+
+    print("Reading data files from directory " + directory)
+    files_list = [os.path.join(directory, fname) for fname in sorted(os.listdir(directory))]
+    return read_files(files_list)
 
 def split_data(data):
     """
@@ -161,4 +186,15 @@ def split_data(data):
     print("Test set: " + str(test_data.shape))
     return (train_data, test_data)
 
+def get_event_list(data, temporal_step, spectral_step):
+    data = np.concatenate(data)
+    data = decompose_raw(data, (temporal_step, spectral_step))
+    data = np.amax(data, axis=2)
+    data = np.amax(data, axis=2)
+    return data
 
+def test_prediction(data, model):
+    predictions = []
+    for i in range(1,len(data)):
+        predictions.append(model.predict_list(data[:i,:]))
+    return predictions
