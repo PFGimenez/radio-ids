@@ -19,7 +19,7 @@ class HMM(AnomalyDetector):
     def preprocess(self, data):
         return do_PCA(data, 0.95)
 
-    def learn(self, data, exo=None):
+    def learn(self, data):
         self._model = hmm.GaussianHMM(self._nb_states, "full", verbose=True)
 #        self._model = hmm.GMMHMM(self._nb_states, n_mix=5, covariance_type="full", verbose=True)
         self._model.fit(data)
@@ -38,7 +38,7 @@ class HMM(AnomalyDetector):
         # evaluation : P(X) / P(X[:-1])
 
     def save(self, filename):
-        joblib.dump(self._model, "hmm.pkl")
+        joblib.dump(self._model, filename)
 
     def load(self, filename):
-        self._model = joblib.load("filename.pkl")
+        self._model = joblib.load(filename)

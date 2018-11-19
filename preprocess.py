@@ -113,7 +113,7 @@ def decompose_raw(data, shape, overlap=0):
     for i in range(x):
         for j in range(y):
             out[i,j] = data[i * step_x : i * step_x + shape_x, j * step_y : j * step_y + shape_y]
-    print(out.shape)
+#    print(out.shape)
     return out
 
 def decompose(data, shape, overlap=0):
@@ -189,8 +189,13 @@ def split_data(data):
 def get_event_list(data, temporal_step, spectral_step):
     data = np.concatenate(data)
     data = decompose_raw(data, (temporal_step, spectral_step))
+    data = data.reshape((data.shape[0], data.shape[1], -1))
+    print(data.shape)
+#    data = np.concatenate((np.amax(data, axis=2),
+#                          np.mean(data, axis=2)
+#                          ), axis=1)
     data = np.amax(data, axis=2)
-    data = np.amax(data, axis=2)
+    print(data.shape)
     return data
 
 def test_prediction(data, model):

@@ -4,9 +4,9 @@ import numpy as np
 from anomalydetector import AnomalyDetector
 from preprocess import do_PCA
 
-class Varmax(AnomalyDetector):
+class Varma(AnomalyDetector):
     """
-        VARMAX model
+        VARMA model
     """
     def __init__(self, order):
         self._order = order

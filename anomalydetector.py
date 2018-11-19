@@ -13,7 +13,7 @@ class AnomalyDetector(ABC):
         pass
 
     @abstractmethod
-    def learn(self, data, exo=None):
+    def learn(self, data):
         """
             Learn from data
         """

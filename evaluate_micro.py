@@ -1,0 +1,6 @@
+
+
+detector = OCSVM()
+detector
+
+

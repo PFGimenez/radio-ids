@@ -91,33 +91,33 @@ class CNN:
         # L'extraction de features se fait avec Conv2D -> augmentation des dimensions
         # MaxPooling permet de réduire les dimensions
         # Toujours utiliser une activation "relu"
-        m = Conv2D(32, (5, 3), activation='relu', padding='same')(input_tensor)
+        m = Conv2D(32, (3, 5), activation='relu', padding='same')(input_tensor)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(16, (5, 3), activation='relu', padding='same', input_shape=self._input_shape)(m)
+        m = Conv2D(16, (3, 5), activation='relu', padding='same', input_shape=self._input_shape)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
+        m = Conv2D(8, (3, 5), activation='relu', padding='same')(m)
 #        m = MaxPooling2D(pool_size=(2,2))(m)
 #        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
-        m = MaxPooling2D(pool_size=(1,2))(m)
-        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
-        m = MaxPooling2D(pool_size=(1,2))(m)
+        m = MaxPooling2D(pool_size=(2,2))(m)
+        m = Conv2D(8, (3, 5), activation='relu', padding='same')(m)
+        m = MaxPooling2D(pool_size=(2,2))(m)
         self._coder = Model(input_tensor, m)
 
         # Permet d'éviter l'overfitting
         m = Dropout(0.5)(m)
 
         # Maintenant on reconstitue l'image initiale
-        m = UpSampling2D((1,2))(m)
-        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
+        m = UpSampling2D((2,2))(m)
+        m = Conv2D(8, (3, 5), activation='relu', padding='same')(m)
 #        m = UpSampling2D((2,5))(m)
 #        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
-        m = UpSampling2D((1,2))(m)
-        m = Conv2D(16, (5, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
-        m = Conv2D(32, (5, 3), activation='relu', padding='same')(m)
+        m = Conv2D(16, (3, 5), activation='relu', padding='same')(m)
+        m = UpSampling2D((2,2))(m)
+        m = Conv2D(32, (3, 5), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
 
-        decoded = Conv2D(1, (5, 3), activation='sigmoid', padding='same')(m)
+        decoded = Conv2D(1, (3, 5), activation='sigmoid', padding='same')(m)
 
         # Compilation du modèle + paramètres d'évaluation et d'apprentissage
         self._autoencoder = Model(input_tensor, decoded)
@@ -155,12 +155,12 @@ class CNN:
         return denormalize(self._autoencoder.predict(normalize(data, self._min, self._max)).reshape(-1, self._input_shape[0], self._input_shape[1]), self._min, self._max)
 
     def extract_features(self, data):
-        print(data.shape)
+#        print(data.shape)
         data = self._crop_samples(data)
-        print(data.shape)
+#        print(data.shape)
         data = self._add_samples(data)
         out = self._coder.predict(data)
-        print(out.shape)
+#        print(out.shape)
         return out.reshape(data.shape[0],-1)
 
     def _add_samples(self, data):

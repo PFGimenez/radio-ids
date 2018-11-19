@@ -4,10 +4,10 @@ from anomalydetector import AnomalyDetector
 import pickle
 from preprocess import do_PCA
 
-class Armax(AnomalyDetector):
+class Arma(AnomalyDetector):
     """
-        ARMAX models
-        Since ARMAX are univariate, learn one model for each feature
+        ARMA models
+        Since ARMA are univariate, learn one model for each feature
     """
 
     def __init__(self, order, distance, threshold):
@@ -19,7 +19,7 @@ class Armax(AnomalyDetector):
     def preprocess(self, data):
         return do_PCA(data, 0.95)
 
-    def learn(self, data, exo=None):
+    def learn(self, data):
         # First, we de-mean the data
         # In fact, it's useless if the data come from a PCA
 #        scaler = StandardScaler(with_std=False)
