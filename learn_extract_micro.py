@@ -66,6 +66,7 @@ except Exception as e:
     print("Learning autoencoder…")
     print("Learning from files in",autoenc_learning_directory)
     filenames = get_files_names(autoenc_learning_directory)
+    autoenc.new_model()
     autoenc.learn_autoencoder(filenames, 32)
     print("Saving autoencoder…")
     autoenc.save("test.h5")

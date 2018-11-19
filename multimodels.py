@@ -5,13 +5,19 @@ from enum import Enum
 """
 
 class JourSemaine(Enum):
+    DIMANCHE = 0
     LUNDI = 1
     MARDI = 2
     MECREDI = 3
     JEUDI = 4
     VENDREDI = 5
     SAMEDI = 6
-    DIMANCHE = 7
+
+print(process_unix_time(1538379386763))
+
+def process_unix_time(time):
+    date = datetime.datetime.fromtimestamp(time/1000)
+    return (JourSemaine(date.day), ((date.hour * 24) + date.minute) * 60 + date.second)
 
 def periode_week_end(day, time):
     return day == SAMEDI or day == DIMANCHE
@@ -33,10 +39,11 @@ class MultiModels():
     def add_model(self, model, fun):
         self._models.append((fun, model))
 
-    def predict(self, data, day, time):
+    def predict(self, data, epoch):
         """
             No anomaly if at least one model says there isn't
         """
+        (day, time) = process_unix_time(epoch)
         for (f,m) in self._models:
             if f(day, time) and not m.predict_list(data):
                 return False

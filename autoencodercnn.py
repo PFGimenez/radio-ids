@@ -87,6 +87,7 @@ class CNN:
         self._size_x = shape[0]
         self._size_y = shape[1]
 
+    def new_model(self):
         # Nouveau réseau de neurones
         # L'extraction de features se fait avec Conv2D -> augmentation des dimensions
         # MaxPooling permet de réduire les dimensions
@@ -164,7 +165,7 @@ class CNN:
         return out.reshape(data.shape[0],-1)
 
     def _add_samples(self, data):
-        print(data.shape)
+#        print(data.shape)
         return data.reshape(-1, self._input_shape[0], self._input_shape[1], self._input_shape[2])
 
     def _crop_samples(self, data):
