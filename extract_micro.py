@@ -17,10 +17,15 @@ try:
         print("Extracting features from ",d)
         filenames = get_files_names([d])
 #        print(filenames)
-        extracted = np.array([autoenc.extract_features(
-            autoenc.decompose(read_file(filename)))
-            for filename in filenames])
-        extracted.tofile("features-"d2)
+
+        out = []
+        for filename in filenames:
+            extracted = autoenc.extract_features(autoenc.decompose(read_file(filename)))
+            date = np.repeat(int(os.path.split(filename)[1]), extracted.shape[0]).reshape(extracted.shape[0], -1)
+            out.append(np.concatenate((date, extracted), axis=1))
+        out = np.concatenate(out)
+        print(out.shape)
+        out.tofile("features-"+d2)
 except Exception as e:
     print(e)
     raise e
