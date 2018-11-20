@@ -3,7 +3,7 @@ from autoencodercnn import CNN
 import sys
 overlap = 0
 
-directories = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "28_August")
+directories = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
 
 shape = (16,1472)
 
@@ -14,7 +14,7 @@ try:
     for d in directories:
         d2 = d.split("/")[-1]
         print(d2)
-        print("Extracting features from ",d)
+        print("Extracting features from",d)
         filenames = get_files_names([d])
 #        print(filenames)
 

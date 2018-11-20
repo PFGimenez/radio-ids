@@ -1,35 +1,42 @@
+from sklearn.externals import joblib
 from enum import Enum
+import datetime
 
 """
     Multiple models
 """
 
 class JourSemaine(Enum):
-    DIMANCHE = 0
-    LUNDI = 1
-    MARDI = 2
-    MECREDI = 3
-    JEUDI = 4
-    VENDREDI = 5
-    SAMEDI = 6
-
-print(process_unix_time(1538379386763))
+    LUNDI = 0
+    MARDI = 1
+    MECREDI = 2
+    JEUDI = 3
+    VENDREDI = 4
+    SAMEDI = 5
+    DIMANCHE = 6
 
 def process_unix_time(time):
     date = datetime.datetime.fromtimestamp(time/1000)
-    return (JourSemaine(date.day), ((date.hour * 24) + date.minute) * 60 + date.second)
+    return (JourSemaine(date.weekday()), ((date.hour * 24) + date.minute) * 60 + date.second)
 
-def periode_week_end(day, time):
-    return day == SAMEDI or day == DIMANCHE
+def period_weekend(time):
+    (day, time) = process_unix_time(time)
+    return day == JourSemaine.SAMEDI or day == JourSemaine.DIMANCHE
 
-def periode_semaine(day, time):
-    return not periode_week_end(day)
+def period_week(time):
+    (day, time) = process_unix_time(time)
+    return not period_weekend(day)
 
-def periode_journee(day, time):
+def period_day(time):
+    (day, time) = process_unix_time(time)
     return time > 7*3600 and time < 19*3600
 
-def periode_nuit(day, time):
+def period_night(time):
+    (day, time) = process_unix_time(time)
     return time < 9*3600 or time > 18*3600
+
+def extract_period(data, fun):
+    return data[list(map(fun, data[:,0]))]
 
 class MultiModels():
 

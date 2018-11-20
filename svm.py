@@ -4,13 +4,14 @@
 
 from anomalydetector import AnomalyDetector
 from sklearn.externals import joblib
+from sklearn.svm import OneClassSVM
 
 class OCSVM(AnomalyDetector):
     """
         One-class SVM
     """
     def __init__(self, kernel="rbf"):
-        self._model = svm.SVC(gamma='scale', kernel=kernel)
+        self._model = OneClassSVM(gamma='scale', kernel=kernel)
         # TODO : tester gamma="auto"
 
     def preprocess(self, data):
@@ -20,10 +21,10 @@ class OCSVM(AnomalyDetector):
         self._model.fit(data)
 
     def predict_list(self, data):
-        clf.predict(data[-1,:])
+        self._model.predict(data[-1,:])
 
     def predict(self, data, obs):
-        clf.predict(obs)
+        self._model.predict(obs)
 
     def save(self, filename):
         joblib.dump(self._model, 'ocsvm.joblib')
