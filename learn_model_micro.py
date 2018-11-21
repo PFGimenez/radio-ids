@@ -1,8 +1,10 @@
-from svm import OCSVM
 from multimodels import *
 from preprocess import *
+from config import Config
+from svm import OCSVM
 
-nb_features = 2944
+config = Config()
+nb_features = config.get_config_eval("nb_features")
 
 files = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
 files = ["features-"+d.split("/")[-1] for d in files]
