@@ -176,7 +176,6 @@ class CNN:
 #        print(out.shape)
         out = out.reshape(data.shape[0], -1)
         out = np.concatenate((self._delta_timestamp + initial_timestamp, out), axis=1)
-        print(out)
         return out
 
     def _add_samples(self, data):

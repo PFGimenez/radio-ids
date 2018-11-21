@@ -14,7 +14,6 @@ print(data.shape)
 periods = [period_night, period_day]
 models = MultiModels()
 
-
 for p in periods:
     detector = OCSVM()
     data = extract_period(data, p)
