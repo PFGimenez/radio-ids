@@ -1,16 +1,21 @@
 from preprocess import *
 from autoencodercnn import CNN
 import sys
-overlap = 0
+import config
 
 directories = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
 
-original_shape = (50, 1500)
-shape = (16,1472)
+config = Config()
 
-autoenc = CNN(original_shape, shape, 0.2, -150, 0)
+original_shape = config.get_config_eval('waterfall_dimensions')
+autoenc_shape = config.get_config_eval('autoenc_dimensions')
+window_overlap = config.get_config_eval('window_overlap')
+min_value = config.get_config_eval('min_value')
+max_value = config.get_config_eval('max_value')
+
+autoenc = CNN()
 try:
-    autoenc.load("test-3cf6357.h5")
+    autoenc.load()
     print(directories)
     for d in directories:
         d2 = d.split("/")[-1]

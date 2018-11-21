@@ -1,4 +1,5 @@
 from multimodels import *
+from preprocess import *
 import numpy as np
 
 class Evaluator:
@@ -48,30 +49,42 @@ class Evaluator:
         print("total pos",total_positives, "total negative",total_negatives)
         print("tp",true_positive, "tn",true_negative, "fp",false_positive,"fn", false_negative)
         print("precision",precision,"recall",recall)
+        if precision != 0 and recall != 0:
+            print("f-measure",2*(precision + recall) / (precision * recall))
 
+def extract_identifiers(all_attack):
+        return np.unique(all_attack[:,2])
 
 
 attack = np.loadtxt("/data/data/00.raw/log_attack/Last_Exp_attacks/logattack")
-print(attack.shape)
-att1 = Evaluator(2440, attack)
-print(att1._attack)
-example_pos = np.random.randint(500, 300000, (100, 1))
-example_neg = np.random.randint(500, 300000, (900, 1))
-#print(example)
-att1.evaluate(example_pos, example_neg)
-exit()
+
+identifiers = extract_identifiers(attack)
+evaluators = [Evaluator(i, attack) for i in identifiers]
 
 nb_features = 2944
 
 files = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
 files = ["features-"+d.split("/")[-1] for d in files]
-print(files)
 data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
-
 print(data.shape)
+models = MultiModels()
+models.load("micro-ocsvm.joblib")
 
-#models = MultiModels()
-#models.load("micro-ocsvm.joblib")
+memory_size = models.get_memory_size()
+memory = []
 
+example_pos = []
+example_neg = []
+for f in data:
+    if len(memory) == memory_size:
+        memory.pop(0)
+    memory.append(f[1:])
 
+    if models.predict(memory, f[0]):
+        example_pos.append(f[0])
+    else:
+        example_neg.append(f[0])
+
+for e in evaluators:
+    e.evaluate(example_pos, example_neg)
 

@@ -203,3 +203,4 @@ def test_prediction(data, model):
     for i in range(1,len(data)):
         predictions.append(model.predict_list(data[:i,:]))
     return predictions
+

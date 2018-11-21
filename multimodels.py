@@ -50,9 +50,8 @@ class MultiModels():
         """
             No anomaly if at least one model says there isn't
         """
-        (day, time) = process_unix_time(epoch)
         for (f,m) in self._models:
-            if f(day, time) and not m.predict_list(data):
+            if f(epoch) and not m.predict_list(data):
                 return False
         return True
 
@@ -61,3 +60,6 @@ class MultiModels():
 
     def load(self, filename):
         self._models = joblib.load(filename)
+
+    def get_memory_size(self):
+        return max([m.get_memory_size() for (_,m) in self._models])

@@ -18,6 +18,7 @@ from preprocess import *
 from keras.models import load_model
 from keras.utils import Sequence
 import math
+from config import Config
 
 class Batch_Generator(Sequence):
 
@@ -77,21 +78,27 @@ class CNN:
     def decompose(self, data):
         return decompose(data, self._shape, self._overlap)
 
-    def __init__(self, original_shape, shape, overlap, val_min, val_max):
-        self._min = val_min
-        self._max = val_max
-        self._shape = shape
-        self._overlap = overlap
-        self._input_shape = None
+    def __init__(self):
+        self._config = Config()
+
+        self._original_shape = self._config.get_config_eval('waterfall_dimensions')
+        self._shape = self._config.get_config_eval('autoenc_dimensions')
+        self._overlap = self._config.get_config_eval('window_overlap')
+        self._min = self._config.get_config_eval('min_value')
+        self._max = self._config.get_config_eval('max_value')
+
+#        self._shape = shape
+#        self._overlap = overlap
+#        self._input_shape = None
         if K.image_data_format() == 'channels_first':
-            self._input_shape = (1, shape[0], shape[1])
+            self._input_shape = (1, self._shape[0], self._shape[1])
         else:
-            self._input_shape = (shape[0], shape[1], 1)
-        input_tensor = Input(shape = self._input_shape)
-        self._size_x = shape[0]
-        self._size_y = shape[1]
-        step_x = round(self._size_x * (1 - overlap))
-        x = math.floor((original_shape[0] - self._size_x) / step_x) + 1
+            self._input_shape = (self._shape[0], self._shape[1], 1)
+        self._input_tensor = Input(shape = self._input_shape)
+        self._size_x = self._shape[0]
+        self._size_y = self._shape[1]
+        step_x = round(self._size_x * (1 - self._overlap))
+        x = math.floor((self._original_shape[0] - self._size_x) / step_x) + 1
         self._delta_timestamp = np.array(range(x)) * step_x * 4000 / 50 + self._size_x / 2 * 4000 / 50
         self._delta_timestamp = self._delta_timestamp.reshape(self._delta_timestamp.shape[0], 1)
 
@@ -101,7 +108,7 @@ class CNN:
         # L'extraction de features se fait avec Conv2D -> augmentation des dimensions
         # MaxPooling permet de réduire les dimensions
         # Toujours utiliser une activation "relu"
-        m = Conv2D(32, (3, 5), activation='relu', padding='same')(input_tensor)
+        m = Conv2D(32, (3, 5), activation='relu', padding='same')(self._input_tensor)
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Conv2D(16, (3, 5), activation='relu', padding='same', input_shape=self._input_shape)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
@@ -112,7 +119,7 @@ class CNN:
         m = Conv2D(8, (3, 5), activation='relu', padding='same')(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
 
-        self._coder = Model(input_tensor, m)
+        self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error',
                                   optimizer='adam')
 
@@ -133,7 +140,7 @@ class CNN:
         decoded = Conv2D(1, (3, 5), activation='sigmoid', padding='same')(m)
 
         # Compilation du modèle + paramètres d'évaluation et d'apprentissage
-        self._autoencoder = Model(input_tensor, decoded)
+        self._autoencoder = Model(self._input_tensor, decoded)
 
         self._autoencoder.compile(loss='mean_squared_error',
                                   optimizer='adam')
@@ -154,11 +161,14 @@ class CNN:
                                         max_queue_size=32)
         #self._autoencoder.fit(train_X, train_ground, batch_size=128,epochs=1000,verbose=1,validation_data=(valid_X, valid_ground))
 
-    def save(self, filename):
+    def save(self):
+        filename = self._config.get_config("autoenc_filename")
         self._coder.save("coder"+filename)
         self._autoencoder.save("autoenc"+filename)
 
-    def load(self, filename):
+    def load(self):
+        filename = self._config.get_config("autoenc_filename")
+        print(filename)
         self._coder = load_model("coder"+filename)
         self._autoencoder = load_model("autoenc"+filename)
 

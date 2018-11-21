@@ -34,6 +34,10 @@ class AnomalyDetector(ABC):
         return self.predict(data[0:l-1,:], data[l-1,:].reshape(-1))
 
     @abstractmethod
+    def get_memory_size(self):
+        pass
+
+    @abstractmethod
     def save(self, filename):
         pass
 

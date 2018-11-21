@@ -26,6 +26,9 @@ class OCSVM(AnomalyDetector):
     def predict(self, data, obs):
         self._model.predict(obs)
 
+    def get_memory_size(self):
+        return 1
+
     def save(self, filename):
         joblib.dump(self._model, 'ocsvm.joblib')
 
