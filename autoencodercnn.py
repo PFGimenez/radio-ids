@@ -1,6 +1,10 @@
 from sklearn.model_selection import train_test_split
 from anomalydetector import AnomalyDetector
 
+# reduce TF verbosity
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 import tensorflow as tf
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -73,7 +77,7 @@ class CNN:
     def decompose(self, data):
         return decompose(data, self._shape, self._overlap)
 
-    def __init__(self, shape, overlap, val_min, val_max):
+    def __init__(self, original_shape, shape, overlap, val_min, val_max):
         self._min = val_min
         self._max = val_max
         self._shape = shape
@@ -86,6 +90,11 @@ class CNN:
         input_tensor = Input(shape = self._input_shape)
         self._size_x = shape[0]
         self._size_y = shape[1]
+        step_x = round(self._size_x * (1 - overlap))
+        x = math.floor((original_shape[0] - self._size_x) / step_x) + 1
+        self._delta_timestamp = np.array(range(x)) * step_x * 4000 / 50 + self._size_x / 2 * 4000 / 50
+        self._delta_timestamp = self._delta_timestamp.reshape(self._delta_timestamp.shape[0], 1)
+
 
     def new_model(self):
         # Nouveau réseau de neurones
@@ -102,7 +111,10 @@ class CNN:
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Conv2D(8, (3, 5), activation='relu', padding='same')(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
+
         self._coder = Model(input_tensor, m)
+        self._coder.compile(loss='mean_squared_error',
+                                  optimizer='adam')
 
         # Permet d'éviter l'overfitting
         m = Dropout(0.5)(m)
@@ -155,14 +167,17 @@ class CNN:
         data = self._add_samples(data)
         return denormalize(self._autoencoder.predict(normalize(data, self._min, self._max)).reshape(-1, self._input_shape[0], self._input_shape[1]), self._min, self._max)
 
-    def extract_features(self, data):
+    def extract_features(self, data, initial_timestamp):
 #        print(data.shape)
         data = self._crop_samples(data)
 #        print(data.shape)
         data = self._add_samples(data)
         out = self._coder.predict(data)
 #        print(out.shape)
-        return out.reshape(data.shape[0],-1)
+        out = out.reshape(data.shape[0], -1)
+        out = np.concatenate((self._delta_timestamp + initial_timestamp, out), axis=1)
+        print(out)
+        return out
 
     def _add_samples(self, data):
 #        print(data.shape)

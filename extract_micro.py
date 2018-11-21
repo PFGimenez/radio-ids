@@ -5,9 +5,10 @@ overlap = 0
 
 directories = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
 
+original_shape = (50, 1500)
 shape = (16,1472)
 
-autoenc = CNN(shape, 0.8, -150, 0)
+autoenc = CNN(original_shape, shape, 0.8, -150, 0)
 try:
     autoenc.load("test-3cf6357.h5")
     print(directories)
@@ -20,9 +21,10 @@ try:
 
         out = []
         for filename in filenames:
-            extracted = autoenc.extract_features(autoenc.decompose(read_file(filename)))
-            date = np.repeat(int(os.path.split(filename)[1]), extracted.shape[0]).reshape(extracted.shape[0], -1)
-            out.append(np.concatenate((date, extracted), axis=1))
+            extracted = autoenc.extract_features(autoenc.decompose(read_file(filename)), int(os.path.split(filename)[1]))
+            print(extracted)
+            exit()
+            out.append(extracted)
         out = np.concatenate(out)
         print(out.shape)
         out.tofile("features-"+d2)

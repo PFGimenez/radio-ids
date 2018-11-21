@@ -33,7 +33,7 @@ dataLearn = data[0:20,0:20,0:10].reshape(-1, 10)
 print(dataLearn.shape)
 detector.learn(dataLearn)
 print(detector.predict(dataLearn, data[21,0:20,0:10].reshape(-1,10)[1]))
-autoenc = CNN((16,1472), 0.8, -150, 0)
+autoenc = CNN((50, 1500), (16,1472), 0.8, -150, 0)
 try:
     print("Loading autoencoder…")
     autoenc.load("test.h5")
