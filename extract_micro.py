@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from preprocess import *
 from autoencodercnn import CNN
 import sys

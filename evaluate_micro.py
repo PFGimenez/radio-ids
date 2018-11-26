@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from multimodels import *
 from preprocess import *
 import numpy as np

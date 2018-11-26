@@ -144,7 +144,6 @@ def get_files_names(directory_list, pattern=""):
         Renvoie la liste des fichiers, triée
     """
     names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if pattern in s]
-    print(names)
     return names
 
 def read_files(files_list):
