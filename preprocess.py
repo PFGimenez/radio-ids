@@ -140,18 +140,22 @@ def read_file(filename):
     return data.reshape(-1, 1500)
 
 def get_files_names(directory_list, pattern=""):
-    names = [os.path.join(d, s) for d in directory_list for s in os.listdir(d) if pattern in s]
+    """
+        Renvoie la liste des fichiers, triée
+    """
+    names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if pattern in s]
+    print(names)
     return names
 
 def read_files(files_list):
     data = []
-    i = 0
+    i = 1
     for fname in files_list:
         if i % 100 == 0:
             print(i,"/",len(files_list))
         i += 1
         data.append(np.fromfile(fname, dtype=np.dtype('float64')).reshape(-1,1500))
-    print(str(len(data)) + " files read")
+#    print(str(len(data)) + " files read")
 
 #    print("Files read" + str(data.shape))
 #data = data.reshape(50,-1)

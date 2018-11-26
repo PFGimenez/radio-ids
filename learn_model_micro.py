@@ -2,16 +2,20 @@ from multimodels import *
 from preprocess import *
 from config import Config
 from svm import OCSVM
+import os
 
 config = Config()
 nb_features = config.get_config_eval("nb_features")
 
-files = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
-files = ["features-"+d.split("/")[-1] for d in files]
-print(files)
-data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
+with open("train_folders") as f:
+    folders = f.readlines()
+folders = [x.strip() for x in folders]
 
-print(data.shape)
+prefix = config.get_config("section")
+
+files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in folders]
+print("Learning from",files)
+data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
 
 periods = [period_night, period_day]
 models = MultiModels()
@@ -26,4 +30,4 @@ for p in periods:
     else:
         print("No data to learn period",p.__name__)
 
-models.save("micro-ocsvm.joblib")
+models.save(os.path.join(prefix, "micro-ocsvm.joblib"))

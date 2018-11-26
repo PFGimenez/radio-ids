@@ -20,8 +20,8 @@ class OCSVM(AnomalyDetector):
     def learn(self, data):
         self._model.fit(data)
 
-    def predict_list(self, data):
-        self._model.predict(data[-1,:])
+#    def predict_list(self, data):
+#        self._model.predict(data[-1,:])
 
     def predict(self, data, obs):
         self._model.predict(obs)
@@ -30,7 +30,7 @@ class OCSVM(AnomalyDetector):
         return 1
 
     def save(self, filename):
-        joblib.dump(self._model, 'ocsvm.joblib')
+        joblib.dump(self._model, filename)
 
     def load(self, filename):
-        self._model = joblib.load('ocsvm.joblib')
+        self._model = joblib.load(filename)

@@ -75,17 +75,21 @@ class CNN:
         Autoencoder convoluted neural network
     """
 
-    def decompose(self, data):
-        return decompose(data, self._shape, self._overlap)
+    def decompose(self, data, overlap=None):
+        if overlap == None:
+            overlap = self._overlap
+#        print("ae.dec",data.shape)
+        return decompose(data, self._shape, overlap)
 
     def __init__(self):
         self._config = Config()
 
         self._original_shape = self._config.get_config_eval('waterfall_dimensions')
         self._shape = self._config.get_config_eval('autoenc_dimensions')
-        self._overlap = self._config.get_config_eval('window_overlap')
+        self._overlap = self._config.get_config_eval('window_overlap_training')
         self._min = self._config.get_config_eval('min_value')
         self._max = self._config.get_config_eval('max_value')
+        waterfall_duration = self._config.get_config_eval('waterfall_duration')
 
 #        self._shape = shape
 #        self._overlap = overlap
@@ -99,7 +103,8 @@ class CNN:
         self._size_y = self._shape[1]
         step_x = round(self._size_x * (1 - self._overlap))
         x = math.floor((self._original_shape[0] - self._size_x) / step_x) + 1
-        self._delta_timestamp = np.array(range(x)) * step_x * 4000 / 50 + self._size_x / 2 * 4000 / 50
+        self._delta_timestamp = np.array(range(2*x)) * step_x * waterfall_duration / 50 + self._size_x / 2 * waterfall_duration / 50
+        self._delta_timestamp = self._delta_timestamp[self._delta_timestamp < waterfall_duration]
         self._delta_timestamp = self._delta_timestamp.reshape(self._delta_timestamp.shape[0], 1)
 
 
@@ -162,15 +167,16 @@ class CNN:
         #self._autoencoder.fit(train_X, train_ground, batch_size=128,epochs=1000,verbose=1,validation_data=(valid_X, valid_ground))
 
     def save(self):
-        filename = self._config.get_config("autoenc_filename")
-        self._coder.save("coder"+filename)
-        self._autoencoder.save("autoenc"+filename)
+        filename_coder = os.path.join(self._config.get_config("section"), "coder"+self._config.get_config("autoenc_filename"))
+        self._coder.save(filename_coder)
+        filename_autoencoder = os.path.join(self._config.get_config("section"), "autoenc"+self._config.get_config("autoenc_filename"))
+        self._autoencoder.save(filename_autoencoder)
 
     def load(self):
-        filename = self._config.get_config("autoenc_filename")
-        print(filename)
-        self._coder = load_model("coder"+filename)
-        self._autoencoder = load_model("autoenc"+filename)
+        filename_coder = os.path.join(self._config.get_config("section"), "coder"+self._config.get_config("autoenc_filename"))
+        self._coder = load_model(filename_coder)
+        filename_autoencoder = os.path.join(self._config.get_config("section"), "autoenc"+self._config.get_config("autoenc_filename"))
+        self._autoencoder = load_model(filename_autoencoder)
 
     def reconstruct(self, data):
         data = self._crop_samples(data)
@@ -178,18 +184,15 @@ class CNN:
         return denormalize(self._autoencoder.predict(normalize(data, self._min, self._max)).reshape(-1, self._input_shape[0], self._input_shape[1]), self._min, self._max)
 
     def extract_features(self, data, initial_timestamp):
-#        print(data.shape)
         data = self._crop_samples(data)
-#        print(data.shape)
         data = self._add_samples(data)
         out = self._coder.predict(data)
-#        print(out.shape)
         out = out.reshape(data.shape[0], -1)
+        out = out[0:len(self._delta_timestamp),:]
         out = np.concatenate((self._delta_timestamp + initial_timestamp, out), axis=1)
         return out
 
     def _add_samples(self, data):
-#        print(data.shape)
         return data.reshape(-1, self._input_shape[0], self._input_shape[1], self._input_shape[2])
 
     def _crop_samples(self, data):

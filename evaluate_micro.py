@@ -1,6 +1,8 @@
 from multimodels import *
 from preprocess import *
 import numpy as np
+from config import Config
+import os
 
 class Evaluator:
 
@@ -55,35 +57,52 @@ class Evaluator:
 def extract_identifiers(all_attack):
         return np.unique(all_attack[:,2])
 
-
-attack = np.loadtxt("/data/data/00.raw/log_attack/Last_Exp_attacks/logattack")
+config = Config()
+attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"))
 
 identifiers = extract_identifiers(attack)
 evaluators = [Evaluator(i, attack) for i in identifiers]
 
-nb_features = 2944
+nb_features = config.get_config_eval("nb_features")
+prefix = config.get_config("section")
 
-files = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
-files = ["features-"+d.split("/")[-1] for d in files]
+with open("test_folders") as f:
+    folders = f.readlines()
+directories = [x.strip() for x in folders]
+
+files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
+print(files)
 data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
 print(data.shape)
 models = MultiModels()
-models.load("micro-ocsvm.joblib")
+models.load(os.path.join(prefix, "micro-ocsvm.joblib"))
 
 memory_size = models.get_memory_size()
 memory = []
 
-example_pos = []
-example_neg = []
-for f in data:
-    if len(memory) == memory_size:
-        memory.pop(0)
-    memory.append(f[1:])
+path_examples = os.path.join(prefix, "results-ocsvm.joblib")
+try:
+    (example_pos, example_neg) = joblib.load(path_examples)
+except:
+    example_pos = []
+    example_neg = []
+    i = 0
 
-    if models.predict(memory, f[0]):
-        example_pos.append(f[0])
-    else:
-        example_neg.append(f[0])
+    for f in data:
+        if i % 100 == 0:
+            print(i,"/",len(data))
+        i += 1
+
+        if len(memory) == memory_size:
+            memory.pop(0)
+        memory.append(f[1:])
+
+        if models.predict(np.array(memory), f[0]):
+            example_pos.append(f[0])
+        else:
+            example_neg.append(f[0])
+
+    joblib.dump((example_pos, example_neg), path_examples)
 
 for e in evaluators:
     e.evaluate(example_pos, example_neg)
