@@ -32,4 +32,4 @@ for p in periods:
     else:
         print("No data to learn period",p.__name__)
 
-models.save(os.path.join(prefix, "micro-ocsvm.joblib"))
+models.save(os.path.join(prefix, "micro-"+detector.__class__.__name__+".joblib"))

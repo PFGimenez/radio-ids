@@ -13,6 +13,7 @@ from config import Config
 import random
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
+from extractor import MultiExtractors
 
 np.random.seed()
 random.seed()
@@ -25,26 +26,37 @@ folders = [x.strip() for x in folders]
 
 config = Config()
 
-autoenc_shape = config.get_config_eval('autoenc_dimensions')
 min_value = config.get_config_eval('min_value')
 
-autoenc = CNN()
-try:
-    print("Loading autoencoder…")
-    #autoenc.load("test.h5")
-    autoenc.load()
-except Exception as e:
-    print("Loading failed:",e)
-    print("Learning autoencoder…")
-    print("Learning from files in",folders)
-    filenames = get_files_names(folders)
-    autoenc.new_model()
-    autoenc.learn_autoencoder(filenames, 32)
-    print("Saving autoencoder…")
-    autoenc.save()
+bands = config.get_config_eval('waterfall_frequency_bands')
+extractors = MultiExtractors()
+dims = config.get_config_eval('autoenc_dimensions')
+
+new = False
+
+for j in range(len(bands)):
+    (i,s) = bands[j]
+    try:
+        m = CNN(i, s, dims[j])
+        extractors.load(i, s, m)
+
+    except Exception as e:
+        print("Loading failed:",e)
+        print("Learning extractor from files in",folders)
+        filenames = get_files_names(folders)
+        m.learn_extractor(filenames, i, s)
+        extractors.add_model(m, i, s)
+        new = True
+
+if new:
+    print("Saving extractors…")
+    extractors.save()
+
+exit()
 
 fig = plt.figure()
 
+autoenc_shape = config.get_config_eval('autoenc_dimensions')
 data = crop_all(read_directory("data-test2"), autoenc_shape[0], autoenc_shape[1])
 data_reconstructed = autoenc.reconstruct(data)
 print(data[0,:,:].shape)

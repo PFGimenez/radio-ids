@@ -4,6 +4,10 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import math
 from keras import backend as K
+from config import Config
+
+_config = Config()
+_waterfall_dim = _config.get_config_eval('waterfall_dimensions')
 
 def normalize(data, val_min, val_max):
     return (data - val_min) / (val_max - val_min)
@@ -136,8 +140,7 @@ def read_file(filename):
     """
 #    print("Reading data file " + filename)
     data = np.fromfile(filename, dtype=np.dtype('float64'))
-#    print(data.reshape(-1,1500)[:,1])
-    return data.reshape(-1, 1500)
+    return data.reshape(_waterfall_dim)
 
 def get_files_names(directory_list, pattern=""):
     """
@@ -153,7 +156,7 @@ def read_files(files_list):
         if i % 100 == 0:
             print(i,"/",len(files_list))
         i += 1
-        data.append(np.fromfile(fname, dtype=np.dtype('float64')).reshape(-1,1500))
+        data.append(np.fromfile(fname, dtype=np.dtype('float64')).reshape(_waterfall_dim))
 #    print(str(len(data)) + " files read")
 
 #    print("Files read" + str(data.shape))
