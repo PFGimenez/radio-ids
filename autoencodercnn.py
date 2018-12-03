@@ -106,11 +106,11 @@ class CNN(FeatureExtractor):
         self._input_tensor = Input(shape = self._input_shape)
         self._size_x = self._shape[0]
         self._size_y = self._shape[1]
-        step_x = round(self._size_x * (1 - self._overlap))
-        x = math.floor((self._original_shape[0] - self._size_x) / step_x) + 1
-        self._delta_timestamp = np.array(range(2*x)) * step_x * waterfall_duration / self._original_shape[0] + self._size_x / 2 * waterfall_duration / self._original_shape[0]
-        self._delta_timestamp = self._delta_timestamp[self._delta_timestamp < waterfall_duration]
-        self._delta_timestamp = self._delta_timestamp.reshape(self._delta_timestamp.shape[0], 1)
+#        step_x = round(self._size_x * (1 - self._overlap))
+#        x = math.floor((self._original_shape[0] - self._size_x) / step_x) + 1
+#        self._delta_timestamp = np.array(range(2*x)) * step_x * waterfall_duration / self._original_shape[0] + self._size_x / 2 * waterfall_duration / self._original_shape[0]
+#        self._delta_timestamp = self._delta_timestamp[self._delta_timestamp < waterfall_duration]
+#        self._delta_timestamp = self._delta_timestamp.reshape(self._delta_timestamp.shape[0], 1)
 
 
     def _new_model(self):
