@@ -94,7 +94,6 @@ class CNN(FeatureExtractor):
         self._overlap = self._config.get_config_eval('window_overlap_training')
         self._min = self._config.get_config_eval('min_value')
         self._max = self._config.get_config_eval('max_value')
-        waterfall_duration = self._config.get_config_eval('waterfall_duration')
 
 #        self._shape = shape
 #        self._overlap = overlap
@@ -192,13 +191,13 @@ class CNN(FeatureExtractor):
         data = self._add_samples(data)
         return denormalize(self._autoencoder.predict(normalize(data, self._min, self._max)).reshape(-1, self._input_shape[0], self._input_shape[1]), self._min, self._max)
 
-    def extract_features(self, data, initial_timestamp):
+    def extract_features(self, data):
         data = self._crop_samples(data)
         data = self._add_samples(data)
-        out = self._coder.predict(data)
-        out = out.reshape(data.shape[0], -1)
-        out = out[0:len(self._delta_timestamp),:]
-        out = np.concatenate((self._delta_timestamp + initial_timestamp, out), axis=1)
+        print("avant predict",data.shape)
+        out = np.array(self._coder.predict(data))
+        out = out.reshape(out.shape[0], -1)
+        print("après predict",out.shape)
         return out
 
     def _add_samples(self, data):

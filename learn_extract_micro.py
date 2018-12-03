@@ -51,6 +51,8 @@ for j in range(len(bands)):
 if new:
     print("Saving extractors…")
     extractors.save()
+else:
+    print("Extractors already learnt !")
 
 exit()
 
