@@ -12,7 +12,7 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 
 from keras.models import Model
-from keras.layers import Input, Dense, Dropout, Activation, Flatten
+from keras.layers import Input, Reshape, Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
 from keras import backend as K
 from preprocess import *
@@ -84,11 +84,11 @@ class CNN(FeatureExtractor):
 #        print("ae.dec",data.shape)
         return decompose(data, self._shape, overlap)
 
-    def __init__(self, i, s, shape):
+    def __init__(self, i, s, shape, nb_epochs):
         self._config = Config()
-
+        self._nb_epochs = nb_epochs
         self._batch_size = self._config.get_config_eval('batch_size')
-        self._nb_epochs = self._config.get_config_eval('nb_epochs')
+#        self._nb_epochs = self._config.get_config_eval('nb_epochs')
         self._original_shape = (self._config.get_config_eval('waterfall_dimensions')[0], s-i)
         self._shape = shape
         self._overlap = self._config.get_config_eval('window_overlap_training')
@@ -121,36 +121,33 @@ class CNN(FeatureExtractor):
         # L'extraction de features se fait avec Conv2D -> augmentation des dimensions
         # MaxPooling permet de réduire les dimensions
         # Toujours utiliser une activation "relu"
-        m = Conv2D(32, (3, 5), activation='relu', padding='same')(self._input_tensor)
+        m = Conv2D(32, (3, 3), activation='relu', padding='same')(self._input_tensor)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(16, (3, 5), activation='relu', padding='same', input_shape=self._input_shape)(m)
+        m = Conv2D(16, (3, 3), activation='relu', padding='same', input_shape=self._input_shape)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(8, (3, 5), activation='relu', padding='same')(m)
-#        m = MaxPooling2D(pool_size=(2,2))(m)
-#        m = Conv2D(4, (5, 3), activation='relu', padding='same')(m)
+        m = Conv2D(8, (3, 3), activation='relu', padding='same')(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(8, (3, 5), activation='relu', padding='same')(m)
-        m = MaxPooling2D(pool_size=(2,2))(m)
-
+        m = Conv2D(4, (3, 3), activation='relu', padding='same')(m)
+        m = Flatten()(m)
+        m = Dense(496, activation='relu')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error',
                                   optimizer='adam')
 
+
         # Permet d'éviter l'overfitting
         m = Dropout(0.5)(m)
+        m = Reshape((2,62,4))(m)
 
         # Maintenant on reconstitue l'image initiale
+        m = Conv2D(8, (3, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
-        m = Conv2D(8, (3, 5), activation='relu', padding='same')(m)
-#        m = UpSampling2D((2,5))(m)
-#        m = Conv2D(8, (5, 3), activation='relu', padding='same')(m)
+        m = Conv2D(16, (3, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
-        m = Conv2D(16, (3, 5), activation='relu', padding='same')(m)
-        m = UpSampling2D((2,2))(m)
-        m = Conv2D(32, (3, 5), activation='relu', padding='same')(m)
+        m = Conv2D(32, (3, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
 
-        decoded = Conv2D(1, (3, 5), activation='sigmoid', padding='same')(m)
+        decoded = Conv2D(1, (3, 3), activation='sigmoid', padding='same')(m)
 
         # Compilation du modèle + paramètres d'évaluation et d'apprentissage
         self._autoencoder = Model(self._input_tensor, decoded)

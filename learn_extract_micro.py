@@ -31,13 +31,14 @@ min_value = config.get_config_eval('min_value')
 bands = config.get_config_eval('waterfall_frequency_bands')
 extractors = MultiExtractors()
 dims = config.get_config_eval('autoenc_dimensions')
+epochs = config.get_config_eval('nb_epochs')
 
 new = False
 
 for j in range(len(bands)):
     (i,s) = bands[j]
     try:
-        m = CNN(i, s, dims[j])
+        m = CNN(i, s, dims[j], epochs[j])
         extractors.load(i, s, m)
 
     except Exception as e:
