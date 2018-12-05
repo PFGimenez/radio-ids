@@ -122,13 +122,19 @@ class CNN(FeatureExtractor):
         # MaxPooling permet de réduire les dimensions
         # Toujours utiliser une activation "relu"
         m = Conv2D(32, (3, 3), activation='relu', padding='same')(self._input_tensor)
+        m = Dropout(0.2)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Conv2D(16, (3, 3), activation='relu', padding='same', input_shape=self._input_shape)(m)
+        m = Dropout(0.2)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Conv2D(8, (3, 3), activation='relu', padding='same')(m)
+        m = Dropout(0.2)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Conv2D(4, (3, 3), activation='relu', padding='same')(m)
+        m = Dropout(0.2)(m)
         m = Flatten()(m)
+        m = Dense(496, activation='relu')(m)
+        m = Dropout(0.5)(m)
         m = Dense(496, activation='relu')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error',
@@ -136,7 +142,7 @@ class CNN(FeatureExtractor):
 
 
         # Permet d'éviter l'overfitting
-        m = Dropout(0.5)(m)
+        m = Dropout(0.2)(m)
         m = Reshape((2,62,4))(m)
 
         # Maintenant on reconstitue l'image initiale
