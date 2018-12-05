@@ -54,13 +54,12 @@ if new:
 else:
     print("Extractors already learnt !")
 
-exit()
-
 fig = plt.figure()
 
-autoenc_shape = config.get_config_eval('autoenc_dimensions')
-data = crop_all(read_directory("data-test2"), autoenc_shape[0], autoenc_shape[1])
-data_reconstructed = autoenc.reconstruct(data)
-print(data[0,:,:].shape)
-plt.imshow(np.concatenate((data[0,:,:], min_value*np.ones((int(autoenc_shape[0]/3), autoenc_shape[1])), data_reconstructed[0,:,:])), cmap='hot', interpolation='nearest', aspect='auto')
+data = read_directory("data-test2")[0:5,:,:]
+data = np.concatenate(data)
+data_reconstructed = extractors.reconstruct(data)[0,:,:]
+data = data[:16,:1488]
+print(data_reconstructed.shape)
+plt.imshow(np.concatenate((data, min_value*np.ones((int(data_reconstructed.shape[0]/3), data_reconstructed.shape[1])), data_reconstructed)), cmap='hot', interpolation='nearest', aspect='auto')
 plt.show()

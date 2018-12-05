@@ -187,17 +187,14 @@ class CNN(FeatureExtractor):
         self._autoencoder = load_model(filename_autoencoder)
 
     def reconstruct(self, data):
-        data = self._crop_samples(data)
-        data = self._add_samples(data)
+        data = self.decompose(data)
         return denormalize(self._autoencoder.predict(normalize(data, self._min, self._max)).reshape(-1, self._input_shape[0], self._input_shape[1]), self._min, self._max)
 
     def extract_features(self, data):
         data = self._crop_samples(data)
         data = self._add_samples(data)
-        print("avant predict",data.shape)
         out = np.array(self._coder.predict(data))
         out = out.reshape(out.shape[0], -1)
-        print("après predict",out.shape)
         return out
 
     def _add_samples(self, data):

@@ -19,9 +19,8 @@ def extract_micro(extractors, directories, window_overlap, prefix, nb_features):
                     np.concatenate(read_files([filenames[i], filenames[i+1]])),
                     int(os.path.split(filenames[i])[1]),
                     window_overlap))
+
         out = np.array(out).reshape(-1, nb_features+1)
-        print(out.shape)
-        exit()
         # take only the last part of the directory
         d2 = d.split("/")[-1]
         out.tofile(os.path.join(prefix,"features-"+d2))

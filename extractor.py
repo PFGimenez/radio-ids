@@ -25,22 +25,24 @@ class MultiExtractors:
         size_x = self._config.get_config_eval('big_sweep_temporal_dimension')
         step_x = round(size_x * (1 - overlap))
         x = math.floor((original_shape[0] - size_x) / step_x) + 1
-        delta_timestamp = np.array(range(2*x)) * step_x * waterfall_duration / original_shape[0] + size_x / 2 * waterfall_duration / original_shape[0] + initial_timestamp
+        delta_timestamp = np.array(range(2*x)) * step_x * waterfall_duration / original_shape[0] + size_x / 2 * waterfall_duration / original_shape[0]
         delta_timestamp = delta_timestamp[delta_timestamp < waterfall_duration]
         delta_timestamp = delta_timestamp.reshape(delta_timestamp.shape[0], 1)
+        delta_timestamp += initial_timestamp
 
-        print("avant",data.shape)
         data = decompose(data, (size_x, original_shape[1]), overlap)
-        print("après",data.shape)
         # data est trop grand (2 waterfall), donc il faut en garder le bon nombre
-        out = [m[2].extract_features(data[m[0]:m[1],:])[0:len(delta_timestamp),:] for m in self._models]
+        out = np.array([m[2].extract_features(data[0:len(delta_timestamp),:,m[0]:m[1],:]) for m in self._models])
+        out = out.reshape(len(delta_timestamp),-1)
         out = np.concatenate((delta_timestamp, out), axis=1)
         return out
 
     def reconstruct(self, data):
-        out = [m[2].reconstruct(data[m[0]:m[1],:]) for m in self._models]
-        return np.concatenate(out, axis=1)
-
+        out = [m[2].reconstruct(data[:,m[0]:m[1]]) for m in self._models]
+        print("after reconstruct",np.array(out).shape)
+        out = np.dstack(out)
+        print(out.shape)
+        return out
 
 class FeatureExtractor(ABC):
 
