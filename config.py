@@ -13,6 +13,12 @@ class Config():
             Config._section = Config._config["DEFAULT"]["section"]
             print("Loading config", Config._section)
 
+    def set_config(self, key, val):
+        """
+            Modification locale, sans modification du fichier de config
+        """
+        Config._config[key]=str(val)
+
     def get_config(self, key):
         return Config._config[Config._section][key]
 

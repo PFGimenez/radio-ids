@@ -5,17 +5,11 @@ from preprocess import *
 import random
 from hmm import HMM
 
-np.random.seed()
-random.seed()
+config = Config()
+nb_features_macro = config.get_config_eval("nb_features_macro")
+filename = os.path.join(config.get_config("section"), config.get_config("events_filename"))
+data = np.fromfile(filename).reshape(-1,nb_features_macro)
 
-try:
-    data = np.fromfile("events_01_10_1mn").reshape(-1,15)
-except:
-    files = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
-    data = read_directory(files[0])
-#    data = read_directory("data-test")
-    data = get_event_list(data, 750, 100) # 1mn
-    data.tofile("events_01_10_1mn")
 detector = HMM(4, 0.1)
 print(data.shape)
 train_data = data[:1000,]

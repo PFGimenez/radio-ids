@@ -135,12 +135,14 @@ class CNN(FeatureExtractor):
 #        m = MaxPooling2D(pool_size=(2,2))(m)
         m = Flatten()(m)
         m = Dense(496, activation='relu')(m)
-#        m = Dropout(0.5)(m)
-#        m = Dense(496, activation='relu')(m)
+        m = Dropout(0.5)(m)
+        m = Dense(300, activation='relu')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error',
                                   optimizer='adam')
 
+        m = Dropout(0.5)(m)
+        m = Dense(496, activation='relu')(m)
 
         # Permet d'éviter l'overfitting
         m = Dropout(0.2)(m)
@@ -186,10 +188,12 @@ class CNN(FeatureExtractor):
         self._autoencoder.save(filename_autoencoder)
 
     def load(self, prefix):
+        print("Loading autoencoder from",prefix)
         filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename"))
         self._coder = load_model(filename_coder)
         filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename"))
         self._autoencoder = load_model(filename_autoencoder)
+        print("Autoencoder loaded!")
 
     def reconstruct(self, data):
         data = self.decompose(data)

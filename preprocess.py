@@ -192,18 +192,6 @@ def split_data(data):
     print("Test set: " + str(test_data.shape))
     return (train_data, test_data)
 
-def get_event_list(data, temporal_step, spectral_step):
-    data = np.concatenate(data)
-    data = decompose_raw(data, (temporal_step, spectral_step))
-    data = data.reshape((data.shape[0], data.shape[1], -1))
-#    print(data.shape)
-#    data = np.concatenate((np.amax(data, axis=2),
-#                          np.mean(data, axis=2)
-#                          ), axis=1)
-    data = np.amax(data, axis=2)
-#    print(data.shape)
-    return data
-
 def test_prediction(data, model):
     predictions = []
     for i in range(1,len(data)):
