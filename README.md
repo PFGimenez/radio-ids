@@ -18,7 +18,11 @@ _evaluate_micro_ evaluates the model on test data and outputs the results
 
 # Pipeline for macro model
 
-_extract_macro_ extract features from data (features are hand-chosen)
+_extract_macro_stage_1_ extract features from data (features are hand-chosen)
+
+_learn_extract_macro_stage_2_ learns the PCA from data
+
+_extract_macro_stage_2_ extract the features using the PCA
 
 _learn_model_macro_ learns a predictive model from the features
 
