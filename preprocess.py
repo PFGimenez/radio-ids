@@ -163,15 +163,18 @@ def read_files(files_list):
 #data = data.reshape(50,-1)
     return np.array(data)
 
-def read_directories(directories):
+def read_directory_with_timestamps(directory):
     """
-        Read all files from several directories
+        Read all files from a directory into a dictonary with timestamp
     """
-    # TODO not tested
-    out = []
-    for d in directories:
-        out.append(read_directory(d))
-    return np.concatenate(out)
+    out_data = []
+    out_time = []
+    s = sorted(os.listdir(directory))
+    for fname in s:
+        fname = os.path.join(directory, fname)
+        out_data.append(read_file(fname))
+        out_time.append(int(os.path.split(fname)[1]))
+    return (out_data, out_time)
 
 def read_directory(directory):
     """

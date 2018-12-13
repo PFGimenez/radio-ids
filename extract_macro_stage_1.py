@@ -5,43 +5,72 @@ from sklearn.decomposition import PCA
 from preprocess import *
 from hmm import HMM
 import os.path
-from sklearn.externals import joblib
+from sklearn.model_selection import train_test_split
 
-def get_event_list(data, temporal_step, spectral_step):
-#    print(temporal_step, spectral_step)
-#    print(data.shape)
+def get_event_list(inp, temporal_step, spectral_step, overlap):
+    data = inp[0]
+    timestamps = inp[1]
     data = np.concatenate(data)
-#    print(data.shape)
-    data = decompose_raw(data, (temporal_step, spectral_step))
-#    print(data.shape)
-#    data = data.reshape((data.shape[1], data.shape[2], data.shape[3]))
-#    print(data.shape)
-#    print(data.shape)
-#    data = np.concatenate((np.amax(data, axis=2),
-#                          np.mean(data, axis=2)
-#                          ), axis=1)
+
+    step_x = round(temporal_step * (1 - overlap))
+    x = math.floor((data.shape[0] - temporal_step) / step_x) + 1
+    data = decompose_raw(data, (temporal_step, spectral_step), overlap)
+
+    out_time = []
+    for i in range(x):
+        out_time.append(timestamps[int((i*step_x) / waterfall_length)])
+
+    # Utiliser le timestamp des fichiers est plus fiable que calculer le temps théorique d'un waterfall car, dans les faits, il n'y a pas exactement 4s entre deux waterfalls mais un peu moins
+    # Pour mesurer le temps :
+#    print(list(map(int.__sub__, out_time[1:], out_time[:-1])))
+
     out = np.array([np.amax(data, axis=(2,3)),
-           np.mean(data, axis=(2,3)),
-           np.std(data, axis=(2,3)),
-           np.median(data, axis=(2,3))])
-#    print(out.shape)
+                    np.mean(data, axis=(2,3)),
+                    np.std(data, axis=(2,3)),
+                    np.median(data, axis=(2,3))])
     out = np.hstack(out)
 #    print(out.shape)
-    return out
+    return (out,out_time)
+
+def extract_macro(output, output_time, directory_list, overlap):
+    if not os.path.isfile(output) or not os.path.isfile(output_time):
+        with open(directory_list) as f:
+            folders = f.readlines()
+        folders = [x.strip() for x in folders]
+        print(folders)
+#        folders = ["data-test2"]
+        data = []
+        data_time = []
+        for f in folders:
+            events = get_event_list(read_directory_with_timestamps(f), round(temporal_duration / waterfall_duration * waterfall_length), int(1500 / nb_macro_band), overlap)
+            data.append(events[0])
+            data_time.append(events[1])
+
+        data = np.concatenate(np.array(data))
+        data_time = np.array(data_time)
+        data_time = np.squeeze(data_time)
+ #       print(data_time.shape)
+        print("Features stage 1 shape:",data.shape)
+        data.tofile(output)
+        data_time.tofile(output_time)
+    else:
+        print(output,"already extracted!")
 
 config = Config()
-nb_features_macro = config.get_config_eval("nb_features_macro")
 temporal_duration = config.get_config_eval("macro_feature_duration")
 waterfall_duration = config.get_config_eval("waterfall_duration")
 waterfall_length = config.get_config_eval("waterfall_dimensions")[0]
-output = os.path.join(config.get_config("section"), config.get_config("macro_features_stage_1"))
+nb_macro_band = config.get_config_eval("nb_macro_band")
 
-if not os.path.isfile(output):
-#    files = get_files_names(["/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/"], "01_October")
-#    data = read_directory("/data/data/00.raw/raw/Adr_Expe_28-08_07-10/raspi1/learn_dataset_23_August")
-    data = read_directory("data-test2")
-    data = get_event_list(data, round(temporal_duration / waterfall_duration * waterfall_length), int(1500 / nb_features_macro)) # 1mn
-    print("Features stage 1 shape:",data.shape)
-    data.tofile(output)
-else:
-    print("Features stage 1 already extracted!")
+extract_macro(
+    os.path.join(config.get_config("section"),"test_"+config.get_config("macro_features_stage_1")),
+    os.path.join(config.get_config("section"),"time_test_"+config.get_config("macro_features_stage_1")),
+    "test_folders",
+    config.get_config_eval("macro_window_overlap_testing"))
+
+extract_macro(
+    os.path.join(config.get_config("section"),"train_"+config.get_config("macro_features_stage_1")),
+    os.path.join(config.get_config("section"),"time_train_"+config.get_config("macro_features_stage_1")),
+    "train_folders",
+    config.get_config_eval("macro_window_overlap_training"))
+

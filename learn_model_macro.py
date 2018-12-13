@@ -6,19 +6,15 @@ import random
 from hmm import HMM
 
 config = Config()
+train_filename = os.path.join(config.get_config("section"), "train_"+config.get_config("macro_features_stage_2"))
+test_filename = os.path.join(config.get_config("section"), "test_"+config.get_config("macro_features_stage_2"))
 nb_features_macro = config.get_config_eval("nb_features_macro")
-filename = os.path.join(config.get_config("section"), config.get_config("events_filename"))
-data = np.fromfile(filename).reshape(-1,nb_features_macro)
 
-detector = HMM(4, 0.1)
-print(data.shape)
-train_data = data[:1000,]
-test_data = data[1000:,]
+train_data = np.fromfile(train_filename).reshape(-1,nb_features_macro)
+test_data = np.fromfile(test_filename).reshape(-1,nb_features_macro)
+
+print(train_data.shape, test_data.shape)
+
+detector = HMM(10)
 detector.learn(train_data)
-predictions = test_prediction(test_data, detector)
-print(np.max(predictions))
-print(np.min(predictions))
-print(np.mean(predictions))
-
-
-#print(detector.predict_list(test_data))
+models.save(os.path.join(prefix, "macro-"+detector.__class__.__name__+".joblib"))
