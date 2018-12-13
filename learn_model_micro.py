@@ -17,14 +17,14 @@ prefix = config.get_config("section")
 
 files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in folders]
 print("Learning from",files)
-data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
+all_data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
 
 periods = [period_night, period_day]
 models = MultiModels()
 
 for p in periods:
     detector = OCSVM()
-    data = extract_period(data, p)
+    data = extract_period(all_data, p)
     if data.shape[0] > 0:
         print("Learning for",p.__name__,"from",data.shape[0],"examples")
         detector.learn(data[:2000,1:]) # should not learn the timestamp

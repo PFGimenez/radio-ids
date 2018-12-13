@@ -51,11 +51,8 @@ else:
     print("Explained variance:",sum(pca.explained_variance_ratio_))
 
     # on ajoute le timestamp
-    np.c_[train_data, train_data_time]
-    np.c_[test_data, test_data_time]
-
-    print(train_data.shape,test_data.shape)
-
+    train_data = np.c_[train_data_time, train_data]
+    test_data = np.c_[test_data_time, test_data]
     train_data.tofile(train_output_filename)
     test_data.tofile(test_output_filename)
 

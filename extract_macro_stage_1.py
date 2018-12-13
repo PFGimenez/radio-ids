@@ -14,11 +14,11 @@ def get_event_list(inp, temporal_step, spectral_step, overlap):
 
     step_x = round(temporal_step * (1 - overlap))
     x = math.floor((data.shape[0] - temporal_step) / step_x) + 1
-    data = decompose_raw(data, (temporal_step, spectral_step), overlap)
-
     out_time = []
     for i in range(x):
-        out_time.append(timestamps[int((i*step_x) / waterfall_length)])
+        out_time.append(float(timestamps[int((i*step_x) / waterfall_length)]))
+
+    data = decompose_raw(data, (temporal_step, spectral_step), overlap)
 
     # Utiliser le timestamp des fichiers est plus fiable que calculer le temps théorique d'un waterfall car, dans les faits, il n'y a pas exactement 4s entre deux waterfalls mais un peu moins
     # Pour mesurer le temps :
@@ -43,13 +43,12 @@ def extract_macro(output, output_time, directory_list, overlap):
         data_time = []
         for f in folders:
             events = get_event_list(read_directory_with_timestamps(f), round(temporal_duration / waterfall_duration * waterfall_length), int(1500 / nb_macro_band), overlap)
+            print(events)
             data.append(events[0])
             data_time.append(events[1])
 
         data = np.concatenate(np.array(data))
-        data_time = np.array(data_time)
-        data_time = np.squeeze(data_time)
- #       print(data_time.shape)
+        data_time = np.concatenate(np.array(data_time))
         print("Features stage 1 shape:",data.shape)
         data.tofile(output)
         data_time.tofile(output_time)
