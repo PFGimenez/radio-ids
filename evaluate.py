@@ -89,7 +89,7 @@ features-macro = os.path.join(config.get_config("section"), "test_"+config.get_c
 
 # modèle macro
 models_macro = MultiModels()
-models.load(os.path.join(prefix, "macro-hmm.joblib"))
+models.load(os.path.join(prefix, "macro-HMM.joblib"))
 
 # évaluation
 
