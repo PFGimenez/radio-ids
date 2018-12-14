@@ -39,10 +39,16 @@ class MultiExtractors:
 
     def reconstruct(self, data):
         out = [m[2].reconstruct(data[:,m[0]:m[1]]) for m in self._models]
-        print("after reconstruct",np.array(out).shape)
+#        print("after reconstruct",np.array(out).shape)
         out = np.dstack(out)
-        print(out.shape)
+#        print(out.shape)
         return out
+
+    def rmse(self, data):
+        out = np.array([m[2].squared_diff(data[:,m[0]:m[1]]) for m in self._models])
+        out = np.sqrt(np.mean(out, axis=(0,2,3)))
+        return out
+
 
 class FeatureExtractor(ABC):
 

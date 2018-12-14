@@ -180,12 +180,28 @@ class CNN(FeatureExtractor):
         self._autoencoder.save(filename_autoencoder)
 
     def load(self, prefix):
-        print("Loading autoencoder from",prefix)
+        print("Loading autoencoder from",prefix+"…"+self._config.get_config("autoenc_filename"))
         filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename"))
         self._coder = load_model(filename_coder)
         filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename"))
         self._autoencoder = load_model(filename_autoencoder)
-        print("Autoencoder loaded!")
+#        print("Autoencoder loaded!")
+
+    def squared_diff(self, data):
+        data = self.decompose(normalize(data, self._min, self._max))
+#        return np.sqrt(np.mean(np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2, axis=(1,2)))
+        return np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2
+
+
+    def learn_threshold(self, filenames, inf, sup):
+        print("Threshold estimation…")
+        predictions = test_prediction(data, self)
+        print("max:",np.max(predictions))
+        p = np.percentile(predictions, 1)
+        print("1% quantile:",p)
+        print("min",np.min(predictions))
+        print("mean",np.mean(predictions))
+        self._threshold = p
 
     def reconstruct(self, data):
         data = self.decompose(data)

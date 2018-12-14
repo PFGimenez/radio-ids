@@ -27,7 +27,7 @@ def extract_micro(extractors, directories, window_overlap, prefix, nb_features):
 
 config = Config()
 prefix = config.get_config("section")
-config.set_config("autoenc_filename", "test-6.h5") # TODO
+#config.set_config("autoenc_filename", "test-6.h5") # TODO
 nb_features = config.get_config_eval("nb_features")
 
 bands = config.get_config_eval('waterfall_frequency_bands')

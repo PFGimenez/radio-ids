@@ -76,78 +76,73 @@ directories = [x.strip() for x in folders]
 files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
 print(files)
 data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
-print(data.shape)
+print("data micro:",data.shape)
 
+data_macro = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
+print("data macro:",data_macro.shape)
 # modèle micro
 
 models = MultiModels()
-models.load(os.path.join(prefix, "micro-ocsvm.joblib"))
-
-# chargement du jeu de données de test macro
-
-features-macro = os.path.join(config.get_config("section"), "test_"+config.get_config("macro_features_stage_2"))
+models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
 
 # modèle macro
 models_macro = MultiModels()
-models.load(os.path.join(prefix, "macro-HMM.joblib"))
+models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
+
+# autoencoders
+bands = config.get_config_eval('waterfall_frequency_bands')
+extractors = MultiExtractors()
+
+for j in range(len(bands)):
+    (i,s) = bands[j]
+    m = CNN(i, s, dims[j], epochs[j])
+    extractors.load(i, s, m)
 
 # évaluation
 
 memory_size = models.get_memory_size()
 memory = []
 
-path_examples = os.path.join(prefix, "results-ocsvm-micro.joblib")
-try:
-    # chargement des prédictions si possible
-    (example_pos, example_neg) = joblib.load(path_examples)
-except:
-    example_pos = []
-    example_neg = []
-    i = 0
+path_examples = os.path.join(prefix, "results-OCSVM-micro.joblib")
+path_examples_macro = os.path.join(prefix, "results-HMM-macro.joblib")
 
-    for f in data:
-        if i % 100 == 0:
-            print(i,"/",len(data))
-        i += 1
+def predict(models, path_examples, data):
+    try:
+        # chargement des prédictions si possible
+        (example_pos, example_neg) = joblib.load(path_examples)
+    except:
+        example_pos = []
+        example_neg = []
+        i = 0
 
-        if len(memory) == memory_size:
-            memory.pop(0)
-        memory.append(f[1:])
+        for f in data:
+            if i % 100 == 0:
+                print(i,"/",len(data))
+            i += 1
 
-        if models.predict(np.array(memory), f[0]):
-            example_pos.append(f[0])
-        else:
-            example_neg.append(f[0])
+            if len(memory) == memory_size:
+                memory.pop(0)
+            memory.append(f[1:])
 
-    joblib.dump((example_pos, example_neg), path_examples)
+            print(np.array(memory).shape)
+            if models.predict(np.array(memory), f[0]):
+                example_pos.append(f[0])
+            else:
+                example_neg.append(f[0])
 
-path_examples_macro = os.path.join(prefix, "results-hmm-macro.joblib")
-try:
-    # chargement des prédictions si possible
-    (example_pos_macro, example_neg_macro) = joblib.load(path_examples_macro)
-except:
-    example_pos_macro = []
-    example_neg_macro = []
-    i = 0
+        joblib.dump((example_pos, example_neg), path_examples)
 
-    for f in data:
-        if i % 100 == 0:
-            print(i,"/",len(data))
-        i += 1
-
-        if len(memory) == memory_size:
-            memory.pop(0)
-        memory.append(f[1:])
-
-        if models.predict(np.array(memory), f[0]):
-            example_pos.append(f[0])
-        else:
-            example_neg.append(f[0])
-
-    joblib.dump((example_pos, example_neg), path_examples)
-
-
+print("Prediction for micro…")
+predict(models, path_examples, data)
+print("Prediction for macro…")
+predict(models_macro, path_examples_macro, data_macro)
 
 for e in evaluators:
+    print("Results micro")
     e.evaluate(example_pos, example_neg)
+    print("Results macro")
+    e.evaluate(example_pos_macro, example_neg_macro)
+    print("Results micro and macro")
+    e.evaluate(list(set(example_pos+example_pos_macro)),
+               list(set(example_neg+example_neg_macro)))
 
