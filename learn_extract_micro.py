@@ -57,13 +57,22 @@ else:
 
 fig = plt.figure()
 
-data = read_directory("data-test")[0:5,:,:]
+data = read_directory("data-test2")[0:5,:,:]
 data = np.concatenate(data)
-#out = extractors.rmse(data)
-#print(np.percentile(out, 1))
+
+data[0,0] = -150
+data[0,1] = 0
+
+with open("test_folders") as f:
+    folders = f.readlines()
+folders = [x.strip() for x in folders]
+
+rmse = extractors.rmse_from_folders(folders)
+print(np.percentile(rmse, 99))
 
 data_reconstructed = extractors.reconstruct(data)[0,:,:]
 data = data[:16,:1488]
+print(data_reconstructed.shape)
 plt.imshow(np.concatenate((data, min_value*np.ones((int(data_reconstructed.shape[0]/3), data_reconstructed.shape[1])), data_reconstructed)), cmap='hot', interpolation='nearest', aspect='auto')
 #plt.savefig(config.get_config("autoenc_filename")+".png")
 plt.show()

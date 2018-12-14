@@ -1,12 +1,14 @@
 from config import Config
 from abc import ABC, abstractmethod
 from preprocess import *
+import os.path
 
 class MultiExtractors:
 
     def __init__(self):
         self._config = Config()
         self._models = []
+        self._thresholds = []
 
     def add_model(self, model, inf, sup):
         self._models.append((inf, sup, model))
@@ -14,6 +16,8 @@ class MultiExtractors:
     def save(self):
         for m in self._models:
             m[2].save(str(m[0])+"-"+str(m[1])+"-")
+        config = Config()
+        thresholds.tofile(os.path.join(config.get_config("section"),"threshold"))
 
     def load(self, i, s, model):
         model.load(str(i)+"-"+str(s)+"-")
@@ -46,7 +50,10 @@ class MultiExtractors:
 
     def rmse(self, data):
         out = np.array([m[2].squared_diff(data[:,m[0]:m[1]]) for m in self._models])
-        out = np.sqrt(np.mean(out, axis=(0,2,3)))
+        print("Après squared diff", out.shape)
+        out = np.mean(out, axis=(0,2,3))
+        print("Après mean", out.shape)
+        out = np.sqrt(out)
         return out
 
 
