@@ -10,10 +10,14 @@ _config = Config()
 _waterfall_dim = _config.get_config_eval('waterfall_dimensions')
 
 def normalize(data, val_min, val_max):
-    return (data - val_min) / (val_max - val_min)
+#    data = (data - val_min) / (val_max - val_min)
+#    data[data < 0] = 0
+#    data[data > 1] = 1
+    return data
 
 def denormalize(data, val_min, val_max):
-    return data * (val_max - val_min) + val_min
+#    return data * (val_max - val_min) + val_min
+    return data
 
 def crop_all(data, size_x, size_y):
     return np.array([crop_sample(s, size_x, size_y) for s in data])

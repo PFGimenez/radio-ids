@@ -135,9 +135,10 @@ class CNN(FeatureExtractor):
         self._coder.compile(loss='mean_squared_error',
                                   optimizer='adam')
 
+        # Permet d'éviter l'overfitting
+        m = Dropout(0.5)(m)
         m = Dense(496, activation='relu')(m)
 
-        # Permet d'éviter l'overfitting
         m = Reshape((2,62,4))(m)
 
         # Maintenant on reconstitue l'image initiale
@@ -149,7 +150,7 @@ class CNN(FeatureExtractor):
         m = Conv2D(32, (3, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
 
-        decoded = Conv2D(1, (3, 3), activation='sigmoid', padding='same')(m)
+        decoded = Conv2D(1, (3, 3), activation='linear', padding='same')(m)
 
         # Compilation du modèle + paramètres d'évaluation et d'apprentissage
         self._autoencoder = Model(self._input_tensor, decoded)

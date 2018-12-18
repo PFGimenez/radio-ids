@@ -17,7 +17,7 @@ class MultiExtractors:
         for m in self._models:
             m[2].save(str(m[0])+"-"+str(m[1])+"-")
         config = Config()
-        thresholds.tofile(os.path.join(config.get_config("section"),"threshold"))
+        self._thresholds.tofile(os.path.join(config.get_config("section"),"threshold"))
 
     def load(self, i, s, model):
         model.load(str(i)+"-"+str(s)+"-")

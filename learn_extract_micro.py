@@ -27,6 +27,7 @@ folders = [x.strip() for x in folders]
 config = Config()
 
 min_value = config.get_config_eval('min_value')
+max_value = config.get_config_eval('max_value')
 
 bands = config.get_config_eval('waterfall_frequency_bands')
 extractors = MultiExtractors()
@@ -60,19 +61,24 @@ fig = plt.figure()
 data = read_directory("data-test2")[0:5,:,:]
 data = np.concatenate(data)
 
-data[0,0] = -150
-data[0,1] = 0
+# juste pour la heatmap…
+data[20,0] = min_value
+data[21,1] = max_value
 
 with open("test_folders") as f:
     folders = f.readlines()
 folders = [x.strip() for x in folders]
 
-rmse = extractors.rmse_from_folders(folders)
-print(np.percentile(rmse, 99))
+#rmse = extractors.rmse_from_folders(folders)
+#print(np.percentile(rmse, 99))
 
 data_reconstructed = extractors.reconstruct(data)[0,:,:]
 data = data[:16,:1488]
+data[data < min_value] = min_value
+data[data > max_value] = max_value
+data_reconstructed[data_reconstructed > max_value] = max_value
 print(data_reconstructed.shape)
-plt.imshow(np.concatenate((data, min_value*np.ones((int(data_reconstructed.shape[0]/3), data_reconstructed.shape[1])), data_reconstructed)), cmap='hot', interpolation='nearest', aspect='auto')
+#plt.imshow(np.concatenate((denormalize(normalize(data, min_value, max_value),min_value,max_value), min_value*np.ones((int(data_reconstructed.shape[0]/3), data_reconstructed.shape[1])), data)), cmap='hot', interpolation='nearest', aspect='auto')
+plt.imshow(np.concatenate((denormalize(normalize(data, min_value, max_value),min_value,max_value), min_value*np.ones((int(data_reconstructed.shape[0]/3), data_reconstructed.shape[1])), data_reconstructed)), cmap='hot', interpolation='nearest', aspect='auto')
 #plt.savefig(config.get_config("autoenc_filename")+".png")
 plt.show()
