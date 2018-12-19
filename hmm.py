@@ -38,8 +38,8 @@ class HMM(AnomalyDetector):
 
     def predict_list(self, data):
         if len(data) == 1:
-            return self._model.score(data)
-        return self._model.score(data) - self._model.score(data[0:len(data)-1,:])
+            return self._model.score(data) < self._threshold
+        return self._model.score(data) - self._model.score(data[0:len(data)-1,:]) < self._threshold
 
     def predict(self, data, obs):
         if len(data) == 1:

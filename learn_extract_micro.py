@@ -51,6 +51,14 @@ for j in range(len(bands)):
         new = True
 
 if new:
+    print("Learning threshold")
+    with open("train_folders") as f:
+        folders = f.readlines()
+    folders = [x.strip() for x in folders]
+    fnames = [os.path.join(directory,f) for directory in folders for f in sorted(os.listdir(directory))]
+    rmse = extractors.rmse_from_folders(fnames)
+    print("99% percentile threshold:",np.percentile(rmse, 99))
+    print("max threshold:",np.max(rmse))
     print("Saving extractors…")
     extractors.save()
 else:
@@ -65,11 +73,10 @@ data = np.concatenate(data)
 data[20,0] = min_value
 data[21,1] = max_value
 
-with open("test_folders") as f:
-    folders = f.readlines()
-folders = [x.strip() for x in folders]
-
-#rmse = extractors.rmse_from_folders(folders)
+#print(np.mean(rmse))
+#print(np.min(rmse))
+#print(np.max(rmse))
+#print(np.percentile(rmse, 1))
 #print(np.percentile(rmse, 99))
 
 data_reconstructed = extractors.reconstruct(data)[0,:,:]

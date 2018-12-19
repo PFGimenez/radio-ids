@@ -5,6 +5,8 @@ from preprocess import *
 import numpy as np
 from config import Config
 import os
+from extractor import MultiExtractors
+from autoencodercnn import CNN
 
 class Evaluator:
 
@@ -47,14 +49,22 @@ class Evaluator:
         false_negative = sum(list(map(self.is_in_attack, detected_negative)))
         true_negative = total_negatives - false_negative
 
-        recall = true_positive / (true_positive + false_negative)
-        precision = true_positive / total_positives
+        if true_positive + false_negative == 0:
+            recall = 1
+        else:
+            recall = true_positive / (true_positive + false_negative)
 
-        print("total pos",total_positives, "total negative",total_negatives)
-        print("tp",true_positive, "tn",true_negative, "fp",false_positive,"fn", false_negative)
-        print("precision",precision,"recall",recall)
+        if total_positives == 0:
+            precision = 1
+        else:
+            precision = true_positive / total_positives
+
+#        print("total pos",total_positives, "total negative",total_negatives)
         if precision != 0 and recall != 0:
-            print("f-measure",2*(precision + recall) / (precision * recall))
+            fmeasure = 2*(precision + recall) / (precision * recall)
+        else:
+            fmeasure = float('nan')
+        print("tp",true_positive, "tn",true_negative, "fp",false_positive,"fn", false_negative,"precision",precision,"recall",recall,"f-measure",fmeasure)
 
 # lecture config
 
@@ -65,6 +75,7 @@ identifiers = np.unique(attack[:,2])
 evaluators = [Evaluator(i, attack) for i in identifiers]
 
 nb_features = config.get_config_eval("nb_features")
+nb_features_macro = config.get_config_eval("nb_features_macro")
 prefix = config.get_config("section")
 
 # chargement du jeu de données de test micro
@@ -78,8 +89,10 @@ print(files)
 data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
 print("data micro:",data.shape)
 
-data_macro = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
+test_macro_filename = os.path.join(config.get_config("section"), "test_"+config.get_config("macro_features_stage_2"))
+data_macro = np.fromfile(test_macro_filename).reshape(-1, nb_features_macro + 1)
 print("data macro:",data_macro.shape)
+
 # modèle micro
 
 models = MultiModels()
@@ -91,29 +104,36 @@ models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
 
 # autoencoders
 bands = config.get_config_eval('waterfall_frequency_bands')
+dims = config.get_config_eval('autoenc_dimensions')
 extractors = MultiExtractors()
 
 for j in range(len(bands)):
     (i,s) = bands[j]
-    m = CNN(i, s, dims[j], epochs[j])
+    m = CNN(i, s, dims[j], 0)
     extractors.load(i, s, m)
+
+with open("train_folders") as f:
+    folders_test = f.readlines()
+folders_test = [x.strip() for x in folders]
+
 
 # évaluation
 
-memory_size = models.get_memory_size()
-memory = []
 
 path_examples = os.path.join(prefix, "results-OCSVM-micro.joblib")
 path_examples_macro = os.path.join(prefix, "results-HMM-macro.joblib")
+path_examples_extractors = os.path.join(prefix, "results-autoenc.joblib")
 
 def predict(models, path_examples, data):
     try:
         # chargement des prédictions si possible
         (example_pos, example_neg) = joblib.load(path_examples)
     except:
+        memory_size = models.get_memory_size()
         example_pos = []
         example_neg = []
         i = 0
+        memory = []
 
         for f in data:
             if i % 100 == 0:
@@ -124,25 +144,58 @@ def predict(models, path_examples, data):
                 memory.pop(0)
             memory.append(f[1:])
 
-            print(np.array(memory).shape)
+#            print("Memory",np.array(memory).shape) # TODO
             if models.predict(np.array(memory), f[0]):
                 example_pos.append(f[0])
             else:
                 example_neg.append(f[0])
 
         joblib.dump((example_pos, example_neg), path_examples)
+    return (example_pos, example_neg)
+
+def predict_extractors(extractors, path_examples, folders_test):
+    try:
+        # chargement des prédictions si possible
+        (example_pos, example_neg) = joblib.load(path_examples)
+    except:
+        example_pos = []
+        example_neg = []
+        i = 0
+
+        paths = [os.path.join(directory,f) for directory in folders_test for f in sorted(os.listdir(directory))]
+        for fname in paths:
+            timestamp = int(os.path.split(fname)[1])
+            data = read_file(fname)
+            if i % 100 == 0:
+                print(i,"/",len(paths))
+            i += 1
+
+            if extractors.predict(data):
+                example_pos.append(timestamp)
+            else:
+                example_neg.append(timestamp)
+
+        joblib.dump((example_pos, example_neg), path_examples)
+    return (example_pos, example_neg)
+
+
 
 print("Prediction for micro…")
-predict(models, path_examples, data)
+(example_pos, example_neg) = predict(models, path_examples, data)
 print("Prediction for macro…")
-predict(models_macro, path_examples_macro, data_macro)
+(example_pos_macro, example_neg_macro) = predict(models_macro, path_examples_macro, data_macro)
+print("Prediction for autoencoders…")
+(example_pos_extractors, example_neg_extractors) = predict_extractors(extractors, path_examples_extractors, folders_test)
 
 for e in evaluators:
-    print("Results micro")
+    print("***",e._id)
+    print("Results micro: ",end='')
     e.evaluate(example_pos, example_neg)
-    print("Results macro")
+    print("Results macro: ",end='')
     e.evaluate(example_pos_macro, example_neg_macro)
-    print("Results micro and macro")
-    e.evaluate(list(set(example_pos+example_pos_macro)),
-               list(set(example_neg+example_neg_macro)))
+#    print("Results micro and macro")
+#    e.evaluate(list(set(example_pos+example_pos_macro)),
+#               list(set(example_neg+example_neg_macro)))
+    print("Results autoencoders: ",end='')
+    e.evaluate(example_pos_extractors, example_neg_extractors)
 
