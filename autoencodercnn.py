@@ -92,6 +92,7 @@ class CNN(FeatureExtractor):
         self._original_shape = (self._config.get_config_eval('waterfall_dimensions')[0], s-i)
         self._shape = shape
         self._overlap = self._config.get_config_eval('window_overlap_training')
+        self._overlap_test = self._config.get_config_eval('extractors_window_overlap_testing')
         self._min = self._config.get_config_eval('min_value')
         self._max = self._config.get_config_eval('max_value')
 
@@ -130,7 +131,7 @@ class CNN(FeatureExtractor):
         m = Conv2D(4, (3, 3), activation='relu', padding='same')(m)
         m = Flatten()(m)
         m = Dense(496, activation='relu')(m)
-        m = Dense(300, activation='relu')(m)
+#        m = Dense(300, activation='relu')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error',
                                   optimizer='adam')
@@ -189,7 +190,7 @@ class CNN(FeatureExtractor):
 #        print("Autoencoder loaded!")
 
     def squared_diff(self, data):
-        data = self.decompose(normalize(data, self._min, self._max))
+        data = self.decompose(normalize(data, self._min, self._max), self._overlap_test)
 #        return np.sqrt(np.mean(np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2, axis=(1,2)))
         return np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2
 
