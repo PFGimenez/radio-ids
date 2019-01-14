@@ -25,30 +25,31 @@ def extract_micro(extractors, directories, window_overlap, prefix, nb_features):
         d2 = d.split("/")[-1]
         out.tofile(os.path.join(prefix,"features-"+d2))
 
-config = Config()
-prefix = config.get_config("section")
+if __name__ == "__main__":
+    config = Config()
+    prefix = config.get_config("section")
 #config.set_config("autoenc_filename", "test-6.h5") # TODO
-nb_features = config.get_config_eval("nb_features")
+    nb_features = config.get_config_eval("nb_features")
 
-bands = config.get_config_eval('waterfall_frequency_bands')
-extractors = MultiExtractors()
-dims = config.get_config_eval('autoenc_dimensions')
+    bands = config.get_config_eval('waterfall_frequency_bands')
+    extractors = MultiExtractors()
+    dims = config.get_config_eval('autoenc_dimensions')
 
-for j in range(len(bands)):
-    (i,s) = bands[j]
-    m = CNN(i, s, dims[j], -1)
-    extractors.load(i, s, m)
+    for j in range(len(bands)):
+        (i,s) = bands[j]
+        m = CNN(i, s, dims[j], -1)
+        extractors.load(i, s, m)
 
-with open("train_folders") as f:
-    folders = f.readlines()
-directories = [x.strip() for x in folders]
+    with open("train_folders") as f:
+        folders = f.readlines()
+    directories = [x.strip() for x in folders]
 
-extract_micro(extractors, directories, config.get_config_eval("window_overlap_training"), prefix, nb_features)
+    extract_micro(extractors, directories, config.get_config_eval("window_overlap_training"), prefix, nb_features)
 
-with open("test_folders") as f:
-    folders = f.readlines()
-directories = [x.strip() for x in folders]
+    with open("test_folders") as f:
+        folders = f.readlines()
+    directories = [x.strip() for x in folders]
 
-extract_micro(extractors, directories, config.get_config_eval("window_overlap_testing"), prefix, nb_features)
+    extract_micro(extractors, directories, config.get_config_eval("window_overlap_testing"), prefix, nb_features)
 
 

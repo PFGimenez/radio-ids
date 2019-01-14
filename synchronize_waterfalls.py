@@ -66,10 +66,14 @@ for d in range(8,len(days)):
                 val = val[begin:begin + waterfall_dimensions_time]
                 if val.shape[0] < waterfall_dimensions_time:
                     error = True
+                    # on ne pourra pas finir le waterfall
+                    break
                 else:
                     l.append(val)
         if error:
             print("Incomplete last waterfall")
+            # journée finie
+            break
         else:
             l = np.array(l)
             print(l.shape)
@@ -82,6 +86,7 @@ for d in range(8,len(days)):
 #            plt.imshow(np.concatenate(l,axis=1), cmap='hot', interpolation='nearest', aspect='auto')
             l = np.moveaxis(l,0,2)
             print(l.shape)
+            # TODO: PCA par fréquence
             pca = PCA(1, svd_solver="full")
             l = pca.fit_transform(l.reshape(-1,3))
             print(pca.components_)
