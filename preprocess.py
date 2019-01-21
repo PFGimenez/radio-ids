@@ -113,8 +113,9 @@ def do_PCA(data, n_components):
 def decompose_raw(data, shape, overlap=0):
     shape_x = shape[0]
     shape_y = shape[1]
+    # spectral overlap is always 0
     step_x = round(shape_x * (1 - overlap))
-    step_y = round(shape_y * (1 - overlap))
+    step_y = shape_y
     x = math.floor((data.shape[0] - shape_x) / step_x) + 1
     y = math.floor((data.shape[1] - shape_y) / step_y) + 1
     out = np.empty((x, y, shape_x, shape_y))
@@ -128,8 +129,9 @@ def decompose(data, shape, overlap=0):
     out = decompose_raw(data, shape, overlap)
     shape_x = shape[0]
     shape_y = shape[1]
+    # spectral overlap is always 0
     step_x = round(shape_x * (1 - overlap))
-    step_y = round(shape_y * (1 - overlap))
+    step_y = shape_y
     x = math.floor((data.shape[0] - shape_x) / step_x) + 1
     y = math.floor((data.shape[1] - shape_y) / step_y) + 1
 

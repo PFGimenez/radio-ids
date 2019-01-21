@@ -169,7 +169,7 @@ class CNN(FeatureExtractor):
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
         self._autoencoder.fit_generator(generator=training_batch_generator,
                                         epochs=self._nb_epochs,
-                                        verbose=1,
+                                        verbose=2,
                                         validation_data=validation_batch_generator,
                                         use_multiprocessing=True,
                                         workers=8,
