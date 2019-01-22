@@ -4,6 +4,8 @@ from multimodels import *
 from preprocess import *
 from config import Config
 from svm import OCSVM
+from local_outlier_factor import LOF
+import copy
 import os
 
 config = Config()
@@ -22,14 +24,21 @@ all_data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in 
 periods = [period_night, period_day]
 models = MultiModels()
 
-for p in periods:
-    detector = OCSVM()
-    data = extract_period(all_data, p)
-    if data.shape[0] > 0:
-        print("Learning for",p.__name__,"from",data.shape[0],"examples")
-        detector.learn(data[:2000,1:]) # should not learn the timestamp
-        models.add_model(detector, p)
-    else:
-        print("No data to learn period",p.__name__)
+#detector_model = OCSVM()
+detector_model = LOF()
+outputname = os.path.join(prefix, "micro-"+detector_model.__class__.__name__+".joblib")
 
-models.save(os.path.join(prefix, "micro-"+detector.__class__.__name__+".joblib"))
+if not os.path.isfile(outputname):
+    for p in periods:
+        detector = copy.deepcopy(detector_model)
+        data = extract_period(all_data, p)
+        if data.shape[0] > 0:
+            print("Learning for",p.__name__,"from",data.shape[0],"examples")
+            detector.learn(data[:2000,1:]) # should not learn the timestamp
+            models.add_model(detector, p)
+        else:
+            print("No data to learn period",p.__name__)
+
+    models.save(outputname)
+else:
+    print("Micro model already learned!")
