@@ -198,12 +198,13 @@ class CNN(FeatureExtractor):
     def learn_threshold(self, filenames, inf, sup):
         print("Threshold estimation…")
         predictions = test_prediction(data, self)
-        print("max:",np.max(predictions))
-        p = np.percentile(predictions, 1)
-        print("1% quantile:",p)
-        print("min",np.min(predictions))
-        print("mean",np.mean(predictions))
-        self._threshold = p
+        # print("max:",np.max(predictions))
+        # p = np.percentile(predictions, 1)
+        # print("1% quantile:",p)
+        # print("min",np.min(predictions))
+        # print("mean",np.mean(predictions))
+        self._thresholds = [np.max(predictions), np.percentile(predictions,99), np.pencentile(predictions,95)]
+        print(self._thresholds)
 
     def reconstruct(self, data):
         data = self.decompose(data)

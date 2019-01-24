@@ -7,6 +7,7 @@ from config import Config
 import os
 from extractor import MultiExtractors
 from autoencodercnn import CNN
+import time
 
 class Evaluator:
 
@@ -25,7 +26,7 @@ class Evaluator:
         """
         self._id = identifier
         # TODO : ou remplacer identifier par une fonction (pour agréger toutes les attaques bluetooth par exemple)
-        self._attack = all_attack[all_attack[:,2] == identifier]
+        self._attack = all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer)
         print(self._attack.shape[0],"attacks on",identifier)
 
     def is_in_attack(self, timestamp):
@@ -60,8 +61,8 @@ class Evaluator:
             precision = true_positive / total_positives
 
 #        print("total pos",total_positives, "total negative",total_negatives)
-        if precision != 0 and recall != 0:
-            fmeasure = 2*(precision + recall) / (precision * recall)
+        if precision + recall != 0:
+            fmeasure = 2*(precision * recall) / (precision + recall)
         else:
             fmeasure = float('nan')
         print("tp",true_positive, "tn",true_negative, "fp",false_positive,"fn", false_negative,"precision",precision,"recall",recall,"f-measure",fmeasure)
@@ -69,11 +70,11 @@ class Evaluator:
 # lecture config
 
 config = Config()
-attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"))
+attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
 
-identifiers = np.unique(attack[:,2])
+identifiers = np.unique(attack[:,0])
+print(identifiers)
 evaluators = [Evaluator(i, attack) for i in identifiers]
-
 nb_features = config.get_config_eval("nb_features")
 nb_features_macro = config.get_config_eval("nb_features_macro")
 prefix = config.get_config("section")
@@ -95,14 +96,25 @@ print("data macro:",data_macro.shape)
 
 # modèle micro
 
+use_micro = True
 models = MultiModels()
-models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
+try:
+    models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
+except Exception as e:
+    print("Loading failed:",e)
+    use_micro = False
 
 # modèle macro
+use_macro = True
 models_macro = MultiModels()
-models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
+try:
+    models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
+except Exception as e:
+    print("Loading failed:",e)
+    use_macro = False
 
 # autoencoders
+use_autoenc = False
 bands = config.get_config_eval('waterfall_frequency_bands')
 dims = config.get_config_eval('autoenc_dimensions')
 extractors = MultiExtractors()
@@ -129,12 +141,14 @@ def predict(models, path_examples, data):
         # chargement des prédictions si possible
         (example_pos, example_neg) = joblib.load(path_examples)
     except:
+        start = time.time()
         memory_size = models.get_memory_size()
         example_pos = []
         example_neg = []
         i = 0
         memory = []
 
+        data = data[20000:30000]
         for f in data:
             if i % 100 == 0:
                 print(i,"/",len(data))
@@ -146,11 +160,14 @@ def predict(models, path_examples, data):
 
 #            print("Memory",np.array(memory).shape) # TODO
             if models.predict(np.array(memory), f[0]):
+#                print("Attack detected at",f[0])
                 example_pos.append(f[0])
             else:
                 example_neg.append(f[0])
 
-        joblib.dump((example_pos, example_neg), path_examples)
+        end = time.time()
+        print("Detection time:",(end-start),"s")
+#        joblib.dump((example_pos, example_neg), path_examples)
     return (example_pos, example_neg)
 
 def predict_extractors(extractors, path_examples, folders_test):
@@ -175,27 +192,32 @@ def predict_extractors(extractors, path_examples, folders_test):
             else:
                 example_neg.append(timestamp)
 
-        joblib.dump((example_pos, example_neg), path_examples)
+#        joblib.dump((example_pos, example_neg), path_examples)
     return (example_pos, example_neg)
 
 
-
-print("Prediction for micro…")
-(example_pos, example_neg) = predict(models, path_examples, data)
-print("Prediction for macro…")
-(example_pos_macro, example_neg_macro) = predict(models_macro, path_examples_macro, data_macro)
-print("Prediction for autoencoders…")
-(example_pos_extractors, example_neg_extractors) = predict_extractors(extractors, path_examples_extractors, folders_test)
+if use_micro:
+    print("Prediction for micro…")
+    (example_pos, example_neg) = predict(models, path_examples, data)
+if use_macro:
+    print("Prediction for macro…")
+    (example_pos_macro, example_neg_macro) = predict(models_macro, path_examples_macro, data_macro)
+if use_autoenc:
+    print("Prediction for autoencoders…")
+    (example_pos_extractors, example_neg_extractors) = predict_extractors(extractors, path_examples_extractors, folders_test)
 
 for e in evaluators:
     print("***",e._id)
-    print("Results micro: ",end='')
-    e.evaluate(example_pos, example_neg)
-    print("Results macro: ",end='')
-    e.evaluate(example_pos_macro, example_neg_macro)
+    if use_micro:
+        print("Results micro: ",end='')
+        e.evaluate(example_pos, example_neg)
+    if use_macro:
+        print("Results macro: ",end='')
+        e.evaluate(example_pos_macro, example_neg_macro)
 #    print("Results micro and macro")
 #    e.evaluate(list(set(example_pos+example_pos_macro)),
 #               list(set(example_neg+example_neg_macro)))
-    print("Results autoencoders: ",end='')
-    e.evaluate(example_pos_extractors, example_neg_extractors)
+    if use_autoenc:
+        print("Results autoencoders: ",end='')
+        e.evaluate(example_pos_extractors, example_neg_extractors)
 

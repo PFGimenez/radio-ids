@@ -5,6 +5,7 @@
 from anomalydetector import AnomalyDetector
 from sklearn.externals import joblib
 from sklearn.svm import OneClassSVM
+import numpy as np
 
 class OCSVM(AnomalyDetector):
     """
@@ -12,6 +13,7 @@ class OCSVM(AnomalyDetector):
     """
     def __init__(self, kernel="rbf"):
         self._model = OneClassSVM(gamma='scale', kernel=kernel)
+        self._thresholds = None
         # TODO : tester gamma="auto"
 
     def preprocess(self, data):
@@ -19,12 +21,18 @@ class OCSVM(AnomalyDetector):
 
     def learn(self, data):
         self._model.fit(data)
+        distances = self._model.decision_function(data)
+        self._thresholds = [max(distances), np.percentile(distances, 1), np.percentile(distances, 5)]
+        print("Threshold:",self._thresholds)
 
 #    def predict_list(self, data):
 #        self._model.predict(data[-1,:])
 
     def predict(self, data, obs):
-        return self._model.predict(obs)
+        y = self._model.decision_function(obs)
+        return y > self._thresholds[1]
+
+        #return self._model.predict(obs) == -1
 
     def get_memory_size(self):
         return 1

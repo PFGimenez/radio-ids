@@ -32,4 +32,4 @@ if not os.path.isfile(output):
             print("No data to learn period",p.__name__)
     models.save(output)
 else:
-    print("Models already learnt!")
+    print("Models already learnt!",output)

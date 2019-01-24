@@ -64,11 +64,11 @@ waterfall_duration = config.get_config_eval("waterfall_duration")
 waterfall_length = config.get_config_eval("waterfall_dimensions")[0]
 nb_macro_band = config.get_config_eval("nb_macro_band")
 
-# extract_macro(
-#     os.path.join(config.get_config("section"),"test_"+config.get_config("macro_features_stage_1")),
-#     os.path.join(config.get_config("section"),"time_test_"+config.get_config("macro_features_stage_1")),
-#     "test_folders",
-#     config.get_config_eval("macro_window_overlap_testing"))
+extract_macro(
+    os.path.join(config.get_config("section"),"test_"+config.get_config("macro_features_stage_1")),
+    os.path.join(config.get_config("section"),"time_test_"+config.get_config("macro_features_stage_1")),
+    "test_folders",
+    config.get_config_eval("macro_window_overlap_testing"))
 
 extract_macro(
     os.path.join(config.get_config("section"),"train_"+config.get_config("macro_features_stage_1")),

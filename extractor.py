@@ -11,6 +11,12 @@ class MultiExtractors:
         self._threshold = self._config.get_config_eval("autoenc_detection_threshold")
 
     def add_model(self, model, inf, sup):
+        """
+            models:
+            index 0: debut spectre
+            index 1: fin spectre
+            index 2: model
+        """
         self._models.append((inf, sup, model))
 
     def save(self):
@@ -46,8 +52,8 @@ class MultiExtractors:
 #        print(out.shape)
         return out
 
-    def rmse(self, data):
-        out = np.array([m[2].squared_diff(data[:,m[0]:m[1]]) for m in self._models])
+    def rmse(self, data, m):
+        out = np.array(m[2].squared_diff(data[:,m[0]:m[1]]))
         out = np.mean(out, axis=(0,2,3))
         out = np.sqrt(out)
         return out
@@ -57,13 +63,23 @@ class MultiExtractors:
         """
             Il y a une anomalie si la RMSE dépasse un certain seuil
         """
-        return any(self.rmse(data) > self._threshold)
+        for m in self._models:
+            if any(self.rmse(data, m) > m._thresholds[1]):
+                return True
+        return False
 
 
-    def rmse_from_folders(self, fnames):
-        data = np.array([self.rmse(read_file(f)) for f in fnames])
+    # def rmse_from_folders(self, fnames):
+    #     data = np.array([self.rmse(read_file(f)) for f in fnames])
+    #     data = np.concatenate(data)
+    #     return data
+
+    def learn_thresholds(self, fnames):
+        # TODO : un jour à la fois
+        data = np.array([read_file(f) for f in fnames])
         data = np.concatenate(data)
-        return data
+        for m in self._models:
+            m[2].learn_threshold(data, m[0], m[1])
 
 class FeatureExtractor(ABC):
 

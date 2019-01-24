@@ -11,6 +11,10 @@ class Arma(AnomalyDetector):
     """
 
     def __init__(self, order, distance, threshold):
+        """
+            distance: a distance function
+            threshold: self-explanatory
+        """
         self._order = order
         self._armax = None
         self._distance = distance

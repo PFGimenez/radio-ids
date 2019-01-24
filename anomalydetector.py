@@ -5,12 +5,12 @@ class AnomalyDetector(ABC):
     Abstract class for all anomaly detector algorithms
     """
 
-    @abstractmethod
-    def preprocess(self, data):
-        """
-            Preprocess the train and test test
-        """
-        pass
+    # @abstractmethod
+    # def preprocess(self, data):
+    #     """
+    #         Preprocess the train and test test
+    #     """
+    #     pass
 
     @abstractmethod
     def learn(self, data):
