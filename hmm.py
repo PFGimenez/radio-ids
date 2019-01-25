@@ -17,9 +17,7 @@ class HMM(AnomalyDetector):
         self._nb_states = nb_states
         self._model = None
         self._threshold = None
-
-    def preprocess(self, data):
-        return do_PCA(data, 0.95)
+        self._mem_size = 100
 
     def learn(self, data):
         self._model = hmm.GaussianHMM(self._nb_states, "full", verbose=True)
@@ -28,13 +26,47 @@ class HMM(AnomalyDetector):
         print("Model learnt")
 
         print("Threshold estimation…")
-        predictions = test_prediction(data, self)
+
+        predictions = []
+        memory = []
+        i = 0
+        memory_size = self.get_memory_size()
+
+        for f in data:
+            if i % 100 == 0:
+                print(i,"/",len(data))
+            i += 1
+            print(f)
+            if len(memory) == memory_size:
+                memory.pop(0)
+
+            memory.append(f[1:])
+
+            if len(memory) != memory_size:
+                continue
+
+            self.predict(np.array(memory), f[0])
+            predictions.append(self._model.score(np.concatenate((memory,np.expand_dims(f[0], axis=0)))) - self._model.score(memory))
+
+
         print("max:",np.max(predictions))
         p = np.percentile(predictions, 1)
         print("1% quantile:",p)
         print("min",np.min(predictions))
         print("mean",np.mean(predictions))
         self._threshold = p
+
+
+    def anomalies_have_high_score(self):
+        # Ce sont des log-probabilités. Les anomalies sont rares dont avec une faible proba
+        return False
+
+
+    def get_score(self, data):
+        # TODO : peut-être que ce n'est pas nécessaire
+        if len(data) < self._mem_size:
+            return None
+        return self._model.score(data[len(data) - self._mem_size:])
 
     def predict_list(self, data):
         if len(data) == 1:
@@ -54,4 +86,4 @@ class HMM(AnomalyDetector):
         self._model = joblib.load(filename)
 
     def get_memory_size(self):
-        return 1000
+        return self._mem_size

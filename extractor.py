@@ -54,6 +54,7 @@ class MultiExtractors:
 
     def rmse(self, data, m):
         out = np.array(m[2].squared_diff(data[:,m[0]:m[1]]))
+        print(out.shape)
         out = np.mean(out, axis=(0,2,3))
         out = np.sqrt(out)
         return out
@@ -76,10 +77,12 @@ class MultiExtractors:
 
     def learn_thresholds(self, fnames):
         # TODO : un jour à la fois
-        data = np.array([read_file(f) for f in fnames])
-        data = np.concatenate(data)
+        for flist in fnames:
+            data = np.array([read_file(f) for f in flist])
+            for m in self._models:
+                m[2].learn_threshold(np.array([self.rmse(d, m) for d in data]), m[0], m[1])
         for m in self._models:
-            m[2].learn_threshold(data, m[0], m[1])
+            m[2].merge_threshold()
 
 class FeatureExtractor(ABC):
 

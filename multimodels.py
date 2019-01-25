@@ -19,6 +19,16 @@ def process_unix_time(time):
     date = datetime.datetime.fromtimestamp(time/1000)
     return (JourSemaine(date.weekday()), ((date.hour * 24) + date.minute) * 60 + date.second)
 
+class Period():
+    def __init__(self, deb=0, fin=24*3600, days=None):
+        self._deb = deb
+        self._fin = fin
+        self._days = days
+
+    def is_in_period(time):
+        (day, time) = process_unix_time(time)
+        return (days == None or day in days) and time >= deb and time <= fin
+
 def period_weekend(time):
     (day, time) = process_unix_time(time)
     return day == JourSemaine.SAMEDI or day == JourSemaine.DIMANCHE

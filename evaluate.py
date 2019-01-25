@@ -148,7 +148,7 @@ def predict(models, path_examples, data):
         i = 0
         memory = []
 
-        data = data[20000:30000]
+#        data = data[20000:30000]
         for f in data:
             if i % 100 == 0:
                 print(i,"/",len(data))

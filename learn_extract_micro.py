@@ -55,7 +55,7 @@ if new:
     with open("train_folders") as f:
         folders = f.readlines()
     folders = [x.strip() for x in folders]
-    fnames = [os.path.join(directory,f) for directory in folders for f in sorted(os.listdir(directory))]
+    fnames = [[os.path.join(directory,f) for f in sorted(os.listdir(directory))] for directory in folders]
     extractors.learn_thresholds(fnames)
 #    rmse = extractors.rmse_from_folders(fnames)
 #    print("99% percentile threshold:",np.percentile(rmse, 99))

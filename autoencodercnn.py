@@ -85,6 +85,7 @@ class CNN(FeatureExtractor):
         return decompose(data, self._shape, overlap)
 
     def __init__(self, i, s, shape, nb_epochs):
+        self._thresholds = []
         self._config = Config()
         self._nb_epochs = nb_epochs
         self._batch_size = self._config.get_config_eval('batch_size')
@@ -195,15 +196,20 @@ class CNN(FeatureExtractor):
         return np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2
 
 
-    def learn_threshold(self, filenames, inf, sup):
+    def learn_threshold(self, data, inf, sup):
         print("Threshold estimation…")
-        predictions = test_prediction(data, self)
+#        predictions = test_prediction(data, self)
         # print("max:",np.max(predictions))
         # p = np.percentile(predictions, 1)
         # print("1% quantile:",p)
         # print("min",np.min(predictions))
         # print("mean",np.mean(predictions))
-        self._thresholds = [np.max(predictions), np.percentile(predictions,99), np.pencentile(predictions,95)]
+        self._thresholds.add([np.max(data), np.percentile(data,99), np.pencentile(data,95)])
+        print(self._thresholds)
+
+    def merge_threshold(self):
+        print(self._thresholds)
+        self._thresholds = np.mean(np.array(self._thresholds), axis=0)
         print(self._thresholds)
 
     def reconstruct(self, data):
