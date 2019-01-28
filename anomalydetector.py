@@ -21,9 +21,12 @@ class AnomalyDetector(ABC):
         pass
 
 
-    @abstractmethod
-    def predict(self, data):
-        pass
+#    @abstractmethod
+#    def predict(self, data):
+#        pass
+
+    def predict_thr(self, data, nbThreshold = 1):
+        return self.get_score(data) < self._thresholds[nbThreshold]
 
 #    @abstractmethod
 #    def predict(self, data, obs):
@@ -35,8 +38,8 @@ class AnomalyDetector(ABC):
 #        """
 #        pass
 
-    def predict_list(self, data):
-        return self.predict(data[:-1,:], data[-1,:].reshape(1,-1))
+#    def predict_list(self, data):
+#        return self.predict(data[:-1,:], data[-1,:].reshape(1,-1))
 
     @abstractmethod
     def get_memory_size(self):

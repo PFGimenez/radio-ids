@@ -23,7 +23,7 @@ from config import Config
 
 class Batch_Generator(Sequence):
 
-    def __init__(self, filenames, batch_size, input_shape, val_min, val_max, overlap, inf, sup):
+    def __init__(self, filenames, batch_size, input_shape, val_min, val_max, overlap, inf, sup, quant):
         self._min = val_min
         self._max = val_max
         self._overlap = overlap
@@ -34,6 +34,7 @@ class Batch_Generator(Sequence):
         self._size_y = input_shape[1]
         self._inf = inf
         self._sup = sup
+        self._quant = quant
 
     def __len__(self):
         return int(np.ceil(len(self.filenames) / float(self.batch_size)))
@@ -41,8 +42,6 @@ class Batch_Generator(Sequence):
     def __getitem__(self, idx):
         try:
             batch_x = self.filenames[idx * self.batch_size : (idx + 1) * self.batch_size]
-#            out = np.array([crop_sample(normalize(read_file(file_name), self._min, self._max), self._size_x, self._size_y).reshape(self._input_shape) for file_name in batch_x])
-#            print(len(batch_x), self._overlap, self._size_x, self._size_y, self._input_shape)
             out = [decompose(
 #                crop_sample(
                     normalize(
@@ -50,28 +49,14 @@ class Batch_Generator(Sequence):
                         , self._min, self._max),
 #                    self._size_x, self._size_y),
                 self._input_shape, self._overlap)
-#            .reshape(self._input_shape)
             for file_name in batch_x]
-#            print(out)
             out = np.concatenate(out)
-#            print(out.shape)
+            if self._quant:
+                quantify(out)
             return out, out # parce que la sortie et l'entrée de l'autoencoder doivent être identiques
         except ValueError as e:
             print(e, batch_x)
             raise
-
-#    def _process(self, data):
-#        max = 0
-#        min = -150
-#        data = (data - min) / (max - min)
-#        return self._crop_sample(data).reshape(self._input_shape)
-
-#    def _crop_sample(self, data):
-#        shape_x = data.shape[0]
-#        shape_y = data.shape[1]
-#        return data[int((shape_x - self._size_x) / 2) : int((shape_x + self._size_x) / 2),
-#                    int((shape_y - self._size_y) / 2) : int((shape_y + self._size_y) / 2)]
-
 
 class CNN(FeatureExtractor):
     """
@@ -92,6 +77,7 @@ class CNN(FeatureExtractor):
 #        self._nb_epochs = self._config.get_config_eval('nb_epochs')
         self._original_shape = (self._config.get_config_eval('waterfall_dimensions')[0], s-i)
         self._shape = shape
+        self._quant = self._config.get_config_eval('quantification')
         self._overlap = self._config.get_config_eval('window_overlap_training')
         self._overlap_test = self._config.get_config_eval('extractors_window_overlap_testing')
         self._min = self._config.get_config_eval('min_value')
@@ -165,12 +151,12 @@ class CNN(FeatureExtractor):
     def learn_extractor(self, filenames, inf, sup):
         self._new_model()
         [training_filenames, validation_filenames] = train_test_split(filenames)
-        training_batch_generator = Batch_Generator(training_filenames, self._batch_size, self._input_shape, self._min, self._max, self._overlap, inf, sup)
-        validation_batch_generator = Batch_Generator(validation_filenames, self._batch_size, self._input_shape, self._min, self._max, self._overlap, inf, sup)
+        training_batch_generator = Batch_Generator(training_filenames, self._batch_size, self._input_shape, self._min, self._max, self._overlap, inf, sup, self._quant)
+        validation_batch_generator = Batch_Generator(validation_filenames, self._batch_size, self._input_shape, self._min, self._max, self._overlap, inf, sup, self._quant)
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
         self._autoencoder.fit_generator(generator=training_batch_generator,
                                         epochs=self._nb_epochs,
-                                        verbose=2,
+                                        verbose=1,
                                         validation_data=validation_batch_generator,
                                         use_multiprocessing=True,
                                         workers=8,

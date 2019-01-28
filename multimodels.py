@@ -61,7 +61,7 @@ class MultiModels():
             No anomaly if at least one model says there isn't
         """
         for (f,m) in self._models:
-            if f(epoch) and not m.predict_list(data):
+            if f(epoch) and not m.predict(data):
                 return False
         return True
 

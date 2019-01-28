@@ -5,9 +5,34 @@ from sklearn.preprocessing import StandardScaler
 import math
 from keras import backend as K
 from config import Config
+import matplotlib.pyplot as plt
 
 _config = Config()
 _waterfall_dim = _config.get_config_eval('waterfall_dimensions')
+
+def show_histo(data, log=False):
+    """
+        Affiche un histogramme de data
+    """
+    plt.hist(data.flatten(), log=log, bins=100)
+    plt.title("Histogram")
+    plt.show()
+
+def quantify(data):
+    data[data >= 0] = -10
+    data[data < -60] = 0
+    data[data < -50] = 1
+    data[data < -40] = 2
+    data[data < -35] = 3
+    data[data < -30] = 4
+    data[data < -27.5] = 5
+    data[data < -25] = 6
+    data[data < -22.5] = 7
+    data[data < -20] = 8
+    data[data < -17.5] = 9
+    data[data < -15] = 10
+    data[data < -12.5] = 11
+    data[data < 0] = 12
 
 def normalize(data, val_min, val_max):
 #    data = (data - val_min) / (val_max - val_min)
@@ -202,8 +227,11 @@ def split_data(data):
     return (train_data, test_data)
 
 def test_prediction(data, model):
+    """
+        Liste des prédictions pour data selon model
+    """
     predictions = []
     for i in range(1,len(data)):
-        predictions.append(model.predict_list(data[:i,:]))
+        predictions.append(model.predict(data[:i,:]))
     return predictions
 
