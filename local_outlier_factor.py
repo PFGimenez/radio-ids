@@ -11,17 +11,17 @@ class LOF(AnomalyDetector):
     def __init__(self):
         self._model = LocalOutlierFactor(novelty=True)
 
-    def preprocess(self, data):
-        pass
-
     def learn(self, data):
         self._model.fit(data)
 
-#    def predict_list(self, data):
-#        self._model.predict(data[-1,:])
-
     def predict(self, data, obs):
-        return self._model.predict(obs)
+        return self._model.predict(obs) == -1
+
+    def get_score(self, data):
+        return self._model.score_samples(data)
+
+    def anomalies_have_high_score(self):
+        return False
 
     def get_memory_size(self):
         return 1
