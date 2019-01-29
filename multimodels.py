@@ -27,7 +27,7 @@ class Period():
 
     def is_in_period(time):
         (day, time) = process_unix_time(time)
-        return (days == None or day in days) and time >= deb and time <= fin
+        return (self._days == None or day in self._days) and time >= self._deb and time <= self._fin
 
 def period_weekend(time):
     (day, time) = process_unix_time(time)
@@ -48,7 +48,7 @@ def period_night(time):
 def extract_period(data, fun):
     return data[list(map(fun, data[:,0]))]
 
-class MultiModels():
+class MultiModels(AnomalyDetector):
 
     def __init__(self):
         self._models = []
@@ -64,6 +64,24 @@ class MultiModels():
             if f(epoch) and not m.predict(data):
                 return False
         return True
+
+
+    def get_score(self, data, epoch):
+        """
+            Optimistic score
+        """
+        s = []
+        # get the score for each model enable at this date
+        for (f,m) in self._models:
+            if f(epoch):
+                s.append(m_get_score(data)
+        if self.anomalies_have_high_score():
+            return min(s)
+        else:
+            return max(s)
+
+    def anomalies_have_high_score(self):
+        return self._models[0][1].anomalies_have_high_score()
 
     def save(self, filename):
         joblib.dump(self._models, filename)

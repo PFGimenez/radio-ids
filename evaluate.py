@@ -85,33 +85,34 @@ with open("test_folders") as f:
     folders = f.readlines()
 directories = [x.strip() for x in folders]
 
-files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
-print(files)
-data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
-print("data micro:",data.shape)
-
-test_macro_filename = os.path.join(config.get_config("section"), "test_"+config.get_config("macro_features_stage_2"))
-data_macro = np.fromfile(test_macro_filename).reshape(-1, nb_features_macro + 1)
-print("data macro:",data_macro.shape)
+use_micro = True
+use_macro = False
 
 # modèle micro
 
-use_micro = True
-models = MultiModels()
-try:
-    models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
-except Exception as e:
-    print("Loading failed:",e)
-    use_micro = False
+if use_micro:
+    models = MultiModels()
+    try:
+        models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
+        files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
+        print(files)
+        data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
+        print("data micro:",data.shape)
+    except Exception as e:
+        print("Loading failed:",e)
+        use_micro = False
 
 # modèle macro
-use_macro = True
-models_macro = MultiModels()
-try:
-    models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
-except Exception as e:
-    print("Loading failed:",e)
-    use_macro = False
+if use_macro:
+    models_macro = MultiModels()
+    try:
+        models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
+        test_macro_filename = os.path.join(config.get_config("section"), "test_"+config.get_config("macro_features_stage_2"))
+        data_macro = np.fromfile(test_macro_filename).reshape(-1, nb_features_macro + 1)
+        print("data macro:",data_macro.shape)
+    except Exception as e:
+        print("Loading failed:",e)
+        use_macro = False
 
 # autoencoders
 use_autoenc = False
@@ -119,10 +120,11 @@ bands = config.get_config_eval('waterfall_frequency_bands')
 dims = config.get_config_eval('autoenc_dimensions')
 extractors = MultiExtractors()
 
-for j in range(len(bands)):
-    (i,s) = bands[j]
-    m = CNN(i, s, dims[j], 0)
-    extractors.load(i, s, m)
+if use_autoenc:
+    for j in range(len(bands)):
+        (i,s) = bands[j]
+        m = CNN(i, s, dims[j], 0)
+        extractors.load(i, s, m)
 
 with open("train_folders") as f:
     folders_test = f.readlines()
@@ -145,21 +147,20 @@ def predict(models, path_examples, data):
         memory_size = models.get_memory_size()
         example_pos = []
         example_neg = []
-        i = 0
-        memory = []
+#        memory = []
 
 #        data = data[20000:30000]
-        for f in data:
+        print(data[0])
+        for i in range(memory_size,len(data)):
             if i % 100 == 0:
                 print(i,"/",len(data))
-            i += 1
 
-            if len(memory) == memory_size:
-                memory.pop(0)
-            memory.append(f[1:])
+#            if len(memory) == memory_size:
+#                memory.pop(0)
+#            memory.append(f[1:]) # hors timestamp
 
 #            print("Memory",np.array(memory).shape) # TODO
-            if models.predict(np.array(memory), f[0]):
+            if models.predict(data[i-1-memory_size:i]):
 #                print("Attack detected at",f[0])
                 example_pos.append(f[0])
             else:

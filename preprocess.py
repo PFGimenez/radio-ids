@@ -2,6 +2,7 @@ import os
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.utils.random import sample_without_replacement
 import math
 from keras import backend as K
 from config import Config
@@ -33,6 +34,12 @@ def quantify(data):
     data[data < -15] = 10
     data[data < -12.5] = 11
     data[data < 0] = 12
+
+def subsample(data, prop=0.01):
+    """
+        Return only a subsample
+    """
+    return data[sample_without_replacement(data.shape[0], int(data.shape[0]*prop))]
 
 def normalize(data, val_min, val_max):
 #    data = (data - val_min) / (val_max - val_min)
