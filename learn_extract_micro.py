@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from varma import Varma
-from arma import Arma
 from autoencodercnn import CNN
-from hmm import HMM
 from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import manhattan_distances, euclidean_distances
-from anomalydetector import AnomalyDetector
+from models import AnomalyDetector
 from preprocess import *
 from config import Config
 import random

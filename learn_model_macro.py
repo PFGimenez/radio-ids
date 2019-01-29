@@ -4,7 +4,7 @@ import numpy as np
 from preprocess import *
 from multimodels import *
 import random
-from hmm import HMM
+from models import HMM
 import os
 
 config = Config()

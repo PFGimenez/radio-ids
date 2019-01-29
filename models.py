@@ -1,9 +1,11 @@
-
-from anomalydetector import AnomalyDetector
+from preprocess import show_histo
 from sklearn.externals import joblib
 from sklearn.neighbors import LocalOutlierFactor
+from sklearn.svm import OneClassSVM
+from hmmlearn import hmm
 import numpy as np
 from abc import ABC, abstractmethod
+import matplotlib.pyplot as plt
 
 class AnomalyDetector(ABC):
     """
@@ -17,8 +19,12 @@ class AnomalyDetector(ABC):
         """
         pass
 
-    def predict_thr(self, data, nbThreshold = 1):
-        return self.get_score(data) < self._thresholds[nbThreshold]
+    def predict_thr(self, data, epoch, nbThreshold = 1):
+        return self.get_score(data, epoch) < self._thresholds[nbThreshold]
+
+    def histo_score(self, data):
+        s = [get_score(d) for d in data]
+        show_histo(s)
 
     @abstractmethod
     def get_memory_size(self):
@@ -34,11 +40,18 @@ class AnomalyDetector(ABC):
         pass
 
     def learn_threshold(self, data):
-        predictions = np.array([self.get_score(data[:i]) for i in range(1,len(data))])
+#        print(data.shape)
+        memory_size = self.get_memory_size()
+#        i = memory_size
+#        print(memory_size, i-1-memory_size, i)
+        predictions = np.array([self.get_score(data[i-1-memory_size:i,:]) for i in range(memory_size+1,len(data))])
         # on retire les None
         predictions = [x for x in predictions if x is not None]
         r = [0,1,2,3,4,5,7,10] if self.anomalies_have_high_score() else [100,99,98,97,96,95,93,90]
         self._thresholds = [np.percentile(predictions, p) for p in r]
+        print(self._thresholds)
+        plt.hist(predictions, log=False, bins=100)
+        plt.show()
 
     @abstractmethod
     def save(self, filename):
@@ -100,7 +113,8 @@ class OCSVM(AnomalyDetector):
         self._model.fit(data)
 
     def get_score(self, data, epoch=None):
-        return self._model.decision_function(obs)
+        assert len(data) == 1, "len(data) = "+str(len(data))
+        return self._model.decision_function(data)
 
     def anomalies_have_high_score(self):
         return True
@@ -145,3 +159,61 @@ class LOF(AnomalyDetector):
 
     def load(self, filename):
         self._model = joblib.load(filename)
+
+
+class MultiModels(AnomalyDetector):
+
+    def __init__(self):
+        self._models = []
+
+    def add_model(self, model, fun):
+        self._models.append((fun, model))
+
+    def predict(self, data, epoch):
+        """
+            No anomaly if at least one model says there isn't
+        """
+        for (f,m) in self._models:
+            if f(epoch) and not m.predict(data):
+                return False
+        return True
+
+    def learn(self, data):
+        pass
+    # TODO : pas de timestamp
+#        for (f,m) in self._models:
+#            data_m = extract_period(data, f)
+#            m.learn(data_m)
+
+    def get_score(self, data, epoch=None):
+        """
+            Optimistic score
+        """
+        if epoch == None:
+            raise ValueError("Impossible None")
+        s = []
+        # get the score for each model enable at this date
+        for (f,m) in self._models:
+            if f(epoch):
+                s.append(m.get_score(data))
+        if self.anomalies_have_high_score():
+            return min(s)
+        else:
+            return max(s)
+
+    def learn_threshold(self, data):
+        for (f,m) in self._models:
+            data_m = extract_period(data, f)
+            m.learn_threshold(data_m)
+
+    def anomalies_have_high_score(self):
+        return self._models[0][1].anomalies_have_high_score()
+
+    def save(self, filename):
+        joblib.dump(self._models, filename)
+
+    def load(self, filename):
+        self._models = joblib.load(filename)
+
+    def get_memory_size(self):
+        return max([m.get_memory_size() for (_,m) in self._models])

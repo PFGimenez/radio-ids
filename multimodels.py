@@ -48,46 +48,4 @@ def period_night(time):
 def extract_period(data, fun):
     return data[list(map(fun, data[:,0]))]
 
-class MultiModels(AnomalyDetector):
 
-    def __init__(self):
-        self._models = []
-
-    def add_model(self, model, fun):
-        self._models.append((fun, model))
-
-    def predict(self, data, epoch):
-        """
-            No anomaly if at least one model says there isn't
-        """
-        for (f,m) in self._models:
-            if f(epoch) and not m.predict(data):
-                return False
-        return True
-
-
-    def get_score(self, data, epoch):
-        """
-            Optimistic score
-        """
-        s = []
-        # get the score for each model enable at this date
-        for (f,m) in self._models:
-            if f(epoch):
-                s.append(m_get_score(data)
-        if self.anomalies_have_high_score():
-            return min(s)
-        else:
-            return max(s)
-
-    def anomalies_have_high_score(self):
-        return self._models[0][1].anomalies_have_high_score()
-
-    def save(self, filename):
-        joblib.dump(self._models, filename)
-
-    def load(self, filename):
-        self._models = joblib.load(filename)
-
-    def get_memory_size(self):
-        return max([m.get_memory_size() for (_,m) in self._models])
