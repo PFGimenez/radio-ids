@@ -1,6 +1,5 @@
 from sklearn.model_selection import train_test_split
-from anomalydetector import AnomalyDetector
-from extractor import FeatureExtractor
+from models import AnomalyDetector, FeatureExtractor
 
 # reduce TF verbosity
 import os
@@ -58,10 +57,29 @@ class Batch_Generator(Sequence):
             print(e, batch_x)
             raise
 
-class CNN(FeatureExtractor):
+class CNN(FeatureExtractor, AnomalyDetector):
     """
         Autoencoder convoluted neural network
     """
+
+
+    def anomalies_have_high_score(self):
+        return True
+
+
+    def learn_threshold(self, data):
+        super().learn_threshold(data)
+        self._all_th.append(self._thresholds)
+        self._thresholds = []
+
+    def get_score(self, data, epoch=None):
+        print("get score shape:",data.shape)
+        out = np.array(self.squared_diff(data[:,self._i:self._s]))
+        print(out.shape)
+        out = np.mean(out, axis=(0,2,3))
+        out = np.sqrt(out)
+        return out
+
 
     def decompose(self, data, overlap=None):
         if overlap == None:
@@ -70,7 +88,17 @@ class CNN(FeatureExtractor):
         return decompose(data, self._shape, overlap)
 
     def __init__(self, i, s, shape, nb_epochs):
+        """
+            i: beginning of the spectral band
+            s: end of the spectral band
+            shape: input shape
+            nb_epoches: self-explanatory
+        """
+
+        self._i = i
+        self._s = s
         self._thresholds = []
+        self._all_th = []
         self._config = Config()
         self._nb_epochs = nb_epochs
         self._batch_size = self._config.get_config_eval('batch_size')
@@ -148,6 +176,16 @@ class CNN(FeatureExtractor):
 
         self._autoencoder.summary()
 
+    def learn(self, data):
+        """
+            Pas utilisé directement
+        """
+        assert False
+
+
+    def get_memory_size(self):
+        return 0
+
     def learn_extractor(self, filenames, inf, sup):
         self._new_model()
         [training_filenames, validation_filenames] = train_test_split(filenames)
@@ -177,21 +215,22 @@ class CNN(FeatureExtractor):
 #        print("Autoencoder loaded!")
 
     def squared_diff(self, data):
+        print("squared diff shape:",data.shape)
         data = self.decompose(normalize(data, self._min, self._max), self._overlap_test)
 #        return np.sqrt(np.mean(np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2, axis=(1,2)))
         return np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2
 
 
-    def learn_threshold(self, data, inf, sup):
-        print("Threshold estimation…")
-#        predictions = test_prediction(data, self)
-        # print("max:",np.max(predictions))
-        # p = np.percentile(predictions, 1)
-        # print("1% quantile:",p)
-        # print("min",np.min(predictions))
-        # print("mean",np.mean(predictions))
-        self._thresholds.add([np.max(data), np.percentile(data,99), np.pencentile(data,95)])
-        print(self._thresholds)
+    # def learn_threshold(self, data, inf, sup):
+    #     print("Threshold estimation…")
+# #        predictions = test_prediction(data, self)
+    #     # print("max:",np.max(predictions))
+    #     # p = np.percentile(predictions, 1)
+    #     # print("1% quantile:",p)
+    #     # print("min",np.min(predictions))
+    #     # print("mean",np.mean(predictions))
+    #     self._thresholds.add([np.max(data), np.percentile(data,99), np.pencentile(data,95)])
+    #     print(self._thresholds)
 
     def merge_threshold(self):
         print(self._thresholds)

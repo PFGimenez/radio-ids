@@ -4,23 +4,21 @@ import numpy as np
 from autoencodercnn import CNN
 from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import manhattan_distances, euclidean_distances
-from models import AnomalyDetector
+from models import MultiExtractors
 from preprocess import *
 from config import Config
 import random
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
-from extractor import MultiExtractors
 
 np.random.seed()
 random.seed()
 
 
-# TODO merge from different raspi
 with open("train_folders") as f:
     folders = f.readlines()
 folders = [x.strip() for x in folders]
-
+folders = ['data-test']
 config = Config()
 
 min_value = config.get_config_eval('min_value')
@@ -37,28 +35,26 @@ for j in range(len(bands)):
     (i,s) = bands[j]
     try:
         m = CNN(i, s, dims[j], epochs[j])
-        extractors.load(i, s, m)
+        extractors.load_model(m)
 
     except Exception as e:
         print("Loading failed:",e)
         print("Learning extractor from files in",folders)
         filenames = get_files_names(folders)
         m.learn_extractor(filenames, i, s)
-        extractors.add_model(m, i, s)
+        extractors.add_model(m)
         new = True
-new = True
+new = True # TODO virer
 if new:
+    extractors.save_all()
     print("Learning threshold")
-    with open("train_folders") as f:
-        folders = f.readlines()
-    folders = [x.strip() for x in folders]
     fnames = [[os.path.join(directory,f) for f in sorted(os.listdir(directory))] for directory in folders]
     extractors.learn_thresholds(fnames)
 #    rmse = extractors.rmse_from_folders(fnames)
 #    print("99% percentile threshold:",np.percentile(rmse, 99))
 #    print("max threshold:",np.max(rmse))
     print("Saving extractors…")
-    extractors.save()
+    extractors.save_all()
 else:
     print("Extractors already learnt !")
 
@@ -68,8 +64,8 @@ data = read_directory("data-test2")[0:5,:,:]
 data = np.concatenate(data)
 
 # juste pour la heatmap…
-data[20,0] = min_value
-data[21,1] = max_value
+#data[20,0] = min_value
+#data[21,1] = max_value
 
 #print(np.mean(rmse))
 #print(np.min(rmse))
@@ -77,6 +73,7 @@ data[21,1] = max_value
 #print(np.percentile(rmse, 1))
 #print(np.percentile(rmse, 99))
 
+quantify(data)
 data_reconstructed = extractors.reconstruct(data)[0,:,:]
 data = data[:16,:1488]
 data[data < min_value] = min_value

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from multimodels import *
+from models import MultiModels
 from preprocess import *
 import numpy as np
 from config import Config
@@ -8,6 +8,8 @@ import os
 from extractor import MultiExtractors
 from autoencodercnn import CNN
 import time
+from sklearn.externals import joblib
+import matplotlib.pyplot as plt
 
 class Evaluator:
 
@@ -26,39 +28,73 @@ class Evaluator:
         """
         self._id = identifier
         # TODO : ou remplacer identifier par une fonction (pour agréger toutes les attaques bluetooth par exemple)
-        self._attack = all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer)
-        print(self._attack.shape[0],"attacks on",identifier)
+        self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
+#        print(self._attack)
+        self._seen_attack = []
+        print(len(self._attack),"attacks on",identifier)
 
     def is_in_attack(self, timestamp):
         for a in self._attack:
             if timestamp >= a[0] and timestamp <= a[1]:
                 return True
         return False
+#        return np.any([timestamp >= a[0] and timestamp <= a[1] for a in self._attack])
 
-    def evaluate(self, detected_positive, detected_negative):
+    def is_in_attack_detected(self, timestamp):
+        for a in self._attack:
+            if timestamp >= a[0] and timestamp <= a[1]:
+                if a[0] not in self._seen_attack:
+                    self._seen_attack.append(a[0])
+                return True
+        return False
+
+    def evaluate(self, detected_positive_dico, detected_negative_dico):
         """
             Prediction : shape (-1,2)
             column 0 : timestamp
             column 1 : true iff detection
         """
-
+        detected_positive = np.array([k for k in detected_positive_dico])
+        detected_negative = np.array([k for k in detected_negative_dico])
         total_positives = len(detected_positive)
-        true_positive = sum(list(map(self.is_in_attack, detected_positive)))
+        true_positive_list = detected_positive[list(map(self.is_in_attack_detected, detected_positive))]
+        false_positive_list = detected_positive[[t not in true_positive_list for t in detected_positive]]
+        true_positive = len(true_positive_list)
         false_positive = total_positives - true_positive
 
         total_negatives = len(detected_negative)
-        false_negative = sum(list(map(self.is_in_attack, detected_negative)))
+        false_negative_list = detected_negative[list(map(self.is_in_attack, detected_negative))]
+        true_negative_list = detected_negative[[t not in false_negative_list for t in detected_negative]]
+        false_negative = len(false_negative_list)
         true_negative = total_negatives - false_negative
+
+        print("Detected : ",len(self._seen_attack),"/",len(self._attack))
+
+        true_positive_score = np.array([detected_positive_dico[t] for t in true_positive_list])
+        false_negative_score = np.array([detected_negative_dico[t] for t in false_negative_list])
+        false_positive_score = np.array([detected_positive_dico[t] for t in false_positive_list])
+        true_negative_score = np.array([detected_negative_dico[t] for t in true_negative_list])
+        plt.hist(true_positive_score, color='red', bins=100, histtype='step', log=True)
+        plt.hist(false_negative_score, color='magenta', bins=100, histtype='step', log=True)
+        plt.hist(false_positive_score, color='cyan', bins=100, histtype='step', log=True)
+        plt.hist(true_negative_score, color='blue', bins=100, histtype='step', log=True)
+        plt.title(self._id)
 
         if true_positive + false_negative == 0:
             recall = 1
         else:
             recall = true_positive / (true_positive + false_negative)
 
+        # TODO
+        recall = len(self._seen_attack) / len(self._attack)
+
         if total_positives == 0:
             precision = 1
         else:
             precision = true_positive / total_positives
+
+        # TODO
+        precision = len(self._seen_attack) / (false_positive + len(self._seen_attack))
 
 #        print("total pos",total_positives, "total negative",total_negatives)
         if precision + recall != 0:
@@ -67,13 +103,14 @@ class Evaluator:
             fmeasure = float('nan')
         print("tp",true_positive, "tn",true_negative, "fp",false_positive,"fn", false_negative,"precision",precision,"recall",recall,"f-measure",fmeasure)
 
+        plt.show()
 # lecture config
 
 config = Config()
 attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
 
 identifiers = np.unique(attack[:,0])
-print(identifiers)
+print("Attacks list:",identifiers)
 evaluators = [Evaluator(i, attack) for i in identifiers]
 nb_features = config.get_config_eval("nb_features")
 nb_features_macro = config.get_config_eval("nb_features_macro")
@@ -93,7 +130,7 @@ use_macro = False
 if use_micro:
     models = MultiModels()
     try:
-        models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
+        models.load(os.path.join(prefix, "micro-LOF.joblib"))
         files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
         print(files)
         data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
@@ -134,7 +171,7 @@ folders_test = [x.strip() for x in folders]
 # évaluation
 
 
-path_examples = os.path.join(prefix, "results-OCSVM-micro.joblib")
+path_examples = os.path.join(prefix, "results-LOF-micro.joblib")
 path_examples_macro = os.path.join(prefix, "results-HMM-macro.joblib")
 path_examples_extractors = os.path.join(prefix, "results-autoenc.joblib")
 
@@ -145,30 +182,32 @@ def predict(models, path_examples, data):
     except:
         start = time.time()
         memory_size = models.get_memory_size()
-        example_pos = []
-        example_neg = []
+        example_pos = {}
+        example_neg = {}
 #        memory = []
 
 #        data = data[20000:30000]
-        print(data[0])
-        for i in range(memory_size,len(data)):
+#        for i in range(memory_size+1,1000):
+        for i in range(memory_size+1,len(data)): # TODO
             if i % 100 == 0:
                 print(i,"/",len(data))
 
 #            if len(memory) == memory_size:
 #                memory.pop(0)
 #            memory.append(f[1:]) # hors timestamp
-
-#            print("Memory",np.array(memory).shape) # TODO
-            if models.predict(data[i-1-memory_size:i]):
-#                print("Attack detected at",f[0])
-                example_pos.append(f[0])
+            d = data[i-1-memory_size:i]
+#            print(data.shape, d.shape, d[0,0],d[0,1:])
+#            print(d[0,0].shape, d[:,1:].shape)
+            score = models.get_score(d[:,1:], d[0,0])
+            if models.predict_thr(d[:,1:], d[0,0]):
+#                print("Attack detected at",d[0,0])
+                example_pos[d[0,0]] = score
             else:
-                example_neg.append(f[0])
+                example_neg[d[0,0]] = score
 
         end = time.time()
         print("Detection time:",(end-start),"s")
-#        joblib.dump((example_pos, example_neg), path_examples)
+        joblib.dump((example_pos, example_neg), path_examples)
     return (example_pos, example_neg)
 
 def predict_extractors(extractors, path_examples, folders_test):

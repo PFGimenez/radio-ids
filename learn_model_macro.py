@@ -2,6 +2,7 @@
 
 import numpy as np
 from preprocess import *
+from models import MultiModels
 from multimodels import *
 import random
 from models import HMM
@@ -27,6 +28,8 @@ if not os.path.isfile(output):
         if data.shape[0] > 0:
             print("Learning for",p.__name__,"from",data.shape[0],"examples")
             detector.learn(data[:,1:]) # should not learn the timestamp
+            print("Learning threshold")
+            detector.learn_threshold(data[:,1:])
             models.add_model(detector, p)
         else:
             print("No data to learn period",p.__name__)

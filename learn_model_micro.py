@@ -13,7 +13,7 @@ nb_features = config.get_config_eval("nb_features")
 with open("train_folders") as f:
     folders = f.readlines()
 folders = [x.strip() for x in folders]
-folders = [folders[0]] # TODO
+#folders = [folders[0]] # TODO virer
 prefix = config.get_config("section")
 model_subsample = config.get_config_eval("model_subsample")
 

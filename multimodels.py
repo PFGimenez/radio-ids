@@ -29,6 +29,9 @@ class Period():
         (day, time) = process_unix_time(time)
         return (self._days == None or day in self._days) and time >= self._deb and time <= self._fin
 
+def period_always(time):
+    return True
+
 def period_weekend(time):
     (day, time) = process_unix_time(time)
     return day == JourSemaine.SAMEDI or day == JourSemaine.DIMANCHE

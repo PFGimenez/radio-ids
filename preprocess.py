@@ -11,16 +11,16 @@ import matplotlib.pyplot as plt
 _config = Config()
 _waterfall_dim = _config.get_config_eval('waterfall_dimensions')
 
-def show_histo(data, log=False):
+def show_histo(data, log=False, flatten=False):
     """
         Affiche un histogramme de data
     """
-    plt.hist(data.flatten(), log=log, bins=100)
+    plt.hist(data.flatten() if flatten else data, log=log, bins=100)
     plt.title("Histogram")
     plt.show()
 
 def quantify(data):
-    data[data >= 0] = -10
+    data[data >= 0] = -10 # qui devient ensuite 12
     data[data < -60] = 0
     data[data < -50] = 1
     data[data < -40] = 2
