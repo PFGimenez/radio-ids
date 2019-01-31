@@ -28,7 +28,11 @@ class Evaluator:
         """
         self._id = identifier
         # TODO : ou remplacer identifier par une fonction (pour agréger toutes les attaques bluetooth par exemple)
-        self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
+        if self._id == None:
+            self._id = "All"
+            self._attack = np.array(all_attack[:,1:].astype(np.integer))
+        else:
+            self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
 #        print(self._attack)
         self._seen_attack = []
         print(len(self._attack),"attacks on",identifier)
@@ -113,77 +117,6 @@ class Evaluator:
             plt.vlines(t, 0.85, 0.9, color='red' if self.is_in_attack(t) else 'blue')
         plt.show()
 
-# lecture config
-
-config = Config()
-attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
-
-identifiers = np.unique(attack[:,0])
-print("Attacks list:",identifiers)
-evaluators = [Evaluator(i, attack) for i in identifiers]
-nb_features = config.get_config_eval("nb_features")
-nb_features_macro = config.get_config_eval("nb_features_macro")
-prefix = config.get_config("section")
-
-# chargement du jeu de données de test micro
-
-with open("test_folders") as f:
-    folders = f.readlines()
-directories = [x.strip() for x in folders]
-
-show_hist = False
-use_micro = False
-use_macro = False
-use_autoenc = True
-
-# modèle micro
-
-if use_micro:
-    models = MultiModels()
-    try:
-        models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
-        files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
-        print(files)
-        data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
-        print("data micro:",data.shape)
-    except Exception as e:
-        print("Loading failed:",e)
-        use_micro = False
-
-# modèle macro
-if use_macro:
-    models_macro = MultiModels()
-    try:
-        models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
-        test_macro_filename = os.path.join(config.get_config("section"), "test_"+config.get_config("macro_features_stage_2"))
-        data_macro = np.fromfile(test_macro_filename).reshape(-1, nb_features_macro + 1)
-        print("data macro:",data_macro.shape)
-    except Exception as e:
-        print("Loading failed:",e)
-        use_macro = False
-
-# autoencoders
-bands = config.get_config_eval('waterfall_frequency_bands')
-dims = config.get_config_eval('autoenc_dimensions')
-extractors = MultiExtractors()
-
-if use_autoenc:
-    for j in range(len(bands)):
-        (i,s) = bands[j]
-        m = CNN(i, s, dims[j], 0)
-        extractors.load_model(m)
-
-with open("train_folders") as f:
-    folders_test = f.readlines()
-folders_test = [x.strip() for x in folders]
-
-
-# évaluation
-
-
-path_examples = os.path.join(prefix, "results-OCSVM-micro.joblib")
-path_examples_macro = os.path.join(prefix, "results-HMM-macro.joblib")
-path_examples_extractors = os.path.join(prefix, "results-autoenc.joblib")
 
 def predict(models, path_examples, data):
     try:
@@ -234,6 +167,7 @@ def predict_extractors(extractors, path_examples, folders_test):
         (example_pos, example_neg) = joblib.load(path_examples)
         print("Predictions loaded")
     except:
+        start = time.time()
         example_pos = {}
         example_neg = {}
         i = 0
@@ -259,10 +193,87 @@ def predict_extractors(extractors, path_examples, folders_test):
                 else:
                     example_neg[timestamp] = score
 
-
-#        joblib.dump((example_pos, example_neg), path_examples)
+        end = time.time()
+        print("Detection time:",(end-start),"s")
+        joblib.dump((example_pos, example_neg), path_examples)
     return (example_pos, example_neg)
 
+
+
+
+# lecture config
+
+config = Config()
+attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
+
+identifiers = np.unique(attack[:,0])
+print("Attacks list:",identifiers)
+
+evaluators = [Evaluator(i, attack) for i in identifiers]
+evaluators.append(Evaluator(None, attack))
+nb_features = config.get_config_eval("nb_features")
+nb_features_macro = config.get_config_eval("nb_features_macro")
+prefix = config.get_config("section")
+
+# chargement du jeu de données de test micro
+
+with open("test_folders") as f:
+    folders = f.readlines()
+directories = [x.strip() for x in folders]
+
+show_hist = False
+use_micro = True
+use_macro = False
+use_autoenc = False
+
+# modèle micro
+
+if use_micro:
+    models = MultiModels()
+    try:
+        models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
+        files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
+        print(files)
+        data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
+        print("data micro:",data.shape)
+    except Exception as e:
+        print("Loading failed:",e)
+        use_micro = False
+
+# modèle macro
+if use_macro:
+    models_macro = MultiModels()
+    try:
+        models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
+        test_macro_filename = os.path.join(config.get_config("section"), "test_"+config.get_config("macro_features_stage_2"))
+        data_macro = np.fromfile(test_macro_filename).reshape(-1, nb_features_macro + 1)
+        print("data macro:",data_macro.shape)
+    except Exception as e:
+        print("Loading failed:",e)
+        use_macro = False
+
+# autoencoders
+bands = config.get_config_eval('waterfall_frequency_bands')
+dims = config.get_config_eval('autoenc_dimensions')
+extractors = MultiExtractors()
+
+if use_autoenc:
+    for j in range(len(bands)):
+        (i,s) = bands[j]
+        m = CNN(i, s, dims[j], 0)
+        extractors.load_model(m)
+
+with open("train_folders") as f:
+    folders_test = f.readlines()
+folders_test = [x.strip() for x in folders]
+
+
+# évaluation
+
+
+path_examples = os.path.join(prefix, "results-OCSVM-micro.joblib")
+path_examples_macro = os.path.join(prefix, "results-HMM-macro.joblib")
+path_examples_extractors = os.path.join(prefix, "results-autoenc.joblib")
 
 if use_micro:
     print("Prediction for micro…")
