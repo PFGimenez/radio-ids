@@ -18,7 +18,8 @@ random.seed()
 with open("train_folders") as f:
     folders = f.readlines()
 folders = [x.strip() for x in folders]
-folders = ['data-test']
+#folders = ['data-test', 'data-test']
+folders = [folders[0]]
 config = Config()
 
 min_value = config.get_config_eval('min_value')
@@ -49,7 +50,7 @@ if new:
     extractors.save_all()
     print("Learning threshold")
     fnames = [[os.path.join(directory,f) for f in sorted(os.listdir(directory))] for directory in folders]
-    extractors.learn_thresholds(fnames)
+    extractors.learn_threshold(fnames)
 #    rmse = extractors.rmse_from_folders(fnames)
 #    print("99% percentile threshold:",np.percentile(rmse, 99))
 #    print("max threshold:",np.max(rmse))
@@ -60,7 +61,7 @@ else:
 
 fig = plt.figure()
 
-data = read_directory("data-test2")[0:5,:,:]
+data = read_directory("data-test2",quant=True)[0:5,:,:]
 data = np.concatenate(data)
 
 # juste pour la heatmap…
@@ -73,7 +74,10 @@ data = np.concatenate(data)
 #print(np.percentile(rmse, 1))
 #print(np.percentile(rmse, 99))
 
-quantify(data)
+print(data)
+print(np.max(data))
+#quantify(data)
+print(data)
 data_reconstructed = extractors.reconstruct(data)[0,:,:]
 data = data[:16,:1488]
 data[data < min_value] = min_value

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
-from models import MultiModels
+from models import MultiModels, MultiExtractors
 from preprocess import *
 import numpy as np
 from config import Config
 import os
-from extractor import MultiExtractors
 from autoencodercnn import CNN
 import time
 from sklearn.externals import joblib
 import matplotlib.pyplot as plt
+
 
 class Evaluator:
 
@@ -103,7 +103,8 @@ class Evaluator:
             fmeasure = float('nan')
         print("tp",true_positive, "tn",true_negative, "fp",false_positive,"fn", false_negative,"precision",precision,"recall",recall,"f-measure",fmeasure)
 
-        plt.show()
+        if show_hist:
+            plt.show()
 # lecture config
 
 config = Config()
@@ -122,8 +123,10 @@ with open("test_folders") as f:
     folders = f.readlines()
 directories = [x.strip() for x in folders]
 
-use_micro = True
+show_hist = False
+use_micro = False
 use_macro = False
+use_autoenc = True
 
 # modèle micro
 
@@ -152,7 +155,6 @@ if use_macro:
         use_macro = False
 
 # autoencoders
-use_autoenc = False
 bands = config.get_config_eval('waterfall_frequency_bands')
 dims = config.get_config_eval('autoenc_dimensions')
 extractors = MultiExtractors()
@@ -161,7 +163,7 @@ if use_autoenc:
     for j in range(len(bands)):
         (i,s) = bands[j]
         m = CNN(i, s, dims[j], 0)
-        extractors.load(i, s, m)
+        extractors.load_model(m)
 
 with open("train_folders") as f:
     folders_test = f.readlines()
@@ -222,11 +224,12 @@ def predict_extractors(extractors, path_examples, folders_test):
         paths = [os.path.join(directory,f) for directory in folders_test for f in sorted(os.listdir(directory))]
         for fname in paths:
             timestamp = int(os.path.split(fname)[1])
-            data = read_file(fname)
+            data = read_file(fname, quant=True)
             if i % 100 == 0:
                 print(i,"/",len(paths))
             i += 1
 
+            # TODO : décompose data
             if extractors.predict(data):
                 example_pos.append(timestamp)
             else:

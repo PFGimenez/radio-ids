@@ -1,4 +1,4 @@
-from preprocess import show_histo, read_file
+from preprocess import show_histo, read_files, quantify
 from sklearn.externals import joblib
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.svm import OneClassSVM
@@ -52,6 +52,9 @@ class AnomalyDetector(ABC):
         predictions = np.array([self.get_score(data[i-1-memory_size:i,:]) for i in range(memory_size+1,len(data))])
         # on retire les None
         predictions = np.array([x for x in predictions if x is not None])
+        self._learn_threshold_from_scores(predictions)
+
+    def _learn_threshold_from_scores(self, predictions):
         r = [100,99,98,97,96,95,93,90] if self.anomalies_have_high_score() else [0,1,2,3,4,5,7,10]
         self._thresholds = [np.percentile(predictions, p) for p in r]
         print("Thresholds:",self._thresholds)
@@ -278,16 +281,17 @@ class MultiExtractors(MultiModels):
 #        print(out.shape)
         return out
 
-    def learn_thresholds(self, fnames):
+    def learn_threshold(self, fnames):
+        scores = {m : [] for (_,m) in self._models}
         # un jour à la fois
         for flist in fnames:
-            print("Learn from",flist)
-            data = np.array([read_file(f) for f in flist])
-            super().learn_threshold(data)
-#            for (_,m) in self._models:
-#                m.learn_threshold(np.array([self.rmse(d, m) for d in data]), m._i, m._s)
+            print("Learn from",flist[0],len(flist))
+            data = read_files(flist,quant=True)
+#            quantify(data)
+            for (_,m) in self._models:
+                scores[m].append([m.get_score(d) for d in data])
         for (_,m) in self._models:
-            m.merge_threshold()
+            m._learn_threshold_from_scores(np.array(scores[m]).flatten())
 
 class FeatureExtractor(ABC):
 

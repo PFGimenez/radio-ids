@@ -44,14 +44,14 @@ class Batch_Generator(Sequence):
             out = [decompose(
 #                crop_sample(
                     normalize(
-                        read_file(file_name)[:,self._inf:self._sup]
+                        read_file(file_name, quant=True)[:,self._inf:self._sup]
                         , self._min, self._max),
 #                    self._size_x, self._size_y),
                 self._input_shape, self._overlap)
             for file_name in batch_x]
             out = np.concatenate(out)
-            if self._quant:
-                quantify(out)
+#            if self._quant:
+#                quantify(out)
             return out, out # parce que la sortie et l'entrée de l'autoencoder doivent être identiques
         except ValueError as e:
             print(e, batch_x)
@@ -66,20 +66,16 @@ class CNN(FeatureExtractor, AnomalyDetector):
     def anomalies_have_high_score(self):
         return True
 
-
     def learn_threshold(self, data):
         super().learn_threshold(data)
         self._all_th.append(self._thresholds)
         self._thresholds = []
 
     def get_score(self, data, epoch=None):
-        print("get score shape:",data.shape)
         out = np.array(self.squared_diff(data[:,self._i:self._s]))
-        print(out.shape)
-        out = np.mean(out, axis=(0,2,3))
+        out = np.mean(out, axis=(1,2))
         out = np.sqrt(out)
         return out
-
 
     def decompose(self, data, overlap=None):
         if overlap == None:
@@ -215,7 +211,6 @@ class CNN(FeatureExtractor, AnomalyDetector):
 #        print("Autoencoder loaded!")
 
     def squared_diff(self, data):
-        print("squared diff shape:",data.shape)
         data = self.decompose(normalize(data, self._min, self._max), self._overlap_test)
 #        return np.sqrt(np.mean(np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2, axis=(1,2)))
         return np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2

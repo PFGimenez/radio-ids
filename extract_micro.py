@@ -16,7 +16,7 @@ def extract_micro(extractors, directories, window_overlap, prefix, nb_features):
         for i in range(len(filenames)-1):
             out.append(
                 extractors.extract_features(
-                    np.concatenate(read_files([filenames[i], filenames[i+1]])),
+                    np.concatenate(read_files([filenames[i], filenames[i+1]], quant=True)),
                     int(os.path.split(filenames[i])[1]),
                     window_overlap))
 

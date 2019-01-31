@@ -20,6 +20,7 @@ def show_histo(data, log=False, flatten=False):
     plt.show()
 
 def quantify(data):
+    assert np.all(data < 0)
     data[data >= 0] = -10 # qui devient ensuite 12
     data[data < -60] = 0
     data[data < -50] = 1
@@ -172,12 +173,14 @@ def decompose(data, shape, overlap=0):
     else:
         return out.reshape(x*y, shape_x, shape_y, 1)
 
-def read_file(filename):
+def read_file(filename, quant=False):
     """
         Read one file
     """
 #    print("Reading data file " + filename)
     data = np.fromfile(filename, dtype=np.dtype('float64'))
+    if quant:
+        quantify(data)
     return data.reshape(_waterfall_dim)
 
 def get_files_names(directory_list, pattern=""):
@@ -187,7 +190,7 @@ def get_files_names(directory_list, pattern=""):
     names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if pattern in s]
     return names
 
-def read_files(files_list):
+def read_files(files_list, quant=False):
     data = []
     i = 1
     for fname in files_list:
@@ -195,13 +198,15 @@ def read_files(files_list):
             print(i,"/",len(files_list))
         i += 1
         data.append(np.fromfile(fname, dtype=np.dtype('float64')).reshape(_waterfall_dim))
+    if quant:
+        quantify(data)
 #    print(str(len(data)) + " files read")
 
 #    print("Files read" + str(data.shape))
 #data = data.reshape(50,-1)
     return np.array(data)
 
-def read_directory_with_timestamps(directory):
+def read_directory_with_timestamps(directory,quant=False):
     """
         Read all files from a directory into a dictonary with timestamp
     """
@@ -210,18 +215,18 @@ def read_directory_with_timestamps(directory):
     s = sorted(os.listdir(directory))
     for fname in s:
         fname = os.path.join(directory, fname)
-        out_data.append(read_file(fname))
+        out_data.append(read_file(fname,quant=quant))
         out_time.append(int(os.path.split(fname)[1]))
     return (out_data, out_time)
 
-def read_directory(directory):
+def read_directory(directory,quant=False):
     """
         Read all files from a directory
     """
 
     print("Reading data files from directory " + directory)
     files_list = [os.path.join(directory, fname) for fname in sorted(os.listdir(directory))]
-    return read_files(files_list)
+    return read_files(files_list,quant=quant)
 
 def split_data(data):
     """
