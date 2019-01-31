@@ -45,15 +45,11 @@ for j in range(len(bands)):
         m.learn_extractor(filenames, i, s)
         extractors.add_model(m)
         new = True
-#new = True # TODO virer
+new = True # TODO virer
 if new:
-    extractors.save_all()
     print("Learning threshold")
     fnames = [[os.path.join(directory,f) for f in sorted(os.listdir(directory))] for directory in folders]
     extractors.learn_threshold(fnames)
-#    rmse = extractors.rmse_from_folders(fnames)
-#    print("99% percentile threshold:",np.percentile(rmse, 99))
-#    print("max threshold:",np.max(rmse))
     print("Saving extractors…")
     extractors.save_all()
 else:

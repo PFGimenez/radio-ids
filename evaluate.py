@@ -74,11 +74,6 @@ class Evaluator:
         false_negative_score = np.array([detected_negative_dico[t] for t in false_negative_list])
         false_positive_score = np.array([detected_positive_dico[t] for t in false_positive_list])
         true_negative_score = np.array([detected_negative_dico[t] for t in true_negative_list])
-        plt.hist(true_positive_score, color='red', bins=100, histtype='step', log=True)
-        plt.hist(false_negative_score, color='magenta', bins=100, histtype='step', log=True)
-        plt.hist(false_positive_score, color='cyan', bins=100, histtype='step', log=True)
-        plt.hist(true_negative_score, color='blue', bins=100, histtype='step', log=True)
-        plt.title(self._id)
 
         if true_positive + false_negative == 0:
             recall = 1
@@ -103,8 +98,21 @@ class Evaluator:
             fmeasure = float('nan')
         print("tp",true_positive, "tn",true_negative, "fp",false_positive,"fn", false_negative,"precision",precision,"recall",recall,"f-measure",fmeasure)
 
-        if show_hist:
-            plt.show()
+        plt.hist(true_positive_score, color='red', bins=100, histtype='step', log=True)
+        plt.hist(false_negative_score, color='magenta', bins=100, histtype='step', log=True)
+        plt.hist(false_positive_score, color='cyan', bins=100, histtype='step', log=True)
+        plt.hist(true_negative_score, color='blue', bins=100, histtype='step', log=True)
+        plt.title(self._id)
+        plt.show()
+
+        for a in self._attack:
+#            print(a[1]-a[0])
+            plt.hlines(1, a[0], a[1], color='red')
+        for t in detected_positive:
+#            print(t)
+            plt.vlines(t, 0.85, 0.9, color='red' if self.is_in_attack(t) else 'blue')
+        plt.show()
+
 # lecture config
 
 config = Config()
@@ -133,7 +141,7 @@ use_autoenc = True
 if use_micro:
     models = MultiModels()
     try:
-        models.load(os.path.join(prefix, "micro-LOF.joblib"))
+        models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
         files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
         print(files)
         data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
@@ -173,7 +181,7 @@ folders_test = [x.strip() for x in folders]
 # évaluation
 
 
-path_examples = os.path.join(prefix, "results-LOF-micro.joblib")
+path_examples = os.path.join(prefix, "results-OCSVM-micro.joblib")
 path_examples_macro = os.path.join(prefix, "results-HMM-macro.joblib")
 path_examples_extractors = os.path.join(prefix, "results-autoenc.joblib")
 
@@ -202,11 +210,18 @@ def predict(models, path_examples, data):
 #            print(data.shape, d.shape, d[0,0],d[0,1:])
 #            print(d[0,0].shape, d[:,1:].shape)
             score = models.get_score(d[:,1:], d[0,0])
-            if models.predict_thr(d[:,1:], d[0,0]):
+            if models.predict_thr(score):
 #                print("Attack detected at",d[0,0])
-                example_pos[d[0,0]] = score
+                if isinstance(score, dict):
+                    example_pos[d[0,0]] = score[max(score,key=score.get)]
+                else:
+                    example_pos[d[0,0]] = score
             else:
-                example_neg[d[0,0]] = score
+                if isinstance(score, dict):
+                    # on enregistre le plus haut score (ne sert qu'à l'affichage)
+                    example_neg[d[0,0]] = score[max(score,key=score.get)]
+                else:
+                    example_neg[d[0,0]] = score
 
         end = time.time()
         print("Detection time:",(end-start),"s")
@@ -219,8 +234,8 @@ def predict_extractors(extractors, path_examples, folders_test):
         (example_pos, example_neg) = joblib.load(path_examples)
         print("Predictions loaded")
     except:
-        example_pos = []
-        example_neg = []
+        example_pos = {}
+        example_neg = {}
         i = 0
 
         paths = [os.path.join(directory,f) for directory in folders_test for f in sorted(os.listdir(directory))]
@@ -230,12 +245,20 @@ def predict_extractors(extractors, path_examples, folders_test):
             if i % 100 == 0:
                 print(i,"/",len(paths))
             i += 1
-                score = extractors.get_score(d[:,1:], d[0,0])
-                if models.predict_thr(d[:,1:], d[0,0]):
-#                print("Attack detected at",d[0,0])
-                    example_pos[d[0,0]] = score
+
+            score = extractors.get_score(data, timestamp)
+            if extractors.predict_thr(score):
+                if isinstance(score, dict):
+                    example_pos[timestamp] = score[max(score,key=score.get)]
                 else:
-                    example_neg[d[0,0]] = score
+                    example_pos[timestamp] = score
+            else:
+                if isinstance(score, dict):
+                    # on enregistre le plus haut score (ne sert qu'à l'affichage)
+                    example_neg[timestamp] = score[max(score,key=score.get)]
+                else:
+                    example_neg[timestamp] = score
+
 
 #        joblib.dump((example_pos, example_neg), path_examples)
     return (example_pos, example_neg)

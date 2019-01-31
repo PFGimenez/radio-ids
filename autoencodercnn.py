@@ -77,10 +77,17 @@ class CNN(FeatureExtractor, AnomalyDetector):
         """
             Renvoie une valeur
         """
-        data = np.expand_dims(data[:,self._i:self._s], axis=0)
-        out = np.array(self.squared_diff(data))
+        print("GET_SCORE",self)
+        print("get",data.shape)
+        out = data[:,self._i:self._s]
+        print("spectre",out.shape)
+        print(self._i, self._s)
+        out = np.expand_dims(out, axis=0)
+        print("expand",out.shape)
+        out = np.array(self.squared_diff(out))
         out = np.mean(out)
         out = np.sqrt(out)
+        print("fin get",out.shape)
         return out
 
 
@@ -227,6 +234,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
     def load(self, prefix):
         print("Loading autoencoder from",prefix+"…"+self._config.get_config("autoenc_filename"))
         self._thresholds = joblib.load(os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")))
+        print("Thresholds :",self._thresholds)
         filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename"))
         self._coder = load_model(filename_coder)
         filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename"))
@@ -235,6 +243,8 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
     def squared_diff(self, data):
 #        data = self.decompose(normalize(data, self._min, self._max), self._overlap_test)
+#        print("squared",data.shape)
+#        print("squeeze",np.squeeze(data).shape)
         return np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2
 
 

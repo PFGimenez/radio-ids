@@ -22,10 +22,14 @@ class AnomalyDetector(ABC):
         """
         pass
 
-    def predict_thr(self, data, epoch, nbThreshold = 1):
+
+    def predict_thr_from_data(self, data, epoch, nbThreshold = 1):
+        return predict_thr(self.get_score(data, epoch))
+
+    def predict_thr(self, score, nbThreshold = 1):
         if self.anomalies_have_high_score():
-            return self.get_score(data, epoch) > self._thresholds[nbThreshold]
-        return self.get_score(data, epoch) < self._thresholds[nbThreshold]
+            return score > self._thresholds[nbThreshold]
+        return score < self._thresholds[nbThreshold]
 
     def histo_score(self, data):
         s = [get_score(d) for d in data]
@@ -178,7 +182,7 @@ class MultiModels(AnomalyDetector):
         """
         for (f,m) in self._models:
             print(m)
-            if f(epoch) and not m.predict_thr(data, epoch):
+            if f(epoch) and not m.predict_thr_from_data(data, epoch):
                 return False
         return True
 
@@ -189,20 +193,18 @@ class MultiModels(AnomalyDetector):
         assert False
 
     def get_score(self, data, epoch=None):
-        """
-            Optimistic score
-        """
         if epoch == None:
             raise ValueError("Epoch is missing !")
-        s = []
+        s = {}
         # get the score for each model enable at this date
         for (f,m) in self._models:
             if f(epoch):
-                s.append(m.get_score(data))
-        if self.anomalies_have_high_score():
-            return min(s)
-        else:
-            return max(s)
+                s[m] = m.get_score(data)
+        return s
+#        if self.anomalies_have_high_score():
+#            return min(s)
+#        else:
+#            return max(s)
 
     def learn_threshold(self, data):
         for (f,m) in self._models:
@@ -221,13 +223,18 @@ class MultiModels(AnomalyDetector):
     def get_memory_size(self):
         return max([m.get_memory_size() for (_,m) in self._models])
 
-    def predict_thr(self, data, epoch, nbThreshold = 1):
+    def predict_thr(self, score, nbThreshold = 1):
         """
             Optimistic detection (no detection if at least one model sees no detection)
         """
-        for (f,m) in self._models:
-            if f(epoch) and not m.predict_thr(data, epoch, nbThreshold):
-                return False
+        for (_,m) in self._models:
+            if score.get(m):
+                if isinstance(score.get(m), list):
+                    s = max(score.get(m))
+                else:
+                    s = score.get(m)
+                if not m.predict_thr(s, nbThreshold):
+                    return False
         return True
 
 
@@ -305,6 +312,12 @@ class MultiExtractors(MultiModels):
                 scores[m].append([m.get_score_vector(d) for d in data])
         for (_,m) in self._models:
             m._learn_threshold_from_scores(np.array(scores[m]).flatten())
+
+    def get_score(self, data, epoch=None):
+        scores = {}
+        for (_,m) in self._models:
+            scores[m] = max(m.get_score_vector(data))
+        return scores
 
 class FeatureExtractor(ABC):
 
