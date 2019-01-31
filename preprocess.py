@@ -20,7 +20,7 @@ def show_histo(data, log=False, flatten=False):
     plt.show()
 
 def quantify(data):
-    assert np.all(data < 0)
+    assert np.all(data < 0) # pour être sûr qu'on ne l'utilise pas deux fois de suite
     data[data >= 0] = -10 # qui devient ensuite 12
     data[data < -60] = 0
     data[data < -50] = 1
@@ -198,13 +198,14 @@ def read_files(files_list, quant=False):
             print(i,"/",len(files_list))
         i += 1
         data.append(np.fromfile(fname, dtype=np.dtype('float64')).reshape(_waterfall_dim))
+    data = np.array(data)
     if quant:
         quantify(data)
 #    print(str(len(data)) + " files read")
 
 #    print("Files read" + str(data.shape))
 #data = data.reshape(50,-1)
-    return np.array(data)
+    return data
 
 def read_directory_with_timestamps(directory,quant=False):
     """

@@ -177,7 +177,8 @@ class MultiModels(AnomalyDetector):
             No anomaly if at least one model says there isn't
         """
         for (f,m) in self._models:
-            if f(epoch) and not m.predict(data):
+            print(m)
+            if f(epoch) and not m.predict_thr(data, epoch):
                 return False
         return True
 
@@ -231,6 +232,18 @@ class MultiModels(AnomalyDetector):
 
 
 class MultiExtractors(MultiModels):
+
+    def predict(self, data, epoch):
+        """ If a least one mini-waterfall throws a detection
+        """
+        data = self._models[0][1].decompose_test(data)
+        for d in data:
+            if super().predict(d, epoch):
+                return True
+        return False
+
+    def decompose_test(self, data):
+        return self._models[0][1].decompose_test(data)
 
     def __init__(self):
         super().__init__()
@@ -289,7 +302,7 @@ class MultiExtractors(MultiModels):
             data = read_files(flist,quant=True)
 #            quantify(data)
             for (_,m) in self._models:
-                scores[m].append([m.get_score(d) for d in data])
+                scores[m].append([m.get_score_vector(d) for d in data])
         for (_,m) in self._models:
             m._learn_threshold_from_scores(np.array(scores[m]).flatten())
 

@@ -181,6 +181,7 @@ def predict(models, path_examples, data):
     try:
         # chargement des prédictions si possible
         (example_pos, example_neg) = joblib.load(path_examples)
+        print("Predictions loaded")
     except:
         start = time.time()
         memory_size = models.get_memory_size()
@@ -216,6 +217,7 @@ def predict_extractors(extractors, path_examples, folders_test):
     try:
         # chargement des prédictions si possible
         (example_pos, example_neg) = joblib.load(path_examples)
+        print("Predictions loaded")
     except:
         example_pos = []
         example_neg = []
@@ -228,12 +230,12 @@ def predict_extractors(extractors, path_examples, folders_test):
             if i % 100 == 0:
                 print(i,"/",len(paths))
             i += 1
-
-            # TODO : décompose data
-            if extractors.predict(data):
-                example_pos.append(timestamp)
-            else:
-                example_neg.append(timestamp)
+                score = extractors.get_score(d[:,1:], d[0,0])
+                if models.predict_thr(d[:,1:], d[0,0]):
+#                print("Attack detected at",d[0,0])
+                    example_pos[d[0,0]] = score
+                else:
+                    example_neg[d[0,0]] = score
 
 #        joblib.dump((example_pos, example_neg), path_examples)
     return (example_pos, example_neg)

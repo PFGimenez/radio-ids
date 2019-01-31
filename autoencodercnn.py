@@ -17,6 +17,7 @@ from keras import backend as K
 from preprocess import *
 from keras.models import load_model
 from keras.utils import Sequence
+from sklearn.externals import joblib
 import math
 from config import Config
 
@@ -71,16 +72,36 @@ class CNN(FeatureExtractor, AnomalyDetector):
         self._all_th.append(self._thresholds)
         self._thresholds = []
 
+
     def get_score(self, data, epoch=None):
-        out = np.array(self.squared_diff(data[:,self._i:self._s]))
+        """
+            Renvoie une valeur
+        """
+        data = np.expand_dims(data[:,self._i:self._s], axis=0)
+        out = np.array(self.squared_diff(data))
+        out = np.mean(out)
+        out = np.sqrt(out)
+        return out
+
+
+    def get_score_vector(self, data, epoch=None):
+        """
+            Renvoie un tableau
+        """
+        data = self.decompose(normalize(data[:,self._i:self._s], self._min, self._max), self._overlap_test)
+        out = np.array(self.squared_diff(data))
         out = np.mean(out, axis=(1,2))
         out = np.sqrt(out)
         return out
 
+    def decompose_test(self, data, overlap=None):
+        if overlap == None:
+            overlap = self._overlap_test
+        return decompose(data, self._shape, overlap)
+
     def decompose(self, data, overlap=None):
         if overlap == None:
             overlap = self._overlap
-#        print("ae.dec",data.shape)
         return decompose(data, self._shape, overlap)
 
     def __init__(self, i, s, shape, nb_epochs):
@@ -197,6 +218,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
                                         max_queue_size=32)
 
     def save(self, prefix):
+        joblib.dump(self._thresholds, os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")))
         filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename"))
         self._coder.save(filename_coder)
         filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename"))
@@ -204,6 +226,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
     def load(self, prefix):
         print("Loading autoencoder from",prefix+"…"+self._config.get_config("autoenc_filename"))
+        self._thresholds = joblib.load(os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")))
         filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename"))
         self._coder = load_model(filename_coder)
         filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename"))
@@ -211,8 +234,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 #        print("Autoencoder loaded!")
 
     def squared_diff(self, data):
-        data = self.decompose(normalize(data, self._min, self._max), self._overlap_test)
-#        return np.sqrt(np.mean(np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2, axis=(1,2)))
+#        data = self.decompose(normalize(data, self._min, self._max), self._overlap_test)
         return np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2
 
 
@@ -226,11 +248,6 @@ class CNN(FeatureExtractor, AnomalyDetector):
     #     # print("mean",np.mean(predictions))
     #     self._thresholds.add([np.max(data), np.percentile(data,99), np.pencentile(data,95)])
     #     print(self._thresholds)
-
-    def merge_threshold(self):
-        print(self._thresholds)
-        self._thresholds = np.mean(np.array(self._thresholds), axis=0)
-        print(self._thresholds)
 
     def reconstruct(self, data):
         data = self.decompose(data)
