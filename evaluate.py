@@ -27,7 +27,6 @@ class Evaluator:
             column 2 : attack identifier
         """
         self._id = identifier
-        # TODO : ou remplacer identifier par une fonction (pour agréger toutes les attaques bluetooth par exemple)
         if self._id == None:
             self._id = "All"
             self._attack = np.array(all_attack[:,1:].astype(np.integer))
@@ -35,7 +34,8 @@ class Evaluator:
             self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
 #        print(self._attack)
         self._seen_attack = []
-        print(len(self._attack),"attacks on",identifier)
+        self._cumulative_seen_attack = []
+        print(len(self._attack),"attacks on",self._id)
 
     def is_in_attack(self, timestamp):
         for a in self._attack:
@@ -49,6 +49,8 @@ class Evaluator:
             if timestamp >= a[0] and timestamp <= a[1]:
                 if a[0] not in self._seen_attack:
                     self._seen_attack.append(a[0])
+                if a[0] not in self._cumulative_seen_attack:
+                    self._cumulative_seen_attack.append(a[0])
                 return True
         return False
 
@@ -58,6 +60,8 @@ class Evaluator:
             column 0 : timestamp
             column 1 : true iff detection
         """
+        self._seen_attack = []
+
         detected_positive = np.array([k for k in detected_positive_dico])
         detected_negative = np.array([k for k in detected_negative_dico])
         total_positives = len(detected_positive)
@@ -102,21 +106,24 @@ class Evaluator:
             fmeasure = float('nan')
         print("tp",true_positive, "tn",true_negative, "fp",false_positive,"fn", false_negative,"precision",precision,"recall",recall,"f-measure",fmeasure)
 
-        plt.hist(true_positive_score, color='red', bins=100, histtype='step', log=True)
-        plt.hist(false_negative_score, color='magenta', bins=100, histtype='step', log=True)
-        plt.hist(false_positive_score, color='cyan', bins=100, histtype='step', log=True)
-        plt.hist(true_negative_score, color='blue', bins=100, histtype='step', log=True)
-        plt.title(self._id)
-        plt.show()
+        if show_hist:
+            plt.hist(true_positive_score, color='red', bins=100, histtype='step', log=True)
+            plt.hist(false_negative_score, color='magenta', bins=100, histtype='step', log=True)
+            plt.hist(false_positive_score, color='cyan', bins=100, histtype='step', log=True)
+            plt.hist(true_negative_score, color='blue', bins=100, histtype='step', log=True)
+            plt.title(self._id)
+            plt.show()
 
-        for a in self._attack:
+        if show_time:
+            for a in self._attack:
 #            print(a[1]-a[0])
-            plt.hlines(1, a[0], a[1], color='red')
-        for t in detected_positive:
+                plt.hlines(1, a[0], a[1], color='red')
+            for t in detected_positive:
 #            print(t)
-            plt.vlines(t, 0.85, 0.9, color='red' if self.is_in_attack(t) else 'blue')
-        plt.show()
+                plt.vlines(t, 0.85, 0.9, color='red' if self.is_in_attack(t) else 'blue')
+            plt.show()
 
+        print("Cumulative detected : ",len(self._cumulative_seen_attack),"/",len(self._attack))
 
 def predict(models, path_examples, data):
     try:
@@ -143,7 +150,7 @@ def predict(models, path_examples, data):
 #            print(data.shape, d.shape, d[0,0],d[0,1:])
 #            print(d[0,0].shape, d[:,1:].shape)
             score = models.get_score(d[:,1:], d[0,0])
-            if models.predict_thr(score):
+            if models.predict_thr(score, optimistic=False):
 #                print("Attack detected at",d[0,0])
                 if isinstance(score, dict):
                     example_pos[d[0,0]] = score[max(score,key=score.get)]
@@ -181,7 +188,7 @@ def predict_extractors(extractors, path_examples, folders_test):
             i += 1
 
             score = extractors.get_score(data, timestamp)
-            if extractors.predict_thr(score):
+            if extractors.predict_thr(score,optimistic=False):
                 if isinstance(score, dict):
                     example_pos[timestamp] = score[max(score,key=score.get)]
                 else:
@@ -210,6 +217,7 @@ identifiers = np.unique(attack[:,0])
 print("Attacks list:",identifiers)
 
 evaluators = [Evaluator(i, attack) for i in identifiers]
+#evaluators = []
 evaluators.append(Evaluator(None, attack))
 nb_features = config.get_config_eval("nb_features")
 nb_features_macro = config.get_config_eval("nb_features_macro")
@@ -221,10 +229,11 @@ with open("test_folders") as f:
     folders = f.readlines()
 directories = [x.strip() for x in folders]
 
+show_time = False
 show_hist = False
 use_micro = True
-use_macro = False
-use_autoenc = False
+use_macro = True
+use_autoenc = True
 
 # modèle micro
 
