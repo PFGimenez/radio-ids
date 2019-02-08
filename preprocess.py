@@ -144,30 +144,36 @@ def do_PCA(data, n_components):
 #    print("Variance explanation : "+str(pca.explained_variance_ratio_))
     return (train_pca, pca.fit_transform(test_data))
 
-def decompose_raw(data, shape, overlap=0):
+def decompose_raw(data, shape, overlap=0,pad_t=False, pad_f=False):
     shape_x = shape[0]
     shape_y = shape[1]
     # spectral overlap is always 0
     step_x = round(shape_x * (1 - overlap))
     step_y = shape_y
-    x = math.floor((data.shape[0] - shape_x) / step_x) + 1
-    y = math.floor((data.shape[1] - shape_y) / step_y) + 1
-    out = np.empty((x, y, shape_x, shape_y))
+    if pad_t:
+        x = math.ceil((data.shape[0] - shape_x) / step_x) + 1
+    else:
+        x = math.floor((data.shape[0] - shape_x) / step_x) + 1
+    if pad_f:
+        y = math.ceil((data.shape[1] - shape_y) / step_y) + 1
+    else:
+        y = math.floor((data.shape[1] - shape_y) / step_y) + 1
+    out = np.zeros((x, y, shape_x, shape_y))
     for i in range(x):
         for j in range(y):
-            out[i,j] = data[i * step_x : i * step_x + shape_x, j * step_y : j * step_y + shape_y]
-#    print(out.shape)
-    return out
+            d = data[i * step_x : min(i * step_x + shape_x, data.shape[0]), j * step_y : min(j * step_y + shape_y, data.shape[1])]
+            out[i,j,:d.shape[0],:d.shape[1]] = d
+    return (x,y,out)
 
-def decompose(data, shape, overlap=0):
-    out = decompose_raw(data, shape, overlap)
+def decompose(data, shape, overlap=0,pad_t=False, pad_f=True):
+    (x,y,out) = decompose_raw(data, shape, overlap,pad_t=pad_t, pad_f=pad_f)
     shape_x = shape[0]
     shape_y = shape[1]
     # spectral overlap is always 0
-    step_x = round(shape_x * (1 - overlap))
-    step_y = shape_y
-    x = math.floor((data.shape[0] - shape_x) / step_x) + 1
-    y = math.floor((data.shape[1] - shape_y) / step_y) + 1
+#    step_x = round(shape_x * (1 - overlap))
+#    step_y = shape_y
+#    x = math.floor((data.shape[0] - shape_x) / step_x) + 1
+#    y = math.floor((data.shape[1] - shape_y) / step_y) + 1
 
     if K.image_data_format() == 'channels_first':
         return out.reshape(x*y, 1, shape_x, shape_y)

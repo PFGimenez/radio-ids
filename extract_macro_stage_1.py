@@ -15,7 +15,7 @@ def get_event_list(data, timestamps, temporal_step, spectral_step, overlap):
     out_time = []
     for i in range(x):
         out_time.append(float(timestamps[int((i*step_x) / waterfall_length)]))
-    data = decompose_raw(data, (temporal_step, spectral_step), overlap)
+    (_,_,data) = decompose_raw(data, (temporal_step, spectral_step), overlap,pad=False)
 
     # Utiliser le timestamp des fichiers est plus fiable que calculer le temps théorique d'un waterfall car, dans les faits, il n'y a pas exactement 4s entre deux waterfalls mais un peu moins
     # Pour mesurer le temps :
