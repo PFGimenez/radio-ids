@@ -12,7 +12,7 @@ session = tf.Session(config=config)
 
 from keras.models import Model
 from keras.layers import Input, Reshape, Dense, Dropout, Activation, Flatten
-from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
+from keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Conv2DTranspose
 from keras import backend as K
 from preprocess import *
 from keras.models import load_model
@@ -183,14 +183,14 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
         # Maintenant on reconstitue l'image initiale
 #        m = UpSampling2D((2,2))(m)
-        m = Conv2D(32, (3, 3), activation='relu', padding='same')(m)
+        m = Conv2DTranspose(32, (3, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
-        m = Conv2D(32, (3, 3), activation='relu', padding='same')(m)
+        m = Conv2DTranspose(32, (3, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
-        m = Conv2D(32, (3, 3), activation='relu', padding='same')(m)
+        m = Conv2DTranspose(32, (3, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
 
-        decoded = Conv2D(1, (3, 3), activation='linear', padding='same')(m)
+        decoded = Conv2DTranspose(1, (3, 3), activation='linear', padding='same')(m)
 
         # Compilation du modèle + paramètres d'évaluation et d'apprentissage
         self._autoencoder = Model(self._input_tensor, decoded)
