@@ -9,7 +9,7 @@ from autoencodercnn import CNN
 import time
 from sklearn.externals import joblib
 import matplotlib.pyplot as plt
-
+import datetime
 
 class Evaluator:
 
@@ -211,13 +211,21 @@ def predict_extractors(extractors, path_examples, folders_test):
 # lecture config
 
 config = Config()
+
+with open("test_folders") as f:
+    folders = f.readlines()
+directories = [x.strip() for x in folders]
+
 attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
+
+# TODO : on ne garde les attaques que du 23 janvier
+attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[1])/1000).day == 23])
 
 identifiers = np.unique(attack[:,0])
 print("Attacks list:",identifiers)
 
-evaluators = [Evaluator(i, attack) for i in identifiers]
-#evaluators = []
+#evaluators = [Evaluator(i, attack) for i in identifiers]
+evaluators = []
 evaluators.append(Evaluator(None, attack))
 nb_features = config.get_config_eval("nb_features")
 nb_features_macro = config.get_config_eval("nb_features_macro")
@@ -225,11 +233,7 @@ prefix = config.get_config("section")
 
 # chargement du jeu de données de test micro
 
-with open("test_folders") as f:
-    folders = f.readlines()
-directories = [x.strip() for x in folders]
-
-show_time = False
+show_time = True
 show_hist = False
 use_micro = True
 use_macro = True

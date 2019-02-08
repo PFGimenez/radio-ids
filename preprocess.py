@@ -35,6 +35,7 @@ def quantify(data):
     data[data < -15] = 10
     data[data < -12.5] = 11
     data[data < 0] = 12
+    data = data/12
 
 def subsample(data, prop=0.01):
     """
@@ -173,12 +174,13 @@ def decompose(data, shape, overlap=0):
     else:
         return out.reshape(x*y, shape_x, shape_y, 1)
 
-def read_file(filename, quant=False):
+def read_file(filename, quant=False, int_type=True):
     """
         Read one file
     """
 #    print("Reading data file " + filename)
-    data = np.fromfile(filename, dtype=np.dtype('float64'))
+    data = np.fromfile(filename, dtype=np.dtype('int8' if int_type else 'float64'))
+
     if quant:
         quantify(data)
     return data.reshape(_waterfall_dim)
@@ -190,14 +192,18 @@ def get_files_names(directory_list, pattern=""):
     names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if pattern in s]
     return names
 
-def read_files(files_list, quant=False):
+def read_files_from_timestamp(date_min, date_max, directory_list, quant=False, int_type=True):
+    names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if int(s) > date_min and int(s) < date_max]
+    return read_files(names, quant=quant, int_type=int_type)
+
+def read_files(files_list, quant=False, int_type=True):
     data = []
     i = 1
     for fname in files_list:
         if i % 100 == 0:
             print(i,"/",len(files_list))
         i += 1
-        data.append(np.fromfile(fname, dtype=np.dtype('float64')).reshape(_waterfall_dim))
+        data.append(np.fromfile(fname, dtype=np.dtype('int8' if int_type else 'float64')).reshape(_waterfall_dim))
     data = np.array(data)
     if quant:
         quantify(data)
@@ -207,7 +213,7 @@ def read_files(files_list, quant=False):
 #data = data.reshape(50,-1)
     return data
 
-def read_directory_with_timestamps(directory,quant=False):
+def read_directory_with_timestamps(directory,quant=False, int_type=True):
     """
         Read all files from a directory into a dictonary with timestamp
     """
@@ -216,18 +222,18 @@ def read_directory_with_timestamps(directory,quant=False):
     s = sorted(os.listdir(directory))
     for fname in s:
         fname = os.path.join(directory, fname)
-        out_data.append(read_file(fname,quant=quant))
+        out_data.append(read_file(fname,quant=quant, int_type=int_type))
         out_time.append(int(os.path.split(fname)[1]))
     return (out_data, out_time)
 
-def read_directory(directory,quant=False):
+def read_directory(directory,quant=False, int_type=True):
     """
         Read all files from a directory
     """
 
     print("Reading data files from directory " + directory)
     files_list = [os.path.join(directory, fname) for fname in sorted(os.listdir(directory))]
-    return read_files(files_list,quant=quant)
+    return read_files(files_list,quant=quant,int_type=int_type)
 
 def split_data(data):
     """
