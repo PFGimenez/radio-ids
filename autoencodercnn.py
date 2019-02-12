@@ -77,17 +77,17 @@ class CNN(FeatureExtractor, AnomalyDetector):
         """
             Renvoie une valeur
         """
-        print("GET_SCORE",self)
-        print("get",data.shape)
+        # print("GET_SCORE",self)
+        # print("get",data.shape)
         out = data[:,self._i:self._s]
-        print("spectre",out.shape)
-        print(self._i, self._s)
+        # print("spectre",out.shape)
+        # print(self._i, self._s)
         out = np.expand_dims(out, axis=0)
-        print("expand",out.shape)
+        # print("expand",out.shape)
         out = np.array(self.squared_diff(out))
         out = np.mean(out)
         out = np.sqrt(out)
-        print("fin get",out.shape)
+        # print("fin get",out.shape)
         return out
 
 
@@ -161,15 +161,14 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # L'extraction de features se fait avec Conv2D -> augmentation des dimensions
         # MaxPooling permet de réduire les dimensions
         # Toujours utiliser une activation "relu"
-        m = Conv2D(32, (3, 3), activation='relu', padding='same')(self._input_tensor)
+        m = Conv2D(64, (3, 3), strides=(1,2), activation='relu', padding='same')(self._input_tensor)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=self._input_shape)(m)
+        m = Conv2D(64, (3, 3), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(32, (3, 3), activation='relu', padding='same')(m)
+        m = Conv2D(8, (3, 3), strides=(1,2), activation='relu', padding='same')(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(4, (3, 3), activation='relu', padding='same')(m)
         m = Flatten()(m)
-        m = Dense(496, activation='relu')(m)
+        m = Dense(384, activation='relu')(m)
 #        m = Dense(300, activation='relu')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error',
@@ -177,20 +176,18 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
         # Permet d'éviter l'overfitting
         m = Dropout(0.5)(m)
-        m = Dense(496, activation='relu')(m)
+        m = Dense(384, activation='relu')(m)
 
-        m = Reshape((2,62,4))(m)
+        m = Reshape((6,8,8))(m)
 
         # Maintenant on reconstitue l'image initiale
-#        m = UpSampling2D((2,2))(m)
-        m = Conv2DTranspose(32, (3, 3), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
-        m = Conv2DTranspose(32, (3, 3), activation='relu', padding='same')(m)
+        m = Conv2DTranspose(64, (3, 3), strides=(1,2), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
-        m = Conv2DTranspose(32, (3, 3), activation='relu', padding='same')(m)
+        m = Conv2DTranspose(64, (3, 3), strides=(1,2), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
 
-        decoded = Conv2DTranspose(1, (3, 3), activation='linear', padding='same')(m)
+        decoded = Conv2DTranspose(1, (3, 3), strides=(1,2), activation='linear', padding='same')(m)
 
         # Compilation du modèle + paramètres d'évaluation et d'apprentissage
         self._autoencoder = Model(self._input_tensor, decoded)

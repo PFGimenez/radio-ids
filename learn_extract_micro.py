@@ -37,8 +37,7 @@ for j in range(len(bands)):
         m.learn_extractor(filenames, i, s)
         extractors.add_model(m)
         new = True
-# new = True # TODO virer
-new = False
+new = True # TODO virer
 if new:
     extractors.save_all()
     print("Learning threshold")

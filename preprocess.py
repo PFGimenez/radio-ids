@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 _config = Config()
 _waterfall_dim = _config.get_config_eval('waterfall_dimensions')
+_l = [-70,-60,-40,-35,-30,-27.5,-25,-22.5,-20,-17.5,-15,-12.5,0]
 
 def show_histo(data, log=False, flatten=False):
     """
@@ -19,23 +20,22 @@ def show_histo(data, log=False, flatten=False):
     plt.title("Histogram")
     plt.show()
 
+def dequantify(data):
+    # print("Dequantification…")
+    valmax = len(_l)-1
+    data[data == 0] = -80
+    for i in range(1,len(_l)):
+        data[data == i/valmax] = (_l[i-1] + _l[i]) / 2
+    # print("Dequantification done")
+
 def quantify(data):
+    # print("Quantification…")
+    valmax = len(_l)-1
     assert np.all(data < 0) # pour être sûr qu'on ne l'utilise pas deux fois de suite
     data[data >= 0] = -10 # qui devient ensuite 12
-    data[data < -60] = 0
-    data[data < -50] = 1
-    data[data < -40] = 2
-    data[data < -35] = 3
-    data[data < -30] = 4
-    data[data < -27.5] = 5
-    data[data < -25] = 6
-    data[data < -22.5] = 7
-    data[data < -20] = 8
-    data[data < -17.5] = 9
-    data[data < -15] = 10
-    data[data < -12.5] = 11
-    data[data < 0] = 12
-    data = data/12
+    for i in range(len(_l)):
+        data[data < _l[i]] = i/valmax
+    # print("Quantification done")
 
 def subsample(data, prop=0.01):
     """
@@ -185,7 +185,7 @@ def read_file(filename, quant=False, int_type=True):
         Read one file
     """
 #    print("Reading data file " + filename)
-    data = np.fromfile(filename, dtype=np.dtype('int8' if int_type else 'float64'))
+    data = np.fromfile(filename, dtype=np.dtype('int8' if int_type else 'float64')).astype('float64')
 
     if quant:
         quantify(data)
@@ -209,7 +209,7 @@ def read_files(files_list, quant=False, int_type=True):
         if i % 100 == 0:
             print(i,"/",len(files_list))
         i += 1
-        data.append(np.fromfile(fname, dtype=np.dtype('int8' if int_type else 'float64')).reshape(_waterfall_dim))
+        data.append(np.fromfile(fname, dtype=np.dtype('int8' if int_type else 'float64')).reshape(_waterfall_dim).astype('float64'))
     data = np.array(data)
     if quant:
         quantify(data)
