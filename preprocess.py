@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 
 _config = Config()
 _waterfall_dim = _config.get_config_eval('waterfall_dimensions')
-_l = [-70,-60,-40,-35,-30,-27.5,-25,-22.5,-20,-17.5,-15,-12.5,0]
+_l_high = [-50,-40,-30,-20,0]
+_l_low= [-40,0]
 
 def show_histo(data, log=False, flatten=False):
     """
@@ -22,19 +23,33 @@ def show_histo(data, log=False, flatten=False):
 
 def dequantify(data):
     # print("Dequantification…")
-    valmax = len(_l)-1
+    valmax = len(_l_high)-1
     data[data == 0] = -80
-    for i in range(1,len(_l)):
-        data[data == i/valmax] = (_l[i-1] + _l[i]) / 2
+    dl = data[:,0:1000]
+    dh = data[:,1000:1500]
+    for i in range(1,len(_l_high)):
+        dh[dh == i/valmax] = (_l_high[i-1] + _l_high[i]) / 2
+
+    valmax = len(_l_low)-1
+    for i in range(1,len(_l_low)):
+        dl[dl == i/valmax] = (_l_low[i-1] + _l_low[i]) / 2
+
     # print("Dequantification done")
 
 def quantify(data):
     # print("Quantification…")
-    valmax = len(_l)-1
+    valmax = len(_l_high)-1
     assert np.all(data < 0) # pour être sûr qu'on ne l'utilise pas deux fois de suite
-    data[data >= 0] = -10 # qui devient ensuite 12
-    for i in range(len(_l)):
-        data[data < _l[i]] = i/valmax
+    data[data >= 0] = -1 # qui devient ensuite 12
+    dl = data[:,0:1000]
+    dh = data[:,1000:1500]
+
+    for i in range(len(_l_high)):
+        dh[dh < _l_high[i]] = i/valmax
+
+    valmax = len(_l_low)-1
+    for i in range(len(_l_low)):
+        dl[dl < _l_low[i]] = i/valmax
     # print("Quantification done")
 
 def subsample(data, prop=0.01):
@@ -185,11 +200,11 @@ def read_file(filename, quant=False, int_type=True):
         Read one file
     """
 #    print("Reading data file " + filename)
-    data = np.fromfile(filename, dtype=np.dtype('int8' if int_type else 'float64')).astype('float64')
+    data = np.fromfile(filename, dtype=np.dtype('int8' if int_type else 'float64')).astype('float64').reshape(_waterfall_dim)
 
     if quant:
         quantify(data)
-    return data.reshape(_waterfall_dim)
+    return data
 
 def get_files_names(directory_list, pattern=""):
     """
@@ -209,10 +224,11 @@ def read_files(files_list, quant=False, int_type=True):
         if i % 100 == 0:
             print(i,"/",len(files_list))
         i += 1
-        data.append(np.fromfile(fname, dtype=np.dtype('int8' if int_type else 'float64')).reshape(_waterfall_dim).astype('float64'))
+        d = np.fromfile(fname, dtype=np.dtype('int8' if int_type else 'float64')).reshape(_waterfall_dim).astype('float64')
+        if quant:
+            quantify(d)
+        data.append(d)
     data = np.array(data)
-    if quant:
-        quantify(data)
 #    print(str(len(data)) + " files read")
 
 #    print("Files read" + str(data.shape))

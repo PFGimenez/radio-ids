@@ -13,6 +13,7 @@ session = tf.Session(config=config)
 from keras.models import Model
 from keras.layers import Input, Reshape, Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Conv2DTranspose
+from keras import regularizers
 from keras import backend as K
 from preprocess import *
 from keras.models import load_model
@@ -53,6 +54,9 @@ class Batch_Generator(Sequence):
             out = np.concatenate(out)
 #            if self._quant:
 #                quantify(out)
+            # print(out.shape)
+            # out = out.reshape(out.shape[0],out.shape[1]*out.shape[2],1) # flatten
+            # print(out.shape)
             return out, out # parce que la sortie et l'entrée de l'autoencoder doivent être identiques
         except ValueError as e:
             print(e, batch_x)
@@ -151,8 +155,28 @@ class CNN(FeatureExtractor, AnomalyDetector):
 #        self._delta_timestamp = self._delta_timestamp[self._delta_timestamp < waterfall_duration]
 #        self._delta_timestamp = self._delta_timestamp.reshape(self._delta_timestamp.shape[0], 1)
 
-
     def _new_model(self):
+        m = Flatten()(self._input_tensor)
+        m = Dense(8000, activation='relu', activity_regularizer=regularizers.l1(10e-5))(m)
+#        m = Dense(1000, activation='relu', activity_regularizer=regularizers.l1(10e-5))(m)
+        self._coder = Model(self._input_tensor, m)
+        self._coder.compile(loss='mean_squared_error', # useless parameters
+                                  optimizer='adam')
+
+#        m = Dense(4000, activation='relu')(m)
+        m = Dense(self._input_shape[0] * self._input_shape[1], activation='sigmoid')(m) # or linear
+        decoded = Reshape(self._input_shape)(m)
+
+        # Compilation du modèle + paramètres d'évaluation et d'apprentissage
+        self._autoencoder = Model(self._input_tensor, decoded)
+
+        self._autoencoder.compile(loss='binary_crossentropy', optimizer='adam')
+        # self._autoencoder.compile(loss='mean_squared_error', optimizer='adam')
+
+        self._autoencoder.summary()
+
+
+    def _new_model_2(self):
         """
             À utiliser si l'autoencoder n'est pas chargé mais appris
         """
@@ -161,14 +185,15 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # L'extraction de features se fait avec Conv2D -> augmentation des dimensions
         # MaxPooling permet de réduire les dimensions
         # Toujours utiliser une activation "relu"
-        m = Conv2D(64, (3, 3), strides=(1,2), activation='relu', padding='same')(self._input_tensor)
+        m = Conv2D(64, (3, 5), strides=(1,2), activation='relu', padding='same')(self._input_tensor)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(64, (3, 3), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
+        m = Conv2D(64, (3, 5), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(8, (3, 3), strides=(1,2), activation='relu', padding='same')(m)
+        m = Conv2D(8, (3, 5), strides=(1,2), activation='relu', padding='same')(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Flatten()(m)
         m = Dense(384, activation='relu')(m)
+        m = Dense(200, activation='relu')(m)
 #        m = Dense(300, activation='relu')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error',
@@ -182,18 +207,18 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
         # Maintenant on reconstitue l'image initiale
         m = UpSampling2D((2,2))(m)
-        m = Conv2DTranspose(64, (3, 3), strides=(1,2), activation='relu', padding='same')(m)
+        m = Conv2DTranspose(64, (3, 5), strides=(1,2), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
-        m = Conv2DTranspose(64, (3, 3), strides=(1,2), activation='relu', padding='same')(m)
+        m = Conv2DTranspose(64, (3, 5), strides=(1,2), activation='relu', padding='same')(m)
         m = UpSampling2D((2,2))(m)
 
-        decoded = Conv2DTranspose(1, (3, 3), strides=(1,2), activation='linear', padding='same')(m)
+        decoded = Conv2DTranspose(1, (3, 5), strides=(1,2), activation='linear', padding='same')(m)
 
         # Compilation du modèle + paramètres d'évaluation et d'apprentissage
         self._autoencoder = Model(self._input_tensor, decoded)
 
-        self._autoencoder.compile(loss='mean_squared_error',
-                                  optimizer='adam')
+        self._autoencoder.compile(loss='binary_crossentropy', optimizer='adam')
+        # self._autoencoder.compile(loss='mean_squared_error', optimizer='adam')
 
         self._autoencoder.summary()
 
