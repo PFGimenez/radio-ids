@@ -157,7 +157,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
     def _new_model(self):
         m = Flatten()(self._input_tensor)
-        m = Dense(8000, activation='relu', activity_regularizer=regularizers.l1(10e-5))(m)
+        m = Dense(400, activation='sigmoid')(m)
 #        m = Dense(1000, activation='relu', activity_regularizer=regularizers.l1(10e-5))(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error', # useless parameters
@@ -282,8 +282,14 @@ class CNN(FeatureExtractor, AnomalyDetector):
     #     print(self._thresholds)
 
     def reconstruct(self, data):
+        print("Avant decomp",data.shape)
         data = self.decompose(data)
-        return denormalize(self._autoencoder.predict(normalize(data, self._min, self._max)).reshape(-1, self._input_shape[0], self._input_shape[1]), self._min, self._max)
+        print(data[0,0,:,0])
+        print(data[1,0,:,0])
+        print("Après decomp",data.shape)
+        # return self._autoencoder.predict(data.reshape(-1, self._input_shape[0], self._input_shape[1], 1)).reshape(-1, self._input_shape[0], self._input_shape[1])
+        print(self._autoencoder.predict(data).shape, self._input_shape)
+        return self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1])
 
     def extract_features(self, data):
         data = self._crop_samples(data)
