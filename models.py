@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 from multimodels import period_always, extract_period
 import os.path
 from config import Config
+import math
+import preprocess
+from heapq import nlargest
 
 class AnomalyDetector(ABC):
     """
@@ -33,6 +36,8 @@ class AnomalyDetector(ABC):
         """
             optimistic is useless with a single detector
         """
+        print(score,self._thresholds[nbThreshold])
+
         if self.anomalies_have_high_score():
             return score > self._thresholds[nbThreshold]
         return score < self._thresholds[nbThreshold]
@@ -54,12 +59,26 @@ class AnomalyDetector(ABC):
     def anomalies_have_high_score(self):
         pass
 
+    def get_worse_score(self, data, number):
+        """
+        return the worse score among a dataset
+        """
+        memory_size = self.get_memory_size()
+        predictions = [self.get_score(data[i-1-memory_size:i,1:]) for i in range(memory_size+1,len(data))]
+        if self.anomalies_have_high_score():
+            score = nlargest(number, predictions)
+        else:
+            score = nsmallest(number, predictions)
+        print("Max score:",max(score))
+        return np.array([data[predictions.index(s)] for s in score]), max(score)
+
     def learn_threshold(self, data):
 #        print(data.shape)
         memory_size = self.get_memory_size()
 #        i = memory_size
 #        print(memory_size, i-1-memory_size, i)
         predictions = np.array([self.get_score(data[i-1-memory_size:i,:]) for i in range(memory_size+1,len(data))])
+        print(max(predictions))
         # on retire les None
         predictions = np.array([x for x in predictions if x is not None])
         self._learn_threshold_from_scores(predictions)
@@ -295,9 +314,9 @@ class MultiExtractors(MultiModels):
         delta_timestamp = delta_timestamp.reshape(delta_timestamp.shape[0], 1)
         delta_timestamp += initial_timestamp
 
-        data = decompose(data, (size_x, original_shape[1]), overlap)
+        data = preprocess.decompose(data, (size_x, original_shape[1]), overlap)
         # data est trop grand (2 waterfall), donc il faut en garder le bon nombre
-        out = np.array([m[2].extract_features(data[0:len(delta_timestamp),:,m[0]:m[1],:]) for m in self._models])
+        out = np.array([m.extract_features(data[0:len(delta_timestamp),:,m._i:m._s,:]) for _,m in self._models])
         out = out.reshape(len(delta_timestamp),-1)
         out = np.concatenate((delta_timestamp, out), axis=1)
         return out

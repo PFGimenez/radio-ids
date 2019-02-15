@@ -7,11 +7,11 @@ from preprocess import *
 from config import Config
 import random
 
-with open("train_folders") as f:
+with open("train_folders.old") as f: # TODO
     folders = f.readlines()
 folders = [x.strip() for x in folders]
 #folders = ['data-test', 'data-test']
-#folders = [folders[0]]
+folders = [folders[0]]
 config = Config()
 
 min_value = config.get_config_eval('min_value')
@@ -37,7 +37,7 @@ for j in range(len(bands)):
         m.learn_extractor(filenames, i, s)
         extractors.add_model(m)
         new = True
-new = True # TODO virer
+#new = True # TODO virer
 if new:
     extractors.save_all()
     print("Learning threshold")

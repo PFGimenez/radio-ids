@@ -5,25 +5,29 @@ from autoencodercnn import CNN
 import sys
 import os
 from config import Config
-from extractor import MultiExtractors
+from models import MultiExtractors
 
 def extract_micro(extractors, directories, window_overlap, prefix, nb_features):
     for d in directories:
-        print("Extracting features from",d)
-        filenames = get_files_names([d])
-
-        out = []
-        for i in range(len(filenames)-1):
-            out.append(
-                extractors.extract_features(
-                    np.concatenate(read_files([filenames[i], filenames[i+1]], quant=True)),
-                    int(os.path.split(filenames[i])[1]),
-                    window_overlap))
-
-        out = np.array(out).reshape(-1, nb_features+1)
-        # take only the last part of the directory
         d2 = d.split("/")[-1]
-        out.tofile(os.path.join(prefix,"features-"+d2))
+        path = os.path.join(prefix,"features-"+d2)
+        if not os.path.isfile(path):
+            print("Extracting features from",d)
+            filenames = get_files_names([d])
+
+            out = []
+            for i in range(len(filenames)-1):
+                out.append(
+                    extractors.extract_features(
+                        np.concatenate(read_files([filenames[i], filenames[i+1]], quant=True)),
+                        int(os.path.split(filenames[i])[1]),
+                        window_overlap))
+
+            out = np.array(out).reshape(-1, nb_features+1)
+            # take only the last part of the directory
+            out.tofile(path)
+        else:
+            print("Features already extracted: ",path)
 
 if __name__ == "__main__":
     config = Config()
@@ -38,7 +42,7 @@ if __name__ == "__main__":
     for j in range(len(bands)):
         (i,s) = bands[j]
         m = CNN(i, s, dims[j], -1)
-        extractors.load(i, s, m)
+        extractors.load_model(m)
 
     with open("train_folders") as f:
         folders = f.readlines()

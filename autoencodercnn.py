@@ -46,7 +46,7 @@ class Batch_Generator(Sequence):
             out = [decompose(
 #                crop_sample(
                     normalize(
-                        read_file(file_name, quant=True)[:,self._inf:self._sup]
+                        read_file(file_name, quant=self._quant)[:,self._inf:self._sup]
                         , self._min, self._max),
 #                    self._size_x, self._size_y),
                 self._input_shape, self._overlap)
@@ -158,7 +158,6 @@ class CNN(FeatureExtractor, AnomalyDetector):
     def _new_model(self):
         m = Flatten()(self._input_tensor)
         m = Dense(400, activation='sigmoid')(m)
-#        m = Dense(1000, activation='relu', activity_regularizer=regularizers.l1(10e-5))(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error', # useless parameters
                                   optimizer='adam')
@@ -170,8 +169,8 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # Compilation du modèle + paramètres d'évaluation et d'apprentissage
         self._autoencoder = Model(self._input_tensor, decoded)
 
-        self._autoencoder.compile(loss='binary_crossentropy', optimizer='adam')
-        # self._autoencoder.compile(loss='mean_squared_error', optimizer='adam')
+        # self._autoencoder.compile(loss='binary_crossentropy', optimizer='adam')
+        self._autoencoder.compile(loss='mean_squared_error', optimizer='adam')
 
         self._autoencoder.summary()
 
@@ -282,13 +281,8 @@ class CNN(FeatureExtractor, AnomalyDetector):
     #     print(self._thresholds)
 
     def reconstruct(self, data):
-        print("Avant decomp",data.shape)
-        data = self.decompose(data)
-        print(data[0,0,:,0])
-        print(data[1,0,:,0])
-        print("Après decomp",data.shape)
+        data = self.decompose(data,overlap=0)
         # return self._autoencoder.predict(data.reshape(-1, self._input_shape[0], self._input_shape[1], 1)).reshape(-1, self._input_shape[0], self._input_shape[1])
-        print(self._autoencoder.predict(data).shape, self._input_shape)
         return self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1])
 
     def extract_features(self, data):

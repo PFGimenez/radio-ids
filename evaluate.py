@@ -89,7 +89,7 @@ class Evaluator:
             recall = true_positive / (true_positive + false_negative)
 
         # TODO
-        recall = len(self._seen_attack) / len(self._attack)
+#        recall = len(self._seen_attack) / len(self._attack)
 
         if total_positives == 0:
             precision = 1
@@ -97,7 +97,7 @@ class Evaluator:
             precision = true_positive / total_positives
 
         # TODO
-        precision = len(self._seen_attack) / (false_positive + len(self._seen_attack))
+#        precision = len(self._seen_attack) / (false_positive + len(self._seen_attack))
 
 #        print("total pos",total_positives, "total negative",total_negatives)
         if precision + recall != 0:
@@ -168,7 +168,7 @@ def predict(models, path_examples, data):
         joblib.dump((example_pos, example_neg), path_examples)
     return (example_pos, example_neg)
 
-def predict_extractors(extractors, path_examples, folders_test):
+def predict_extractors(extractors, path_examples, folders_test, threshold_autoencoder):
     try:
         # chargement des prédictions si possible
         (example_pos, example_neg) = joblib.load(path_examples)
@@ -188,7 +188,8 @@ def predict_extractors(extractors, path_examples, folders_test):
             i += 1
 
             score = extractors.get_score(data, timestamp)
-            if extractors.predict_thr(score,optimistic=False):
+            print("Score:",score)
+            if extractors.predict_thr(score,optimistic=False,nbThreshold=threshold_autoencoder):
                 if isinstance(score, dict):
                     example_pos[timestamp] = score[max(score,key=score.get)]
                 else:
@@ -230,13 +231,13 @@ evaluators.append(Evaluator(None, attack))
 nb_features = config.get_config_eval("nb_features")
 nb_features_macro = config.get_config_eval("nb_features_macro")
 prefix = config.get_config("section")
-
+threshold_autoencoder = config.get_config_eval("threshold_autoencoder")
 # chargement du jeu de données de test micro
 
-show_time = True
-show_hist = False
-use_micro = True
-use_macro = True
+show_time = False
+show_hist = True
+use_micro = False
+use_macro = False
 use_autoenc = True
 
 # modèle micro
@@ -296,7 +297,7 @@ if use_macro:
     (example_pos_macro, example_neg_macro) = predict(models_macro, path_examples_macro, data_macro)
 if use_autoenc:
     print("Prediction for autoencoders…")
-    (example_pos_extractors, example_neg_extractors) = predict_extractors(extractors, path_examples_extractors, folders_test)
+    (example_pos_extractors, example_neg_extractors) = predict_extractors(extractors, path_examples_extractors, folders_test, threshold_autoencoder)
 
 for e in evaluators:
     print("***",e._id)
