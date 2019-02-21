@@ -24,9 +24,7 @@ from config import Config
 
 class Batch_Generator(Sequence):
 
-    def __init__(self, filenames, batch_size, input_shape, val_min, val_max, overlap, inf, sup, quant):
-        self._min = val_min
-        self._max = val_max
+    def __init__(self, filenames, batch_size, input_shape, overlap, inf, sup, quant):
         self._overlap = overlap
         self.filenames = filenames
         self.batch_size = batch_size
@@ -45,9 +43,7 @@ class Batch_Generator(Sequence):
             batch_x = self.filenames[idx * self.batch_size : (idx + 1) * self.batch_size]
             out = [decompose(
 #                crop_sample(
-                    normalize(
-                        read_file(file_name, quant=self._quant)[:,self._inf:self._sup]
-                        , self._min, self._max),
+                        read_file(file_name, quant=self._quant)[:,self._inf:self._sup],
 #                    self._size_x, self._size_y),
                 self._input_shape, self._overlap)
             for file_name in batch_x]
@@ -99,7 +95,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
         """
             Renvoie un tableau
         """
-        data = self.decompose(normalize(data[:,self._i:self._s], self._min, self._max), self._overlap_test)
+        data = self.decompose(data[:,self._i:self._s], self._overlap_test)
         out = np.array(self.squared_diff(data))
         out = np.mean(out, axis=(1,2))
         out = np.sqrt(out)
@@ -136,8 +132,6 @@ class CNN(FeatureExtractor, AnomalyDetector):
         self._quant = self._config.get_config_eval('quantification')
         self._overlap = self._config.get_config_eval('window_overlap_training')
         self._overlap_test = self._config.get_config_eval('extractors_window_overlap_testing')
-        self._min = self._config.get_config_eval('min_value')
-        self._max = self._config.get_config_eval('max_value')
 
 #        self._shape = shape
 #        self._overlap = overlap
@@ -157,7 +151,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
     def _new_model(self):
         m = Flatten()(self._input_tensor)
-        m = Dense(400, activation='sigmoid')(m)
+        m = Dense(600, activation='sigmoid')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error', # useless parameters
                                   optimizer='adam')
@@ -234,8 +228,8 @@ class CNN(FeatureExtractor, AnomalyDetector):
     def learn_extractor(self, filenames, inf, sup):
         self._new_model()
         [training_filenames, validation_filenames] = train_test_split(filenames)
-        training_batch_generator = Batch_Generator(training_filenames, self._batch_size, self._input_shape, self._min, self._max, self._overlap, inf, sup, self._quant)
-        validation_batch_generator = Batch_Generator(validation_filenames, self._batch_size, self._input_shape, self._min, self._max, self._overlap, inf, sup, self._quant)
+        training_batch_generator = Batch_Generator(training_filenames, self._batch_size, self._input_shape, self._overlap, inf, sup, self._quant)
+        validation_batch_generator = Batch_Generator(validation_filenames, self._batch_size, self._input_shape, self._overlap, inf, sup, self._quant)
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
         self._autoencoder.fit_generator(generator=training_batch_generator,
                                         epochs=self._nb_epochs,

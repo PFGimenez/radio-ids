@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 _config = Config()
 _waterfall_dim = _config.get_config_eval('waterfall_dimensions')
 _l_high = [-50,-40,-30,-20,0]
-_l_low= [-40,0]
+_l_low= [-50,-40,0]
 
 def show_histo(data, log=False, flatten=False):
     """
@@ -25,8 +25,8 @@ def dequantify(data):
     # print("Dequantification…")
     valmax = len(_l_high)-1
     data[data == 0] = -80
-    dl = data[:,0:1000]
-    dh = data[:,1000:1500]
+    dl = data[:,0:2000]
+    dh = data[:,2000:3000]
     for i in range(1,len(_l_high)):
         dh[dh == i/valmax] = (_l_high[i-1] + _l_high[i]) / 2
 
@@ -41,8 +41,8 @@ def quantify(data):
     valmax = len(_l_high)-1
     assert np.all(data < 0) # pour être sûr qu'on ne l'utilise pas deux fois de suite
     data[data >= 0] = -1 # qui devient ensuite 12
-    dl = data[:,0:1000]
-    dh = data[:,1000:1500]
+    dl = data[:,0:2000]
+    dh = data[:,2000:3000]
 
     for i in range(len(_l_high)):
         dh[dh < _l_high[i]] = i/valmax

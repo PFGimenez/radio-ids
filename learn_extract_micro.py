@@ -14,9 +14,6 @@ folders = [x.strip() for x in folders]
 #folders = [folders[0]]
 config = Config()
 
-min_value = config.get_config_eval('min_value')
-max_value = config.get_config_eval('max_value')
-
 bands = config.get_config_eval('waterfall_frequency_bands')
 extractors = MultiExtractors()
 dims = config.get_config_eval('autoenc_dimensions')
@@ -37,7 +34,7 @@ for j in range(len(bands)):
         m.learn_extractor(filenames, i, s)
         extractors.add_model(m)
         new = True
-#new = True # TODO virer
+new = True # TODO virer
 if new:
     extractors.save_all()
     print("Learning threshold")
