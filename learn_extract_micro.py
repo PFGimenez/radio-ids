@@ -24,7 +24,7 @@ new = False
 for j in range(len(bands)):
     (i,s) = bands[j]
     try:
-        m = CNN(i, s, dims[j], epochs[j])
+        m = CNN(j)
         extractors.load_model(m)
 
     except Exception as e:

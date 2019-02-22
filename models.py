@@ -36,8 +36,8 @@ class AnomalyDetector(ABC):
         """
             optimistic is useless with a single detector
         """
-        print(score,self._thresholds[nbThreshold])
-
+        self._thresholds = [1,1,1,1,1] # TODO VIRER !!!
+        print("VIRER HACK")
         if self.anomalies_have_high_score():
             return score > self._thresholds[nbThreshold]
         return score < self._thresholds[nbThreshold]
@@ -224,7 +224,7 @@ class MultiModels(AnomalyDetector):
         # get the score for each model enable at this date
         for (f,m) in self._models:
             if f(epoch):
-                s[m] = m.get_score(data)
+                s[m._number] = m.get_score(data)
         return s
 #        if self.anomalies_have_high_score():
 #            return min(s)
@@ -254,11 +254,11 @@ class MultiModels(AnomalyDetector):
         """
         p = []
         for (_,m) in self._models:
-            if score.get(m):
-                if isinstance(score.get(m), list):
-                    s = max(score.get(m))
+            if score.get(m._number):
+                if isinstance(score.get(m._number), list):
+                    s = max(score.get(m._number))
                 else:
-                    s = score.get(m)
+                    s = score.get(m._number)
                 p.append(m.predict_thr(s, nbThreshold, optimistic=optimistic))
         if optimistic:
             return all(p) # detection if all detectors detect
@@ -343,7 +343,7 @@ class MultiExtractors(MultiModels):
     def get_score(self, data, epoch=None):
         scores = {}
         for (_,m) in self._models:
-            scores[m] = max(m.get_score_vector(data))
+            scores[m._number] = max(m.get_score_vector(data))
         return scores
 
 class FeatureExtractor(ABC):

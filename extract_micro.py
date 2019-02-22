@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     for j in range(len(bands)):
         (i,s) = bands[j]
-        m = CNN(i, s, dims[j], -1)
+        m = CNN(j)
         extractors.load_model(m)
 
     with open("train_folders") as f:

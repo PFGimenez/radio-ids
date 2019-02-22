@@ -111,7 +111,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
             overlap = self._overlap
         return decompose(data, self._shape, overlap)
 
-    def __init__(self, i, s, shape, nb_epochs):
+    def __init__(self, number):
         """
             i: beginning of the spectral band
             s: end of the spectral band
@@ -119,16 +119,17 @@ class CNN(FeatureExtractor, AnomalyDetector):
             nb_epoches: self-explanatory
         """
 
-        self._i = i
-        self._s = s
         self._thresholds = []
         self._all_th = []
         self._config = Config()
-        self._nb_epochs = nb_epochs
+        self._number = number
+        (self._i, self._s) = self._config.get_config_eval('waterfall_frequency_bands')[number]
+        self._shape = self._config.get_config_eval('autoenc_dimensions')[number]
+        self._features_number = self._config.get_config_eval('features_number')[number]
+        self._nb_epochs = self._config.get_config_eval('nb_epochs')[number]
         self._batch_size = self._config.get_config_eval('batch_size')
 #        self._nb_epochs = self._config.get_config_eval('nb_epochs')
-        self._original_shape = (self._config.get_config_eval('waterfall_dimensions')[0], s-i)
-        self._shape = shape
+        self._original_shape = (self._config.get_config_eval('waterfall_dimensions')[0], self._s - self._i)
         self._quant = self._config.get_config_eval('quantification')
         self._overlap = self._config.get_config_eval('window_overlap_training')
         self._overlap_test = self._config.get_config_eval('extractors_window_overlap_testing')
@@ -151,7 +152,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
     def _new_model(self):
         m = Flatten()(self._input_tensor)
-        m = Dense(600, activation='sigmoid')(m)
+        m = Dense(self._features_number, activation='sigmoid')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error', # useless parameters
                                   optimizer='adam')

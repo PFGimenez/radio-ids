@@ -24,7 +24,7 @@ exit()
 
 for j in range(len(bands)):
     (i,s) = bands[j]
-    m = CNN(i, s, dims[j], -1)
+    m = CNN(j)
     extractors.load(i, s, m)
 
 with open("train_folders") as f:
