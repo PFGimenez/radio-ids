@@ -37,7 +37,6 @@ class AnomalyDetector(ABC):
             optimistic is useless with a single detector
         """
         self._thresholds = [1,1,1,1,1] # TODO VIRER !!!
-        print("VIRER HACK")
         if self.anomalies_have_high_score():
             return score > self._thresholds[nbThreshold]
         return score < self._thresholds[nbThreshold]
