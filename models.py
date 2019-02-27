@@ -86,8 +86,8 @@ class AnomalyDetector(ABC):
         r = [100,99,98,97,96,95,93,90] if self.anomalies_have_high_score() else [0,1,2,3,4,5,7,10]
         self._thresholds = [np.percentile(predictions, p) for p in r]
         print("Thresholds:",self._thresholds)
-        plt.hist(predictions, log=False, bins=100)
-        plt.show()
+        # plt.hist(predictions, log=False, bins=100)
+        # plt.show()
 
     @abstractmethod
     def save(self, filename):
@@ -243,6 +243,8 @@ class MultiModels(AnomalyDetector):
 
     def load(self, filename):
         self._models = joblib.load(filename)
+        for i in range(len(self._models)):
+            self._models[i][1]._number = i
 
     def get_memory_size(self):
         return max([m.get_memory_size() for (_,m) in self._models])

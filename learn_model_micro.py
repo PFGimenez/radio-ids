@@ -35,8 +35,10 @@ else:
 outputname = os.path.join(prefix, "micro-"+detector_model.__class__.__name__+".joblib")
 if not os.path.isfile(outputname):
     all_data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
+    nb = 0
     for p in periods:
         detector = copy.deepcopy(detector_model)
+        detector._number = nb
         initial_data = extract_period(all_data, p)
         if initial_data.shape[0] > 0:
             print("Initial size:",initial_data.shape[0])
@@ -57,6 +59,7 @@ if not os.path.isfile(outputname):
             models.add_model(detector, p)
         else:
             print("No data to learn period",p.__name__)
+        nb += 1
     models.save(outputname)
 else:
     print("Micro model already learned!",outputname)

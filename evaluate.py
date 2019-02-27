@@ -56,7 +56,7 @@ class Evaluator:
                 return True
         return False
 
-    def evaluate(self, detected_positive_dico, scores):
+    def evaluate(self, detected_positive_dico, scores, models):
         """
             Prediction : shape (-1,2)
             column 0 : timestamp
@@ -118,35 +118,45 @@ class Evaluator:
             plt.show()
 
         if show_time:
-            fig, ax = plt.subplots(nrows=1, ncols=3)
+            x = list(scores.keys())
+            tmp = list(scores.values())[0]
+            if isinstance(tmp, dict):
+                fig, ax = plt.subplots(nrows=1, ncols=3)
+                ax = np.expand_dims(ax, 1)
+            else:
+                fig, ax = plt.subplots(nrows=1, ncols=1)
+                ax = np.expand_dims(ax, 1)
+                ax = np.expand_dims(ax, 2)
             hfmt = mdates.DateFormatter('%d/%m %H:%M:%S')
             for row in ax:
-                row.xaxis.set_major_formatter(hfmt)
-                plt.setp(row.get_xticklabels(), rotation=15)
+                for col in row:
+                    col.xaxis.set_major_formatter(hfmt)
+                    plt.setp(col.get_xticklabels(), rotation=15)
             for a in self._attack:
                 for row in ax:
-                    row.hlines(0,
+                    for col in row:
+                        col.hlines(0,
                            mdates.date2num(datetime.datetime.fromtimestamp(a[0]/1000)),
                            mdates.date2num(datetime.datetime.fromtimestamp(a[1]/1000)),
                            color='red')
             # for t in detected_positive:
             #     plt.vlines(t, 0.85, 0.9, color='red' if self.is_in_attack(t) else 'blue')
 
-            x = list(scores.keys())
-            tmp = list(scores.values())[0]
             if isinstance(tmp, dict):
                 nb = len(tmp.values())
                 labels = ["400-500","800-900","2400-2500"]
 
                 i = 0
                 for row in ax:
-                    if i < 3:
-                        val = [list(scores[k].values())[i] for k in x]
-                        x, val = zip(*sorted(zip(x, val)))
-                        x_dates = mdates.date2num([datetime.datetime.fromtimestamp(t/1000) for t in x])
-                        row.plot(x_dates, val, alpha=0.7, label=labels[i])
-                        i += 1
-                        row.legend(loc='upper left')
+                    for col in row:
+                        if i < 3:
+                            # col.hlines( # TODO
+                            val = [list(scores[k].values())[i] for k in x]
+                            x, val = zip(*sorted(zip(x, val)))
+                            x_dates = mdates.date2num([datetime.datetime.fromtimestamp(t/1000) for t in x])
+                            col.plot(x_dates, val, alpha=0.7, label=labels[i])
+                            i += 1
+                            col.legend(loc='upper left')
 
             else:
                 val = list(scores.values())
@@ -295,7 +305,7 @@ print("Attacks list:",identifiers)
 
 #evaluators = [Evaluator(attack, i) for i in identifiers]
 evaluators = []
-evaluators.append(Evaluator(attack))
+evaluators.append(Evaluator(attack, "scan868"))
 nb_features = config.get_config_eval("nb_features")
 nb_features_macro = config.get_config_eval("nb_features_macro")
 prefix = config.get_config("section")
@@ -376,14 +386,14 @@ for e in evaluators:
     print("***",e._id)
     if use_micro:
         print("Results micro: ",end='')
-        e.evaluate(example_pos, scores_micro)
+        e.evaluate(example_pos, scores_micro, models)
     if use_macro:
         print("Results macro: ",end='')
-        e.evaluate(example_pos_macro, scores_macro)
+        e.evaluate(example_pos_macro, scores_macro, models_macro)
 #    print("Results micro and macro")
 #    e.evaluate(list(set(example_pos+example_pos_macro)),
 #               list(set(example_neg+example_neg_macro)))
     if use_autoenc:
         print("Results autoencoders: ",end='')
-        e.evaluate(example_pos_extractors, scores_ex)
+        e.evaluate(example_pos_extractors, scores_ex, extractors)
 
