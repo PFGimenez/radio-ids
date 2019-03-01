@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 _config = Config()
 _waterfall_dim = _config.get_config_eval('waterfall_dimensions')
-_l_high = [-50,-40,-30,-20,0]
-_l_low= [-50,-40,0]
+_l_high = [-65,-50,-35,-20,-10,0]
+_l_low= [-65,-50,-35,-20,-10,0]
 
 def show_histo(data, log=False, flatten=False):
     """
@@ -195,7 +195,7 @@ def decompose(data, shape, overlap=0,pad_t=False, pad_f=True):
     else:
         return out.reshape(x*y, shape_x, shape_y, 1)
 
-def read_file(filename, quant=False, int_type=True):
+def read_file(filename, quant=False, int_type=False):
     """
         Read one file
     """
@@ -213,11 +213,11 @@ def get_files_names(directory_list, pattern=""):
     names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if pattern in s]
     return names
 
-def read_files_from_timestamp(date_min, date_max, directory_list, quant=False, int_type=True):
+def read_files_from_timestamp(date_min, date_max, directory_list, quant=False, int_type=False):
     names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if int(s) > date_min and int(s) < date_max]
     return read_files(names, quant=quant, int_type=int_type)
 
-def read_files(files_list, quant=False, int_type=True):
+def read_files(files_list, quant=False, int_type=False):
     data = []
     i = 1
     for fname in files_list:
@@ -235,7 +235,7 @@ def read_files(files_list, quant=False, int_type=True):
 #data = data.reshape(50,-1)
     return data
 
-def read_directory_with_timestamps(directory,quant=False, int_type=True):
+def read_directory_with_timestamps(directory,quant=False, int_type=False):
     """
         Read all files from a directory into a dictonary with timestamp
     """
@@ -248,7 +248,7 @@ def read_directory_with_timestamps(directory,quant=False, int_type=True):
         out_time.append(int(os.path.split(fname)[1]))
     return (out_data, out_time)
 
-def read_directory(directory,quant=False, int_type=True):
+def read_directory(directory,quant=False, int_type=False):
     """
         Read all files from a directory
     """

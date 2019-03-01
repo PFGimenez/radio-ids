@@ -241,19 +241,19 @@ class CNN(FeatureExtractor, AnomalyDetector):
                                         max_queue_size=32)
 
     def save(self, prefix):
-        joblib.dump(self._thresholds, os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")))
-        filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename"))
+        joblib.dump(self._thresholds, os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")+".thr"))
+        filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename")+".h5")
         self._coder.save(filename_coder)
-        filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename"))
+        filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename")+".h5")
         self._autoencoder.save(filename_autoencoder)
 
     def load(self, prefix):
-        print("Loading autoencoder from",prefix+"…"+self._config.get_config("autoenc_filename"))
-        self._thresholds = joblib.load(os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")))
+        print("Loading autoencoder from",prefix+"…"+self._config.get_config("autoenc_filename")+".h5")
+        self._thresholds = joblib.load(os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")+".thr"))
         print("Thresholds :",self._thresholds)
-        filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename"))
+        filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename")+".h5")
         self._coder = load_model(filename_coder)
-        filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename"))
+        filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename")+".h5")
         self._autoencoder = load_model(filename_autoencoder)
 #        print("Autoencoder loaded!")
 

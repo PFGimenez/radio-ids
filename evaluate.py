@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import sys
 from models import MultiModels, MultiExtractors
 from preprocess import *
 import numpy as np
@@ -31,10 +31,14 @@ class Evaluator:
         self._id = identifier
         if self._id == None:
             self._id = "All"
-            self._attack = np.array(all_attack[:,1:].astype(np.integer))
+            # self._attack = np.array(all_attack[:,1:].astype(np.integer))
+            self._attack = np.array(all_attack[:,:2].astype(np.float))
         else:
-            self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
-#        print(self._attack)
+            # self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
+            self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,:2].astype(np.float))
+        self._attack += 1530576000
+        self._attack *= 1000
+        self._attack = self._attack.astype(np.integer)
         self._seen_attack = []
         self._cumulative_seen_attack = []
         print(len(self._attack),"attacks on",self._id)
@@ -56,7 +60,10 @@ class Evaluator:
                 return True
         return False
 
-    def evaluate(self, detected_positive_dico, scores, models):
+    def roc(self, detected_positive_dico, scores, models, typestr):
+        pass # TODO
+
+    def evaluate(self, detected_positive_dico, scores, models, typestr):
         """
             Prediction : shape (-1,2)
             column 0 : timestamp
@@ -119,9 +126,12 @@ class Evaluator:
 
         if show_time:
             x = list(scores.keys())
-            tmp = list(scores.values())[0]
-            if isinstance(tmp, dict):
-                fig, ax = plt.subplots(nrows=1, ncols=3)
+            if isinstance(models, MultiModels):
+                nbcols = len(models._models)
+            else:
+                nbcols = 1
+            if nbcols > 1:
+                fig, ax = plt.subplots(nrows=1, ncols=nbcols)
                 ax = np.expand_dims(ax, 1)
             else:
                 fig, ax = plt.subplots(nrows=1, ncols=1)
@@ -141,17 +151,18 @@ class Evaluator:
                            color='red')
             # for t in detected_positive:
             #     plt.vlines(t, 0.85, 0.9, color='red' if self.is_in_attack(t) else 'blue')
-
-            if isinstance(tmp, dict):
-                nb = len(tmp.values())
-                labels = ["400-500","800-900","2400-2500"]
+            if isinstance(models, MultiModels):
+                if typestr == "autoenc":
+                    labels = ["400-500","800-900","2400-2500"]
+                elif typestr == "micro":
+                    labels = [f.__name__ for (f,_) in models._models]
 
                 i = 0
                 for row in ax:
                     for col in row:
-                        if i < 3:
+                        if i < nbcols:
                             # col.hlines( # TODO
-                            val = [list(scores[k].values())[i] for k in x]
+                            val = [scores[k].get(i) for k in x]
                             x, val = zip(*sorted(zip(x, val)))
                             x_dates = mdates.date2num([datetime.datetime.fromtimestamp(t/1000) for t in x])
                             col.plot(x_dates, val, alpha=0.7, label=labels[i])
@@ -165,6 +176,7 @@ class Evaluator:
             plt.show()
 
         print("Cumulative detected : ",len(self._cumulative_seen_attack),"/",len(self._attack))
+        return (true_positive, false_positive)
 
 def predict(models, scores, threshold):
     start = time.time()
@@ -176,8 +188,8 @@ def predict(models, scores, threshold):
 #        data = data[20000:30000]
 #        for i in range(memory_size+1,1000):
     for i in range(memory_size+1,len(data)): # TODO
-        if i % 100 == 0:
-            print(i,"/",len(data))
+        # if i % 100 == 0:
+            # print(i,"/",len(data))
 
 #            if len(memory) == memory_size:
 #                memory.pop(0)
@@ -211,7 +223,7 @@ def scores_micro_macro(models, path_examples, data):
     except:
         start = time.time()
         memory_size = models.get_memory_size()
-        score = {}
+        scores = {}
 #        memory = []
 
 #        data = data[20000:30000]
@@ -284,8 +296,32 @@ def predict_extractors(extractors, scores, threshold_autoencoder):
     print("Detection time:",(end-start),"s")
     return (example_pos, example_neg)
 
+use_micro = False
+use_macro = False
+use_autoenc = False
+name_attack = None
 
+i = 1
+while i < len(sys.argv):
+    if sys.argv[i] == "-a":
+        i += 1
+        if not name_attack:
+            name_attack = []
+        name_attack.append(sys.argv[i])
+    elif sys.argv[i] == "-autoenc":
+        use_autoenc = True
+    elif sys.argv[i] == "-micro":
+        use_micro = True
+    elif sys.argv[i] == "-macro":
+        use_macro = True
+    else:
+        print("Erreur:",sys.argv[i])
+        exit()
+    i += 1
 
+if not use_autoenc and not use_micro and not use_macro:
+    print("Aucun détecteur ! Utilisez -micro, -macro ou -autoenc")
+    exit()
 
 # lecture config
 
@@ -300,13 +336,17 @@ attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dty
 # TODO : on ne garde les attaques que du 23 janvier
 # attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[1])/1000).day == 23])
 print(attack)
-identifiers = np.unique(attack[:,0])
+identifiers = np.unique(attack[:,2])
 print("Attacks list:",identifiers)
 
 #evaluators = [Evaluator(attack, i) for i in identifiers]
 evaluators = []
-evaluators.append(Evaluator(attack, "scan868"))
-nb_features = config.get_config_eval("nb_features")
+if not name_attack:
+    evaluators.append(Evaluator(attack))
+else:
+    for n in name_attack:
+        evaluators.append(Evaluator(attack, n))
+nb_features = sum(config.get_config_eval("features_number"))
 nb_features_macro = config.get_config_eval("nb_features_macro")
 prefix = config.get_config("section")
 threshold_autoencoder = config.get_config_eval("threshold_autoencoder")
@@ -316,10 +356,6 @@ threshold_micro = config.get_config_eval("threshold_micro")
 
 show_time = True
 show_hist = False
-use_micro = False
-use_macro = False
-use_autoenc = True
-
 # modèle micro
 
 if use_micro:
@@ -367,7 +403,7 @@ folders_test = [x.strip() for x in folders]
 
 path_examples = os.path.join(prefix, "results-OCSVM-micro.joblib")
 path_examples_macro = os.path.join(prefix, "results-HMM-macro.joblib")
-path_examples_extractors = os.path.join(prefix, "results-autoenc.joblib")
+path_examples_extractors = os.path.join(prefix, config.get_config("autoenc_filename")+"-results-autoenc.joblib")
 
 if use_micro:
     print("Prediction for micro…")
@@ -386,14 +422,14 @@ for e in evaluators:
     print("***",e._id)
     if use_micro:
         print("Results micro: ",end='')
-        e.evaluate(example_pos, scores_micro, models)
+        e.evaluate(example_pos, scores_micro, models,"micro")
     if use_macro:
         print("Results macro: ",end='')
-        e.evaluate(example_pos_macro, scores_macro, models_macro)
+        e.evaluate(example_pos_macro, scores_macro, models_macro,"macro")
 #    print("Results micro and macro")
 #    e.evaluate(list(set(example_pos+example_pos_macro)),
 #               list(set(example_neg+example_neg_macro)))
     if use_autoenc:
         print("Results autoencoders: ",end='')
-        e.evaluate(example_pos_extractors, scores_ex, extractors)
+        e.evaluate(example_pos_extractors, scores_ex, extractors,"autoenc")
 

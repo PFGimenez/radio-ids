@@ -37,11 +37,11 @@ for j in range(len(bands)):
 new = True # TODO virer
 if new:
     extractors.save_all()
-    print("Learning threshold")
-    fnames = [[os.path.join(directory,f) for f in sorted(os.listdir(directory))] for directory in folders]
-    extractors.learn_threshold(fnames)
-    print("Saving extractors…")
-    extractors.save_all()
+#    print("Learning threshold")
+#    fnames = [[os.path.join(directory,f) for f in sorted(os.listdir(directory))] for directory in folders]
+#    extractors.learn_threshold(fnames)
+#    print("Saving extractors…")
+#    extractors.save_all()
 else:
     print("Extractors already learnt !")
 

@@ -8,7 +8,7 @@ import copy
 import os
 
 config = Config()
-nb_features = config.get_config_eval("nb_features")
+nb_features = sum(config.get_config_eval("features_number"))
 
 with open("train_folders") as f:
     folders = f.readlines()
@@ -46,7 +46,7 @@ if not os.path.isfile(outputname):
             step = int(initial_data.shape[0] * model_subsample)
             old_score = None
             score = None
-            while old_score == None or score <= old_score:
+            while old_score == None or (detector.anomalies_have_high_score() and score <= old_score) or (not detector.anomalies_have_high_score() and score >= old_score):
                 old_score = score
                 print("Learning for",p.__name__,"from",batch.shape[0],"examples")
                 best = copy.deepcopy(detector)
@@ -54,8 +54,8 @@ if not os.path.isfile(outputname):
                 (new_batch, score) = detector.get_worse_score(initial_data, step)
                 batch = np.vstack((batch, new_batch))
             detector = best
-            print("Learn threshold")
-            detector.learn_threshold(initial_data[:,1:])
+            # print("Learn threshold")
+            # detector.learn_threshold(initial_data[:,1:])
             models.add_model(detector, p)
         else:
             print("No data to learn period",p.__name__)

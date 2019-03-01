@@ -17,7 +17,7 @@ class JourSemaine(Enum):
 
 def process_unix_time(time):
     date = datetime.datetime.fromtimestamp(time/1000)
-    return (JourSemaine(date.weekday()), ((date.hour * 24) + date.minute) * 60 + date.second)
+    return (JourSemaine(date.weekday()), ((date.hour * 60) + date.minute) * 60 + date.second)
 
 class Period():
     def __init__(self, deb=0, fin=24*3600, days=None):
