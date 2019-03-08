@@ -13,6 +13,21 @@ import matplotlib.pyplot as plt
 import datetime
 import itertools
 
+def get_derivative(scores):
+    out = {}
+    keys = list(scores.keys())
+    for i in range(len(scores)-1):
+        score_old = scores[keys[i]]
+        score_new = scores[keys[i+1]]
+        if isinstance(score_old, dict):
+            tmp = {}
+            for k in score_old:
+                tmp[k] = score_new.get(k) - score_old.get(k)
+            out[keys[i+1]] = tmp
+        else:
+            out[keys[i+1]] = score_new - score_old
+    return out
+
 class Evaluator:
 
     """
@@ -31,14 +46,23 @@ class Evaluator:
         self._id = identifier
         if self._id == None:
             self._id = "All"
-            # self._attack = np.array(all_attack[:,1:].astype(np.integer))
-            self._attack = np.array(all_attack[:,:2].astype(np.float))
+            self._attack = np.array(all_attack[:,1:].astype(np.integer))
+            # self._attack = np.array(all_attack[:,:2].astype(np.float))
         else:
-            # self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
-            self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,:2].astype(np.float))
-        self._attack += 1530576000
-        self._attack *= 1000
-        self._attack = self._attack.astype(np.integer)
+            self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
+            # self._attack = np.array(all_attack[all_attack[:,2] == identifier][:,:2].astype(np.float))
+
+        # self._attack += 1530576000
+        # self._attack -= 7251 # TODO décalage
+        # self._attack *= 1000
+        # self._attack = self._attack.astype(np.integer)
+
+        # if self._id == "All":
+        #     f = open("logattack_fixed","w+")
+        #     for i in range(len(self._attack)):
+        #         a = self._attack[i]
+        #         f.write(all_attack[i, 2]+" "+str(a[0])+" "+str(a[1])+"\r\n")
+        #     f.close()
         self._seen_attack = []
         self._cumulative_seen_attack = []
         print(len(self._attack),"attacks on",self._id)
@@ -124,7 +148,7 @@ class Evaluator:
             plt.title(self._id)
             plt.show()
 
-        if show_time:
+        if show_time and self._id=="All":
             x = list(scores.keys())
             if isinstance(models, MultiModels):
                 nbcols = len(models._models)
@@ -149,6 +173,18 @@ class Evaluator:
                            mdates.date2num(datetime.datetime.fromtimestamp(a[0]/1000)),
                            mdates.date2num(datetime.datetime.fromtimestamp(a[1]/1000)),
                            color='red')
+
+            for t in detected_positive:
+                # TODO
+                for row in ax:
+                    for col in row:
+                        col.hlines(0.01,
+                           mdates.date2num(datetime.datetime.fromtimestamp(t/1000)),
+                           mdates.date2num(datetime.datetime.fromtimestamp(t/1000+10)),
+                           color='blue')
+
+
+
             # for t in detected_positive:
             #     plt.vlines(t, 0.85, 0.9, color='red' if self.is_in_attack(t) else 'blue')
             if isinstance(models, MultiModels):
@@ -198,7 +234,7 @@ def predict(models, scores, threshold):
 #            print(data.shape, d.shape, d[0,0],d[0,1:])
 #            print(d[0,0].shape, d[:,1:].shape)
         score = scores[d[0,0]]
-        if models.predict_thr(score, optimistic=False, nbThreshold=threshold):
+        if models.predict_thr(score, optimistic=False, threshold=threshold):
 #                print("Attack detected at",d[0,0])
             if isinstance(score, dict):
                 example_pos[d[0,0]] = score[max(score,key=score.get)]
@@ -272,15 +308,18 @@ def score_extractors(extractors, path_examples, folders_test):
 def predict_extractors(extractors, scores, threshold_autoencoder):
     start = time.time()
     consecutive = 0
+    example_pos = {}
+    example_neg = {}
+
     for timestamp in scores:
-        example_pos = {}
-        example_neg = {}
         score = scores[timestamp]
-        if extractors.predict_thr(score,optimistic=False,nbThreshold=threshold_autoencoder):
+        if extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
             consecutive += 1
         else:
+            # if consecutive > 0:
+                # print(consecutive)
             consecutive = 0
-        if consecutive > 10:
+        if consecutive > 0:
             if isinstance(score, dict):
                 example_pos[timestamp] = score[max(score,key=score.get)]
             else:
@@ -294,6 +333,7 @@ def predict_extractors(extractors, scores, threshold_autoencoder):
 
     end = time.time()
     print("Detection time:",(end-start),"s")
+    print("Positive:",len(example_pos))
     return (example_pos, example_neg)
 
 use_micro = False
@@ -336,11 +376,11 @@ attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dty
 # TODO : on ne garde les attaques que du 23 janvier
 # attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[1])/1000).day == 23])
 print(attack)
-identifiers = np.unique(attack[:,2])
+identifiers = np.unique(attack[:,0])
 print("Attacks list:",identifiers)
 
-#evaluators = [Evaluator(attack, i) for i in identifiers]
-evaluators = []
+evaluators = [Evaluator(attack, i) for i in identifiers]
+# evaluators = []
 if not name_attack:
     evaluators.append(Evaluator(attack))
 else:
@@ -349,7 +389,8 @@ else:
 nb_features = sum(config.get_config_eval("features_number"))
 nb_features_macro = config.get_config_eval("nb_features_macro")
 prefix = config.get_config("section")
-threshold_autoencoder = config.get_config_eval("threshold_autoencoder")
+# threshold_autoencoder = config.get_config_eval("threshold_autoencoder")
+threshold_autoencoder = [1,0.11,1]
 threshold_macro = config.get_config_eval("threshold_macro")
 threshold_micro = config.get_config_eval("threshold_micro")
 # chargement du jeu de données de test micro
@@ -400,7 +441,6 @@ folders_test = [x.strip() for x in folders]
 
 # évaluation
 
-
 path_examples = os.path.join(prefix, "results-OCSVM-micro.joblib")
 path_examples_macro = os.path.join(prefix, "results-HMM-macro.joblib")
 path_examples_extractors = os.path.join(prefix, config.get_config("autoenc_filename")+"-results-autoenc.joblib")
@@ -416,6 +456,7 @@ if use_macro:
 if use_autoenc:
     print("Prediction for autoencoders…")
     scores_ex = score_extractors(extractors, path_examples_extractors, folders_test)
+    # scores_ex = get_derivative(scores_ex)
     (example_pos_extractors, example_neg_extractors) = predict_extractors(extractors, scores_ex, threshold_autoencoder)
 
 for e in evaluators:
@@ -432,4 +473,3 @@ for e in evaluators:
     if use_autoenc:
         print("Results autoencoders: ",end='')
         e.evaluate(example_pos_extractors, scores_ex, extractors,"autoenc")
-

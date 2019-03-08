@@ -33,14 +33,16 @@ class AnomalyDetector(ABC):
         """
         return predict_thr(self.get_score(data, epoch))
 
-    def predict_thr(self, score, nbThreshold = 1, optimistic=True):
+    def predict_thr(self, score, nbThreshold = 1, threshold=None, optimistic=True):
         """
             optimistic is useless with a single detector
         """
-        self._thresholds = [1,1,1,1,1] # TODO VIRER !!!
+        if not threshold:
+            self._thresholds = [1,1,1,1,1] # TODO VIRER !!!
+            threshold = self._thresholds[nbThreshold]
         if self.anomalies_have_high_score():
-            return score > self._thresholds[nbThreshold]
-        return score < self._thresholds[nbThreshold]
+            return score > threshold
+        return score < thresholds
 
     def histo_score(self, data):
         s = [get_score(d) for d in data]
@@ -250,18 +252,20 @@ class MultiModels(AnomalyDetector):
     def get_memory_size(self):
         return max([m.get_memory_size() for (_,m) in self._models])
 
-    def predict_thr(self, score, nbThreshold = 1, optimistic=True):
+    def predict_thr(self, score, nbThreshold = 1, threshold=None, optimistic=True):
         """
             Optimistic detection (no detection if at least one model sees no detection)
         """
         p = []
+        i = 0
         for (_,m) in self._models:
             if score.get(m._number):
                 if isinstance(score.get(m._number), list):
                     s = max(score.get(m._number))
                 else:
                     s = score.get(m._number)
-                p.append(m.predict_thr(s, nbThreshold, optimistic=optimistic))
+                p.append(m.predict_thr(s, nbThreshold, threshold=threshold[i], optimistic=optimistic))
+            i += 1
         if optimistic:
             return all(p) # detection if all detectors detect
         else:

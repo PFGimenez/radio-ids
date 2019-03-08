@@ -52,9 +52,13 @@ np.random.seed()
 random.seed()
 
 if not folders:
+    with open("train_folders") as f:
+        folders1 = f.readlines()
+    folders = [x.strip() for x in folders1]
+
     with open("test_folders") as f:
-        folders = f.readlines()
-    folders = [x.strip() for x in folders]
+        folders2 = f.readlines()
+    folders += [x.strip() for x in folders2]
 config = Config()
 
 
