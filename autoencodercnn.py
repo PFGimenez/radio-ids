@@ -158,6 +158,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
                                   optimizer='adam')
 
 #        m = Dense(4000, activation='relu')(m)
+        # m = Dropout(0.3)(m)
         m = Dense(self._input_shape[0] * self._input_shape[1], activation='sigmoid')(m) # or linear
         decoded = Reshape(self._input_shape)(m)
 

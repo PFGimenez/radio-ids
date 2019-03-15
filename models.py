@@ -334,6 +334,13 @@ class MultiExtractors(MultiModels):
 #        print(out.shape)
         return out
 
+    def diff_reconstruct(self, data):
+        original = [data[:,m._i:m._s] for _,m in self._models]
+        original = np.dstack(original)
+        out = [m.reconstruct(data[:,m._i:m._s]) for _,m in self._models]
+        out = np.dstack(out)
+        return original - out
+
     def learn_threshold(self, fnames):
         scores = {m : [] for (_,m) in self._models}
         # un jour à la fois

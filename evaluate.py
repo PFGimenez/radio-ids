@@ -292,7 +292,7 @@ def score_extractors(extractors, path_examples, folders_test):
         start = time.time()
         i = 0
 
-        paths = [os.path.join(directory,f) for directory in folders_test for f in sorted(os.listdir(directory))]
+        paths = [os.path.join(directory,f) for directory in folders_test for f in os.listdir(directory).sort(key=lambda x : int(x))]
         for fname in paths:
             timestamp = int(os.path.split(fname)[1])
             data = read_file(fname, quant=True)
@@ -340,6 +340,7 @@ use_micro = False
 use_macro = False
 use_autoenc = False
 name_attack = None
+train = False
 
 i = 1
 while i < len(sys.argv):
@@ -354,6 +355,8 @@ while i < len(sys.argv):
         use_micro = True
     elif sys.argv[i] == "-macro":
         use_macro = True
+    elif sys.argv[i] == "-train":
+        train = True
     else:
         print("Erreur:",sys.argv[i])
         exit()
@@ -366,14 +369,20 @@ if not use_autoenc and not use_micro and not use_macro:
 # lecture config
 
 config = Config()
-
-with open("test_folders") as f:
+if train:
+    prefix_result = "train-"
+    folder_file = "train_folders"
+else:
+    prefix_result = ""
+    folder_file = "test_folders"
+with open(folder_file) as f:
     folders = f.readlines()
+
 directories = [x.strip() for x in folders]
 
 attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
 
-# TODO : on ne garde les attaques que du 23 janvier
+# TODO : pour ne garder que les attaques d'un certain jour
 # attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[1])/1000).day == 23])
 print(attack)
 identifiers = np.unique(attack[:,0])
@@ -441,9 +450,9 @@ folders_test = [x.strip() for x in folders]
 
 # évaluation
 
-path_examples = os.path.join(prefix, "results-OCSVM-micro.joblib")
-path_examples_macro = os.path.join(prefix, "results-HMM-macro.joblib")
-path_examples_extractors = os.path.join(prefix, config.get_config("autoenc_filename")+"-results-autoenc.joblib")
+path_examples = os.path.join(prefix, prefix_result+"results-OCSVM-micro.joblib")
+path_examples_macro = os.path.join(prefix, prefix_result+"results-HMM-macro.joblib")
+path_examples_extractors = os.path.join(prefix, prefix_result+config.get_config("autoenc_filename")+"-results-autoenc.joblib")
 
 if use_micro:
     print("Prediction for micro…")

@@ -83,7 +83,7 @@ if load_autoenc:
 # affiche nom fichier + date
 if False:
     print(folders[0])
-    s = sorted(os.listdir(folders[0]))
+    s = os.listdir(folders[0]).sort(key=lambda x : int(x))
     for fname in s:
         print(fname, datetime.datetime.fromtimestamp(int(fname)/1000))
 print(folders)
@@ -101,15 +101,17 @@ if name_attack:
     date_max = some_attack[len(some_attack)-1][1]
     print(date_min, date_max)
 
+if mode == "data":
+    fig = plt.figure()
 if mode == "quant" or mode == "data":
     data = np.vstack(read_files_from_timestamp(date_min, date_max, folders, quant=False))
 if mode == "quant":
+    fig, ax = plt.subplots(nrows=2, ncols=1)
     data_d = np.vstack(read_files_from_timestamp(date_min, date_max, folders, quant=True))
     dequantify(data_d)
 if mode == "autoenc":
+    fig, ax = plt.subplots(nrows=2, ncols=1)
     data_q = np.vstack(read_files_from_timestamp(date_min, date_max, folders, quant=True))
-
-fig = plt.figure()
 
 #data = read_directory(folders[0], quant=True)[0,:,:]
 #data = read_files_from_timestamp(int(some_attack[1]), int(some_attack[2]), folders, quant=True)
@@ -119,24 +121,28 @@ fig = plt.figure()
 if load_autoenc:
     data_reconstructed = extractors.reconstruct(data_q)
     data_reconstructed = np.vstack(data_reconstructed)
-#data[data < min_value] = min_value
-#data[data > max_value] = max_value
-#data_reconstructed[data_reconstructed > max_value] = max_value
-
-#plt.imshow(np.concatenate((denormalize(normalize(data, min_value, max_value),min_value,max_value), min_value*np.ones((int(data_reconstructed.shape[0]/3), data_reconstructed.shape[1])), data)), cmap='hot', interpolation='nearest', aspect='auto')
-pad = np.ones((50, waterfall_dimensions[1]))
+    # diff = extractors.diff_reconstruct(data_q)
+    # diff = np.vstack(diff)
 
 # vérification quantification
 if mode == "quant":
-    plt.imshow(np.concatenate((data, pad, data_d)), cmap='hot', aspect='auto')
+    ax[0].imshow(data, cmap='hot', aspect='auto')
+    ax[0].set_title("Original data")
+    ax[1].imshow(data_d, cmap='hot', aspect='auto')
+    ax[1].set_title("Quantified data")
 
 # juste data
 elif mode == "data":
     plt.imshow(data, cmap='hot', interpolation='nearest', aspect='auto')
+    plt.title("Original data")
 
 # vérification reconstruction
 elif mode == "autoenc":
-    plt.imshow(np.concatenate((data_q, pad, data_reconstructed, pad, data_q[:data_reconstructed.shape[0],:]-data_reconstructed)), cmap='hot', interpolation='nearest', aspect='auto')
+    ax[0].imshow(data_q, cmap='hot', interpolation='nearest', aspect='auto')
+    ax[0].set_title("Original data")
+    ax[1].imshow(data_reconstructed, cmap='hot', interpolation='nearest', aspect='auto')
+    ax[1].set_title("Reconstructed data")
+    # ax[2].imshow(diff, cmap='hot', interpolation='nearest', aspect='auto')
+    # ax[2].set_title("Difference")
 #plt.savefig(config.get_config("autoenc_filename")+".png")
-plt.title(mode)
 plt.show()
