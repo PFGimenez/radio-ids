@@ -166,13 +166,13 @@ class Evaluator:
                 for col in row:
                     col.xaxis.set_major_formatter(hfmt)
                     plt.setp(col.get_xticklabels(), rotation=15)
-            for a in self._attack:
-                for row in ax:
-                    for col in row:
-                        col.hlines(0,
-                           mdates.date2num(datetime.datetime.fromtimestamp(a[0]/1000)),
-                           mdates.date2num(datetime.datetime.fromtimestamp(a[1]/1000)),
-                           color='red')
+            # for a in self._attack:
+            #     for row in ax:
+            #         for col in row:
+            #             col.hlines(0,
+            #                mdates.date2num(datetime.datetime.fromtimestamp(a[0]/1000)),
+            #                mdates.date2num(datetime.datetime.fromtimestamp(a[1]/1000)),
+            #                color='red')
 
             for t in detected_positive:
                 # TODO
@@ -291,8 +291,8 @@ def score_extractors(extractors, path_examples, folders_test):
         scores = {}
         start = time.time()
         i = 0
-
-        paths = [os.path.join(directory,f) for directory in folders_test for f in os.listdir(directory).sort(key=lambda x : int(x))]
+        # print(os.listdir(folders_test[0]))
+        paths = [os.path.join(directory,f) for directory in folders_test for f in sorted(os.listdir(directory))]
         for fname in paths:
             timestamp = int(os.path.split(fname)[1])
             data = read_file(fname, quant=True)
@@ -443,9 +443,9 @@ if use_autoenc:
         m = CNN(j)
         extractors.load_model(m)
 
-with open("train_folders") as f:
-    folders_test = f.readlines()
-folders_test = [x.strip() for x in folders]
+# with open("train_folders") as f:
+    # folders_test = f.readlines()
+# folders_test = [x.strip() for x in folders]
 
 
 # évaluation
@@ -461,10 +461,10 @@ if use_micro:
 if use_macro:
     print("Prediction for macro…")
     scores_macro = scores_micro_macro(models_macro, path_examples_macro, data_macro)
-    (example_pos_macro, example_neg_macro) = predict(models_macro, scores_ācro, threshold_macro)
+    (example_pos_macro, example_neg_macro) = predict(models_macro, scores_macro, threshold_macro)
 if use_autoenc:
     print("Prediction for autoencoders…")
-    scores_ex = score_extractors(extractors, path_examples_extractors, folders_test)
+    scores_ex = score_extractors(extractors, path_examples_extractors, directories)
     # scores_ex = get_derivative(scores_ex)
     (example_pos_extractors, example_neg_extractors) = predict_extractors(extractors, scores_ex, threshold_autoencoder)
 
