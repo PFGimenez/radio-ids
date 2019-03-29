@@ -10,6 +10,7 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 
+from keras.callbacks import EarlyStopping
 from keras.models import Model
 from keras.layers import Input, Reshape, Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Conv2DTranspose
@@ -85,6 +86,9 @@ class CNN(FeatureExtractor, AnomalyDetector):
         out = np.expand_dims(out, axis=0)
         # print("expand",out.shape)
         out = np.array(self.squared_diff(out))
+        before = np.mean(out)
+        out[out < 0.04] = 0
+        print(before, np.mean(out))
         out = np.mean(out)
         out = np.sqrt(out)
         # print("fin get",out.shape)
@@ -97,6 +101,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
         """
         data = self.decompose(data[:,self._i:self._s], self._overlap_test)
         out = np.array(self.squared_diff(data))
+        out[out < 0.1] = 0
         out = np.mean(out, axis=(1,2))
         out = np.sqrt(out)
         return out
@@ -166,7 +171,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
         self._autoencoder = Model(self._input_tensor, decoded)
 
         # self._autoencoder.compile(loss='binary_crossentropy', optimizer='adam')
-        self._autoencoder.compile(loss='mean_squared_error', optimizer='adam')
+        self._autoencoder.compile(loss='mean_squared_error', optimizer='adam') # TODO : nadam
 
         self._autoencoder.summary()
 
@@ -180,40 +185,39 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # L'extraction de features se fait avec Conv2D -> augmentation des dimensions
         # MaxPooling permet de réduire les dimensions
         # Toujours utiliser une activation "relu"
-        m = Conv2D(64, (3, 5), strides=(1,2), activation='relu', padding='same')(self._input_tensor)
+
+        # TODO: sigmoid ou tanh pour Conv
+        # TODO: faire une couche juste sur spectral
+        # TODO: 6 filtres (~ autant que de cases 3*5)
+        # TODO: taux d'apprentissage
+        m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same')(self._input_tensor)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(64, (3, 5), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
+        m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(8, (3, 5), strides=(1,2), activation='relu', padding='same')(m)
+        m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same')(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Flatten()(m)
-        m = Dense(384, activation='relu')(m)
-        m = Dense(200, activation='relu')(m)
-#        m = Dense(300, activation='relu')(m)
+        m = Dense(self._features_number, activation='relu')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error',
                                   optimizer='adam')
 
         # Permet d'éviter l'overfitting
-        m = Dropout(0.5)(m)
-        m = Dense(384, activation='relu')(m)
+        # m = Dropout(0.5)(m) # TODO vérifier ?
 
-        m = Reshape((6,8,8))(m)
+        m = Dense(self._features_number, activation='relu')(m)
+        m = Dense(self._input_shape[0] * self._input_shape[1], activation='sigmoid')(m) # or linear
+        decoded = Reshape(self._input_shape)(m)
 
-        # Maintenant on reconstitue l'image initiale
-        m = UpSampling2D((2,2))(m)
-        m = Conv2DTranspose(64, (3, 5), strides=(1,2), activation='relu', padding='same')(m)
-        m = UpSampling2D((2,2))(m)
-        m = Conv2DTranspose(64, (3, 5), strides=(1,2), activation='relu', padding='same')(m)
-        m = UpSampling2D((2,2))(m)
-
-        decoded = Conv2DTranspose(1, (3, 5), strides=(1,2), activation='linear', padding='same')(m)
+        # TODO: reconstruire avec dense
+        # TODO: rajouter couche une par une
+        # TODO: pré-apprentissage couche par couche
 
         # Compilation du modèle + paramètres d'évaluation et d'apprentissage
         self._autoencoder = Model(self._input_tensor, decoded)
 
-        self._autoencoder.compile(loss='binary_crossentropy', optimizer='adam')
-        # self._autoencoder.compile(loss='mean_squared_error', optimizer='adam')
+        # self._autoencoder.compile(loss='binary_crossentropy', optimizer='adam')
+        self._autoencoder.compile(loss='mean_squared_error', optimizer='adam')
 
         self._autoencoder.summary()
 
@@ -233,10 +237,15 @@ class CNN(FeatureExtractor, AnomalyDetector):
         training_batch_generator = Batch_Generator(training_filenames, self._batch_size, self._input_shape, self._overlap, inf, sup, self._quant)
         validation_batch_generator = Batch_Generator(validation_filenames, self._batch_size, self._input_shape, self._overlap, inf, sup, self._quant)
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
+
+        # early stopping TODO tester
+        es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=2)
+
         self._autoencoder.fit_generator(generator=training_batch_generator,
                                         epochs=self._nb_epochs,
                                         verbose=1,
                                         validation_data=validation_batch_generator,
+                                        callbacks=[es],
                                         use_multiprocessing=True,
                                         workers=8,
                                         max_queue_size=32)

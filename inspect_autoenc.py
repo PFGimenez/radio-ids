@@ -32,6 +32,8 @@ while i < len(sys.argv):
         mode = "data"
     elif sys.argv[i] == "-quant":
         mode = "quant"
+    elif sys.argv[i] == "-diff":
+        mode = "diff"
     elif sys.argv[i] == "-autoenc":
         mode = "autoenc"
     elif sys.argv[i] == "-dir":
@@ -69,7 +71,7 @@ dims = config.get_config_eval('autoenc_dimensions')
 epochs = config.get_config_eval('nb_epochs')
 
 new = False
-load_autoenc = (mode == "autoenc")
+load_autoenc = (mode == "autoenc" or mode == "diff")
 attack_nb_min = 0
 attack_nb_max = 1
 
@@ -110,7 +112,8 @@ if mode == "quant":
     data_d = np.vstack(read_files_from_timestamp(date_min, date_max, folders, quant=True))
     dequantify(data_d)
 if mode == "autoenc":
-    fig, ax = plt.subplots(nrows=2, ncols=1)
+    fig, ax = plt.subplots(nrows=3, ncols=1)
+if mode == "autoenc" or mode == "diff":
     data_q = np.vstack(read_files_from_timestamp(date_min, date_max, folders, quant=True))
 
 #data = read_directory(folders[0], quant=True)[0,:,:]
@@ -121,8 +124,8 @@ if mode == "autoenc":
 if load_autoenc:
     data_reconstructed = extractors.reconstruct(data_q)
     data_reconstructed = np.vstack(data_reconstructed)
-    # diff = extractors.diff_reconstruct(data_q)
-    # diff = np.vstack(diff)
+    diff = np.abs(data_reconstructed - data_q[:data_reconstructed.shape[0],:])
+    diff[diff < 0.32] = 0
 
 # vérification quantification
 if mode == "quant":
@@ -142,7 +145,12 @@ elif mode == "autoenc":
     ax[0].set_title("Original data")
     ax[1].imshow(data_reconstructed, cmap='hot', interpolation='nearest', aspect='auto')
     ax[1].set_title("Reconstructed data")
-    # ax[2].imshow(diff, cmap='hot', interpolation='nearest', aspect='auto')
-    # ax[2].set_title("Difference")
+    ax[2].imshow(diff, cmap='hot', interpolation='nearest', aspect='auto')
+    ax[2].set_title("Difference")
+
+elif mode == "diff":
+    plt.imshow(diff, cmap='hot', interpolation='nearest', aspect='auto')
+    plt.title("Difference")
+
 #plt.savefig(config.get_config("autoenc_filename")+".png")
 plt.show()

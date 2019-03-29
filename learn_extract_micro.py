@@ -11,7 +11,7 @@ with open("train_folders") as f: # TODO
     folders = f.readlines()
 folders = [x.strip() for x in folders]
 #folders = ['data-test', 'data-test']
-#folders = [folders[0]]
+folders = [folders[0]] # TODO
 config = Config()
 
 bands = config.get_config_eval('waterfall_frequency_bands')

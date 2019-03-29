@@ -28,6 +28,30 @@ def get_derivative(scores):
             out[keys[i+1]] = score_new - score_old
     return out
 
+
+def moyenne_glissante(scores):
+    out = {}
+    keys = list(scores.keys())
+    n = 1000
+
+    m = {}
+    for k in scores[keys[0]]:
+        s = 0
+        for j in range(0,n):
+            s += scores[keys[j]].get(k)
+        m[k] = s
+
+    for i in range(n,len(scores)-1-n):
+        if i % 1000 == 0:
+            print(i)
+        tmp = {}
+        for k in scores[keys[i]]:
+            m[k] += scores[keys[i]].get(k)
+            m[k] -= scores[keys[i-n]].get(k)
+            tmp[k] = m[k]
+        out[keys[i]] = tmp
+    return out
+
 class Evaluator:
 
     """
@@ -46,6 +70,7 @@ class Evaluator:
         self._id = identifier
         if self._id == None:
             self._id = "All"
+            print(all_attack)
             self._attack = np.array(all_attack[:,1:].astype(np.integer))
             # self._attack = np.array(all_attack[:,:2].astype(np.float))
         else:
@@ -166,13 +191,16 @@ class Evaluator:
                 for col in row:
                     col.xaxis.set_major_formatter(hfmt)
                     plt.setp(col.get_xticklabels(), rotation=15)
-            # for a in self._attack:
-            #     for row in ax:
-            #         for col in row:
-            #             col.hlines(0,
-            #                mdates.date2num(datetime.datetime.fromtimestamp(a[0]/1000)),
-            #                mdates.date2num(datetime.datetime.fromtimestamp(a[1]/1000)),
-            #                color='red')
+            for a in self._attack:
+                nb = 0
+                for row in ax:
+                    for col in row:
+                        if a[2] == nb:
+                            col.hlines(0,
+                           mdates.date2num(datetime.datetime.fromtimestamp(a[0]/1000)),
+                           mdates.date2num(datetime.datetime.fromtimestamp(a[1]/1000)),
+                           color='red')
+                        nb += 1
 
             for t in detected_positive:
                 # TODO
@@ -341,6 +369,7 @@ use_macro = False
 use_autoenc = False
 name_attack = None
 train = False
+mini = False
 
 i = 1
 while i < len(sys.argv):
@@ -357,6 +386,8 @@ while i < len(sys.argv):
         use_macro = True
     elif sys.argv[i] == "-train":
         train = True
+    elif sys.argv[i] == "-mini":
+        mini = True
     else:
         print("Erreur:",sys.argv[i])
         exit()
@@ -369,9 +400,13 @@ if not use_autoenc and not use_micro and not use_macro:
 # lecture config
 
 config = Config()
+prefix_result_train = "train-"
 if train:
     prefix_result = "train-"
     folder_file = "train_folders"
+elif mini:
+    prefix_result = "mini-"
+    folder_file = "mini_folders"
 else:
     prefix_result = ""
     folder_file = "test_folders"
@@ -388,9 +423,21 @@ print(attack)
 identifiers = np.unique(attack[:,0])
 print("Attacks list:",identifiers)
 
-evaluators = [Evaluator(attack, i) for i in identifiers]
-# evaluators = []
+attack_plot = {"scan433": 0, "scan868": 1}
+
+# we add the plot number of the attack
+attack_tmp = []
+for a in attack:
+    plot_nb = attack_plot.get(a[0])
+    if plot_nb == None: # par défaut: 2400-2500
+        plot_nb = 2
+    attack_tmp.append([a[0], a[1], a[2], plot_nb])
+attack = np.array(attack_tmp)
+
+# evaluators = [Evaluator(attack, i) for i in identifiers]
+evaluators = []
 if not name_attack:
+# evaluators = [Evaluator(attack, i) for i in identifiers]
     evaluators.append(Evaluator(attack))
 else:
     for n in name_attack:
@@ -398,7 +445,7 @@ else:
 nb_features = sum(config.get_config_eval("features_number"))
 nb_features_macro = config.get_config_eval("nb_features_macro")
 prefix = config.get_config("section")
-# threshold_autoencoder = config.get_config_eval("threshold_autoencoder")
+threshold_autoencoder_number = config.get_config_eval("threshold_autoencoder")
 threshold_autoencoder = [1,0.11,1]
 threshold_macro = config.get_config_eval("threshold_macro")
 threshold_micro = config.get_config_eval("threshold_micro")
@@ -453,6 +500,7 @@ if use_autoenc:
 path_examples = os.path.join(prefix, prefix_result+"results-OCSVM-micro.joblib")
 path_examples_macro = os.path.join(prefix, prefix_result+"results-HMM-macro.joblib")
 path_examples_extractors = os.path.join(prefix, prefix_result+config.get_config("autoenc_filename")+"-results-autoenc.joblib")
+path_examples_train_extractors = os.path.join(prefix, prefix_result_train+config.get_config("autoenc_filename")+"-results-autoenc.joblib")
 
 if use_micro:
     print("Prediction for micro…")
@@ -465,7 +513,17 @@ if use_macro:
 if use_autoenc:
     print("Prediction for autoencoders…")
     scores_ex = score_extractors(extractors, path_examples_extractors, directories)
+    if not train:
+        scores_train = joblib.load(path_examples_train_extractors)
+        thr = extractors.learn_threshold_from_scores(scores_train)
+        threshold_autoencoder = []
+        for l in thr:
+            # check the order of the keys
+            assert l == len(threshold_autoencoder)
+            threshold_autoencoder.append(thr.get(l)[threshold_autoencoder_number])
+        print(threshold_autoencoder)
     # scores_ex = get_derivative(scores_ex)
+    # scores_ex = moyenne_glissante(scores_ex)
     (example_pos_extractors, example_neg_extractors) = predict_extractors(extractors, scores_ex, threshold_autoencoder)
 
 for e in evaluators:

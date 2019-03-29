@@ -341,6 +341,19 @@ class MultiExtractors(MultiModels):
         out = np.dstack(out)
         return original - out
 
+    def learn_threshold_from_scores(self, scores):
+        thr = {}
+        for (_,m) in self._models:
+            r = [100,99,98,97,96,95,93,90] if m.anomalies_have_high_score() else [0,1,2,3,4,5,7,10]
+            score_model = []
+            for s in scores:
+                val = scores.get(s).get(m._number)
+                if val != None:
+                    score_model.append(val)
+            thr[m._number] = [np.percentile(score_model, p) for p in r]
+            print(thr[m._number])
+        return thr
+
     def learn_threshold(self, fnames):
         scores = {m : [] for (_,m) in self._models}
         # un jour à la fois
