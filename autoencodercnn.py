@@ -23,6 +23,44 @@ from sklearn.externals import joblib
 import math
 from config import Config
 
+class Macro_Batch_Generator(Sequence):
+
+    def __init__(self, filenames, batch_size, input_shape, overlap, inf, sup, quant, macro_autoencoder_sweep_merge):
+        self._overlap = overlap
+        self.filenames = filenames
+        self.batch_size = batch_size
+        self._input_shape = input_shape
+        self._size_x = input_shape[0]
+        self._size_y = input_shape[1]
+        self._inf = inf
+        self._sup = sup
+        self._quant = quant
+        self._macro_autoencoder_sweep_merge = macro_autoencoder_sweep_merge
+    def __len__(self):
+        return int(np.ceil(len(self.filenames) / float(self.batch_size)))
+
+    def __getitem__(self, idx):
+        try:
+            batch_x = self.filenames[idx * self.batch_size : (idx + 1) * self.batch_size]
+            out = [decompose(
+#                crop_sample(
+                        read_file(file_name, quant=self._quant)[:,self._inf:self._sup],
+#                    self._size_x, self._size_y),
+                self._input_shape, self._overlap)
+            for file_name in batch_x]
+            out = np.concatenate(out)
+#            if self._quant:
+#                quantify(out)
+            # print(out.shape)
+            # out = out.reshape(out.shape[0],out.shape[1]*out.shape[2],1) # flatten
+            # print(out.shape)
+            return out, out # parce que la sortie et l'entrée de l'autoencoder doivent être identiques
+        except ValueError as e:
+            print(e, batch_x)
+            raise
+
+
+
 class Batch_Generator(Sequence):
 
     def __init__(self, filenames, batch_size, input_shape, overlap, inf, sup, quant):

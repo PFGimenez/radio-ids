@@ -67,20 +67,14 @@ class Evaluator:
             column 1 : attack end itemstamp
             column 2 : attack identifier
         """
-        self._id = identifier
-        if self._id == None:
-            self._id = "All"
-            print(all_attack)
-            self._attack = np.array(all_attack[:,1:].astype(np.integer))
-            # self._attack = np.array(all_attack[:,:2].astype(np.float))
-        else:
-            self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
-            # self._attack = np.array(all_attack[all_attack[:,2] == identifier][:,:2].astype(np.float))
-
-        # self._attack += 1530576000
-        # self._attack -= 7251 # TODO décalage
-        # self._attack *= 1000
-        # self._attack = self._attack.astype(np.integer)
+        # self._id = identifier
+        # if self._id == None:
+        self._id = "All"
+        # print(all_attack)
+        self._all_attack = all_attack
+        self._attack = np.array(all_attack[:,1:].astype(np.integer))
+        # else:
+            # self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
 
         # if self._id == "All":
         #     f = open("logattack_fixed","w+")
@@ -89,7 +83,6 @@ class Evaluator:
         #         f.write(all_attack[i, 2]+" "+str(a[0])+" "+str(a[1])+"\r\n")
         #     f.close()
         self._seen_attack = []
-        self._cumulative_seen_attack = []
         print(len(self._attack),"attacks on",self._id)
 
     def is_in_attack(self, timestamp):
@@ -104,76 +97,63 @@ class Evaluator:
             if timestamp >= a[0] and timestamp <= a[1]:
                 if a[0] not in self._seen_attack:
                     self._seen_attack.append(a[0])
-                if a[0] not in self._cumulative_seen_attack:
-                    self._cumulative_seen_attack.append(a[0])
                 return True
         return False
 
     def roc(self, detected_positive_dico, scores, models, typestr):
         pass # TODO
 
-    def evaluate(self, detected_positive_dico, scores, models, typestr):
-        """
-            Prediction : shape (-1,2)
-            column 0 : timestamp
-            column 1 : true iff detection
-        """
+    def evaluate(self, detected_positive_dico, scores, models, typestr, thr=None):
         self._seen_attack = []
-
         detected_positive = np.array([k for k in detected_positive_dico])
-        # detected_negative = np.array([k for k in detected_negative_dico])
         total_positives = len(detected_positive)
         true_positive_list = detected_positive[list(map(self.is_in_attack_detected, detected_positive))]
         false_positive_list = detected_positive[[t not in true_positive_list for t in detected_positive]]
         true_positive = len(true_positive_list)
         false_positive = total_positives - true_positive
 
-        # total_negatives = len(detected_negative)
-        # false_negative_list = detected_negative[list(map(self.is_in_attack, detected_negative))]
-        # true_negative_list = detected_negative[[t not in false_negative_list for t in detected_negative]]
-        # false_negative = len(false_negative_list)
-        # true_negative = total_negatives - false_negative
-
         print("Detected : ",len(self._seen_attack),"/",len(self._attack))
 
-        true_positive_score = np.array([detected_positive_dico[t] for t in true_positive_list])
-        # false_negative_score = np.array([detected_negative_dico[t] for t in false_negative_list])
-        false_positive_score = np.array([detected_positive_dico[t] for t in false_positive_list])
-        # true_negative_score = np.array([detected_negative_dico[t] for t in true_negative_list])
+        # true_positive_score = np.array([detected_positive_dico[t] for t in true_positive_list])
+        # false_positive_score = np.array([detected_positive_dico[t] for t in false_positive_list])
 
-        # if true_positive + false_negative == 0:
-        #     recall = 1
-        # else:
-        #     recall = true_positive / len(self._attack)
-
-        recall = len(self._seen_attack) / len(self._attack)
-
-        # if total_positives == 0:
-        #     precision = 1
-        # else:
-        #     precision = true_positive / total_positives
         if false_positive + len(self._seen_attack) == 0:
             precision = 1
         else:
+            # precision = len(self._seen_attack) / (false_positive + len(self._seen_attack))
             precision = len(self._seen_attack) / (false_positive + len(self._seen_attack))
+        print("Overall precision:",precision)
 
-#        print("total pos",total_positives, "total negative",total_negatives)
-        if precision + recall != 0:
-            fmeasure = 2*(precision * recall) / (precision + recall)
-        else:
-            fmeasure = float('nan')
+        recall = {}
+        fmeasure = {}
+        identifiers = np.unique(self._all_attack[:,0])
+        for ident in identifiers:
+            attack_id = self._all_attack[self._all_attack[:,0] == ident]
+            r = 0
+            for i in attack_id:
+                if int(i[1]) in self._seen_attack:
+                    r += 1
+            r = r / len(attack_id)
+            print("Recall for "+ident+": "+str(r))
+            recall[ident] = r
+
+            if precision + recall[ident] != 0:
+                fmeasure[ident] = 2*(precision * recall[ident]) / (precision + recall[ident])
+            else:
+                fmeasure[ident] = float('nan')
+            print("f-measure for "+ident+": "+str(fmeasure[ident]))
+
         print("tp",true_positive, "fp",false_positive,"precision",precision,"recall",recall,"f-measure",fmeasure)
-        # print("tp",true_positive, "tn",true_negative, "fp",false_positive,"fn", false_negative,"precision",precision,"recall",recall,"f-measure",fmeasure)
 
-        if show_hist:
-            plt.hist(true_positive_score, color='red', bins=100, histtype='step', log=True)
-            # plt.hist(false_negative_score, color='magenta', bins=100, histtype='step', log=True)
-            plt.hist(false_positive_score, color='cyan', bins=100, histtype='step', log=True)
-            # plt.hist(true_negative_score, color='blue', bins=100, histtype='step', log=True)
-            plt.title(self._id)
-            plt.show()
+        # if show_hist:
+        #     plt.hist(true_positive_score, color='red', bins=100, histtype='step', log=True)
+        #     # plt.hist(false_negative_score, color='magenta', bins=100, histtype='step', log=True)
+        #     plt.hist(false_positive_score, color='cyan', bins=100, histtype='step', log=True)
+        #     # plt.hist(true_negative_score, color='blue', bins=100, histtype='step', log=True)
+        #     plt.title(self._id)
+        #     plt.show()
 
-        if show_time and self._id=="All":
+        if show_time:
             x = list(scores.keys())
             if isinstance(models, MultiModels):
                 nbcols = len(models._models)
@@ -187,10 +167,15 @@ class Evaluator:
                 ax = np.expand_dims(ax, 1)
                 ax = np.expand_dims(ax, 2)
             hfmt = mdates.DateFormatter('%d/%m %H:%M:%S')
+            i = 0
             for row in ax:
                 for col in row:
                     col.xaxis.set_major_formatter(hfmt)
                     plt.setp(col.get_xticklabels(), rotation=15)
+                    if thr:
+                        col.axhline(thr[i],0,1,color="green")
+                    i += 1
+
             for a in self._attack:
                 nb = 0
                 for row in ax:
@@ -202,14 +187,17 @@ class Evaluator:
                            color='red')
                         nb += 1
 
-            for t in detected_positive:
+            for t in detected_positive_dico:
                 # TODO
+                i = 0
                 for row in ax:
                     for col in row:
-                        col.hlines(0.01,
-                           mdates.date2num(datetime.datetime.fromtimestamp(t/1000)),
-                           mdates.date2num(datetime.datetime.fromtimestamp(t/1000+10)),
-                           color='blue')
+                        if i in detected_positive_dico[t]:
+                            col.hlines(-0.001,
+                            mdates.date2num(datetime.datetime.fromtimestamp(t/1000)),
+                            mdates.date2num(datetime.datetime.fromtimestamp(t/1000+10)),
+                            color='green')
+                        i += 1
 
 
 
@@ -225,7 +213,6 @@ class Evaluator:
                 for row in ax:
                     for col in row:
                         if i < nbcols:
-                            # col.hlines( # TODO
                             val = [scores[k].get(i) for k in x]
                             x, val = zip(*sorted(zip(x, val)))
                             x_dates = mdates.date2num([datetime.datetime.fromtimestamp(t/1000) for t in x])
@@ -239,7 +226,7 @@ class Evaluator:
                 plt.plot(x, val)
             plt.show()
 
-        print("Cumulative detected : ",len(self._cumulative_seen_attack),"/",len(self._attack))
+        # print("Cumulative detected : ",len(self._cumulative_seen_attack),"/",len(self._attack))
         return (true_positive, false_positive)
 
 def predict(models, scores, threshold):
@@ -338,24 +325,26 @@ def predict_extractors(extractors, scores, threshold_autoencoder):
     consecutive = 0
     example_pos = {}
     example_neg = {}
-
-    for timestamp in scores:
+    timestamps = sorted(scores.keys())
+    for timestamp in timestamps:
         score = scores[timestamp]
+        print(timestamp)
         if extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
+            # print("OK")
             consecutive += 1
         else:
-            # if consecutive > 0:
-                # print(consecutive)
+            if consecutive > 0:
+                print("NOK",consecutive)
             consecutive = 0
-        if consecutive > 0:
+        if consecutive > 5:
             if isinstance(score, dict):
-                example_pos[timestamp] = score[max(score,key=score.get)]
+                example_pos[timestamp] = extractors.get_predictor(score,optimistic=False,threshold=threshold_autoencoder)
             else:
                 example_pos[timestamp] = score
         else:
             if isinstance(score, dict):
                 # on enregistre le plus haut score (ne sert qu'à l'affichage)
-                example_neg[timestamp] = score[max(score,key=score.get)]
+                example_neg[timestamp] = max(score,key=score.get)
             else:
                 example_neg[timestamp] = score
 
@@ -418,7 +407,7 @@ directories = [x.strip() for x in folders]
 attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
 
 # TODO : pour ne garder que les attaques d'un certain jour
-# attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[1])/1000).day == 23])
+attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[1])/1000).day == 28])
 print(attack)
 identifiers = np.unique(attack[:,0])
 print("Attacks list:",identifiers)
@@ -488,11 +477,10 @@ if use_autoenc:
     for j in range(len(bands)):
         (i,s) = bands[j]
         m = CNN(j)
-        extractors.load_model(m)
+#         extractors.load_model(m)
+# TODO : remettre
+        extractors.add_model(m)
 
-# with open("train_folders") as f:
-    # folders_test = f.readlines()
-# folders_test = [x.strip() for x in folders]
 
 
 # évaluation
@@ -521,13 +509,15 @@ if use_autoenc:
             # check the order of the keys
             assert l == len(threshold_autoencoder)
             threshold_autoencoder.append(thr.get(l)[threshold_autoencoder_number])
-        print(threshold_autoencoder)
+        # TODO:
+        threshold_autoencoder = [0.007, 0.015, 0.03]
+        print("Autoencoder thresholds:", threshold_autoencoder)
     # scores_ex = get_derivative(scores_ex)
     # scores_ex = moyenne_glissante(scores_ex)
     (example_pos_extractors, example_neg_extractors) = predict_extractors(extractors, scores_ex, threshold_autoencoder)
 
 for e in evaluators:
-    print("***",e._id)
+    # print("***",e._id)
     if use_micro:
         print("Results micro: ",end='')
         e.evaluate(example_pos, scores_micro, models,"micro")
@@ -539,4 +529,4 @@ for e in evaluators:
 #               list(set(example_neg+example_neg_macro)))
     if use_autoenc:
         print("Results autoencoders: ",end='')
-        e.evaluate(example_pos_extractors, scores_ex, extractors,"autoenc")
+        e.evaluate(example_pos_extractors, scores_ex, extractors,"autoenc", threshold_autoencoder)

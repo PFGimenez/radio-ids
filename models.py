@@ -271,6 +271,20 @@ class MultiModels(AnomalyDetector):
         else:
             return any(p) # detection if one detector detects
 
+    def get_predictor(self, score, nbThreshold = 1, threshold=None, optimistic=True):
+        p = []
+        i = 0
+        for (_,m) in self._models:
+            if score.get(m._number):
+                if isinstance(score.get(m._number), list):
+                    s = max(score.get(m._number))
+                else:
+                    s = score.get(m._number)
+                if m.predict_thr(s, nbThreshold, threshold=threshold[i], optimistic=optimistic):
+                    p.append(m._number)
+            i += 1
+        return p
+
 class MultiExtractors(MultiModels):
 
     def predict(self, data, epoch):

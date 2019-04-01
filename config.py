@@ -6,11 +6,14 @@ class Config():
     _config = None
     _section = None
 
-    def __init__(self):
+    def __init__(self, section=None):
         if Config._config == None:
             Config._config = configparser.ConfigParser()
             Config._config.read("config.ini")
-            Config._section = Config._config["DEFAULT"]["section"]
+            if section == None:
+                Config._section = Config._config["DEFAULT"]["section"]
+            else:
+                Config._section = section
             print("Loading config", Config._section)
 
     def set_config(self, key, val):
