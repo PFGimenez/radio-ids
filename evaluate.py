@@ -12,6 +12,7 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import datetime
 import itertools
+import random
 
 def get_derivative(scores):
     out = {}
@@ -103,7 +104,7 @@ class Evaluator:
     def roc(self, detected_positive_dico, scores, models, typestr):
         pass # TODO
 
-    def evaluate(self, detected_positive_dico, scores, models, typestr, thr=None):
+    def evaluate(self, detected_positive_dico, scores, models, typestr, thr=None, colors=None):
         self._seen_attack = []
         detected_positive = np.array([k for k in detected_positive_dico])
         total_positives = len(detected_positive)
@@ -177,6 +178,8 @@ class Evaluator:
                     i += 1
 
             for a in self._attack:
+                l = self._all_attack[self._all_attack[:,1] == str(a[0])]
+                ident = l[0,0]
                 nb = 0
                 for row in ax:
                     for col in row:
@@ -184,7 +187,7 @@ class Evaluator:
                             col.hlines(0,
                            mdates.date2num(datetime.datetime.fromtimestamp(a[0]/1000)),
                            mdates.date2num(datetime.datetime.fromtimestamp(a[1]/1000)),
-                           color='red')
+                           color=colors[ident])
                         nb += 1
 
             for t in detected_positive_dico:
@@ -297,27 +300,21 @@ def scores_micro_macro(models, path_examples, data):
     return scores
 
 def score_extractors(extractors, path_examples, folders_test):
-    try:
-        # chargement des prédictions si possible
-#        (example_pos, example_neg) = joblib.load(path_examples)
-        scores = joblib.load(path_examples)
-        print("Scores loaded")
-    except:
-        scores = {}
-        start = time.time()
-        i = 0
-        # print(os.listdir(folders_test[0]))
-        paths = [os.path.join(directory,f) for directory in folders_test for f in sorted(os.listdir(directory))]
-        for fname in paths:
-            timestamp = int(os.path.split(fname)[1])
-            data = read_file(fname, quant=True)
-            if i % 100 == 0:
-                print(i,"/",len(paths))
-            i += 1
-            scores[timestamp] = extractors.get_score(data, timestamp)
-        end = time.time()
-        print("Scoring time:",(end-start),"s")
-        joblib.dump(scores, path_examples)
+    scores = {}
+    start = time.time()
+    i = 0
+    # print(os.listdir(folders_test[0]))
+    paths = [os.path.join(directory,f) for directory in folders_test for f in sorted(os.listdir(directory))]
+    for fname in paths:
+        timestamp = int(os.path.split(fname)[1])
+        data = read_file(fname, quant=True)
+        if i % 100 == 0:
+            print(i,"/",len(paths))
+        i += 1
+        scores[timestamp] = extractors.get_score(data, timestamp)
+    end = time.time()
+    print("Scoring time:",(end-start),"s")
+    joblib.dump(scores, path_examples)
     return scores
 
 def predict_extractors(extractors, scores, threshold_autoencoder):
@@ -328,13 +325,13 @@ def predict_extractors(extractors, scores, threshold_autoencoder):
     timestamps = sorted(scores.keys())
     for timestamp in timestamps:
         score = scores[timestamp]
-        print(timestamp)
+        # print(timestamp)
         if extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
             # print("OK")
             consecutive += 1
         else:
-            if consecutive > 0:
-                print("NOK",consecutive)
+            # if consecutive > 0:
+                # print("NOK",consecutive)
             consecutive = 0
         if consecutive > 5:
             if isinstance(score, dict):
@@ -352,6 +349,8 @@ def predict_extractors(extractors, scores, threshold_autoencoder):
     print("Detection time:",(end-start),"s")
     print("Positive:",len(example_pos))
     return (example_pos, example_neg)
+
+
 
 use_micro = False
 use_macro = False
@@ -407,12 +406,19 @@ directories = [x.strip() for x in folders]
 attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
 
 # TODO : pour ne garder que les attaques d'un certain jour
-attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[1])/1000).day == 28])
+# attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[1])/1000).day == 28])
 print(attack)
 identifiers = np.unique(attack[:,0])
+
+colors = {}
+all_colors = {'red', 'green', 'blue', 'cyan', 'magenta', 'yellow', 'black', 'purple', 'fuchsia', 'grey', 'chocolate', 'lawngreen', 'salmon'}
+for i in identifiers:
+    colors[i] = all_colors.pop()
+    print(i,"is",colors[i])
+
 print("Attacks list:",identifiers)
 
-attack_plot = {"scan433": 0, "scan868": 1}
+attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "strong868": 1}
 
 # we add the plot number of the attack
 attack_tmp = []
@@ -423,14 +429,21 @@ for a in attack:
     attack_tmp.append([a[0], a[1], a[2], plot_nb])
 attack = np.array(attack_tmp)
 
+if name_attack:
+    a = []
+    for n in name_attack:
+        a.append(attack[attack[:,0] == n])
+    attack = np.concatenate((a))
+
+print(attack)
 # evaluators = [Evaluator(attack, i) for i in identifiers]
 evaluators = []
-if not name_attack:
+# if not name_attack:
 # evaluators = [Evaluator(attack, i) for i in identifiers]
-    evaluators.append(Evaluator(attack))
-else:
-    for n in name_attack:
-        evaluators.append(Evaluator(attack, n))
+evaluators.append(Evaluator(attack))
+# else:
+    # for n in name_attack:
+        # evaluators.append(Evaluator(attack, n))
 nb_features = sum(config.get_config_eval("features_number"))
 nb_features_macro = config.get_config_eval("nb_features_macro")
 prefix = config.get_config("section")
@@ -472,16 +485,10 @@ if use_macro:
 bands = config.get_config_eval('waterfall_frequency_bands')
 dims = config.get_config_eval('autoenc_dimensions')
 extractors = MultiExtractors()
-
-if use_autoenc:
-    for j in range(len(bands)):
-        (i,s) = bands[j]
-        m = CNN(j)
-#         extractors.load_model(m)
-# TODO : remettre
-        extractors.add_model(m)
-
-
+for j in range(len(bands)):
+    (i,s) = bands[j]
+    m = CNN(j)
+    extractors.add_model(m) # dummy is enough for most cases
 
 # évaluation
 
@@ -500,7 +507,20 @@ if use_macro:
     (example_pos_macro, example_neg_macro) = predict(models_macro, scores_macro, threshold_macro)
 if use_autoenc:
     print("Prediction for autoencoders…")
-    scores_ex = score_extractors(extractors, path_examples_extractors, directories)
+    try:
+        # chargement des prédictions si possible
+#        (example_pos, example_neg) = joblib.load(path_examples)
+        scores_ex = joblib.load(path_examples_extractors)
+        print("Scores loaded")
+    except Exception as e:
+        print("Scores not found:",e)
+        extractors = MultiExtractors()
+        for j in range(len(bands)):
+            (i,s) = bands[j]
+            m = CNN(j)
+            extractors.load_model(m)
+            # extractors.add_model(m)
+        scores_ex = score_extractors(extractors, path_examples_extractors, directories)
     if not train:
         scores_train = joblib.load(path_examples_train_extractors)
         thr = extractors.learn_threshold_from_scores(scores_train)
@@ -510,7 +530,7 @@ if use_autoenc:
             assert l == len(threshold_autoencoder)
             threshold_autoencoder.append(thr.get(l)[threshold_autoencoder_number])
         # TODO:
-        threshold_autoencoder = [0.007, 0.015, 0.03]
+        threshold_autoencoder = [0.007, 0.008, 0.03]
         print("Autoencoder thresholds:", threshold_autoencoder)
     # scores_ex = get_derivative(scores_ex)
     # scores_ex = moyenne_glissante(scores_ex)
@@ -520,13 +540,13 @@ for e in evaluators:
     # print("***",e._id)
     if use_micro:
         print("Results micro: ",end='')
-        e.evaluate(example_pos, scores_micro, models,"micro")
+        e.evaluate(example_pos, scores_micro, models,"micro", colors)
     if use_macro:
         print("Results macro: ",end='')
-        e.evaluate(example_pos_macro, scores_macro, models_macro,"macro")
+        e.evaluate(example_pos_macro, scores_macro, models_macro,"macro", colors)
 #    print("Results micro and macro")
 #    e.evaluate(list(set(example_pos+example_pos_macro)),
 #               list(set(example_neg+example_neg_macro)))
     if use_autoenc:
         print("Results autoencoders: ",end='')
-        e.evaluate(example_pos_extractors, scores_ex, extractors,"autoenc", threshold_autoencoder)
+        e.evaluate(example_pos_extractors, scores_ex, extractors,"autoenc", threshold_autoencoder, colors)

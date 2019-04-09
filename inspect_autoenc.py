@@ -16,6 +16,7 @@ name_attack = None
 i = 1
 folders = None
 mode = None
+save = False
 while i < len(sys.argv):
     if sys.argv[i] == "-d":
         i += 1
@@ -36,6 +37,8 @@ while i < len(sys.argv):
         mode = "diff"
     elif sys.argv[i] == "-autoenc":
         mode = "autoenc"
+    elif sys.argv[i] == "-save":
+        save = True
     elif sys.argv[i] == "-dir":
         i += 1
         if not folders:
@@ -124,7 +127,13 @@ if mode == "autoenc" or mode == "diff":
 if load_autoenc:
     data_reconstructed = extractors.reconstruct(data_q)
     data_reconstructed = np.vstack(data_reconstructed)
+    print(data_reconstructed.shape)
+    if save:
+        data_reconstructed.tofile("reconstructed_data")
     diff = np.abs(data_reconstructed - data_q[:data_reconstructed.shape[0],:])
+    # diff = np.abs(data_reconstructed[:,:900] - data_q[:data_reconstructed.shape[0],:900])
+    # diff2 = np.abs(data_reconstructed[:,900:] - data_q[:data_reconstructed.shape[0],1000:])
+    # diff = np.concatenate((diff, diff2), axis=1)
     diff[diff < 0.32] = 0
 
 # vérification quantification

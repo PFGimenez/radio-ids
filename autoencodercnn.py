@@ -193,14 +193,17 @@ class CNN(FeatureExtractor, AnomalyDetector):
 #        self._delta_timestamp = self._delta_timestamp[self._delta_timestamp < waterfall_duration]
 #        self._delta_timestamp = self._delta_timestamp.reshape(self._delta_timestamp.shape[0], 1)
 
-    def _new_model(self):
+    def _new_model_2(self):
         m = Flatten()(self._input_tensor)
+        # if self._features_number != 5000:
+            # m = Dense(5000, activation='sigmoid')(m)
         m = Dense(self._features_number, activation='sigmoid')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error', # useless parameters
                                   optimizer='adam')
 
-#        m = Dense(4000, activation='relu')(m)
+        # if self._features_number != 5000:
+            # m = Dense(5000, activation='sigmoid')(m)
         # m = Dropout(0.3)(m)
         m = Dense(self._input_shape[0] * self._input_shape[1], activation='sigmoid')(m) # or linear
         decoded = Reshape(self._input_shape)(m)
@@ -214,7 +217,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
         self._autoencoder.summary()
 
 
-    def _new_model_2(self):
+    def _new_model(self):
         """
             À utiliser si l'autoencoder n'est pas chargé mais appris
         """
@@ -224,26 +227,30 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # MaxPooling permet de réduire les dimensions
         # Toujours utiliser une activation "relu"
 
+        # TODO: moins de couches cachées, couche dense entre 2 couche convolutive
         # TODO: sigmoid ou tanh pour Conv
         # TODO: faire une couche juste sur spectral
         # TODO: 6 filtres (~ autant que de cases 3*5)
         # TODO: taux d'apprentissage
-        m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same')(self._input_tensor)
+        m = Conv2D(15, (3, 5), strides=(1,2), activation='relu', padding='same')(self._input_tensor)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
-        m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same')(m)
+        m = Conv2D(15, (3, 5), strides=(1,2), activation='relu', padding='same')(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
         m = Flatten()(m)
+        # m = Dense(self._features_number, activation='relu')(m)
+        # m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
+        # m = MaxPooling2D(pool_size=(2,2))(m)
+        # m = Dense(self._features_number, activation='relu')(m)
         m = Dense(self._features_number, activation='relu')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error',
                                   optimizer='adam')
 
+        m = Dense(self._features_number, activation='relu')(m)
         # Permet d'éviter l'overfitting
         # m = Dropout(0.5)(m) # TODO vérifier ?
 
-        m = Dense(self._features_number, activation='relu')(m)
+        # m = Dense(self._features_number, activation='relu')(m)
         m = Dense(self._input_shape[0] * self._input_shape[1], activation='sigmoid')(m) # or linear
         decoded = Reshape(self._input_shape)(m)
 
@@ -277,7 +284,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
 
         # early stopping TODO tester
-        es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=2)
+        es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
 
         self._autoencoder.fit_generator(generator=training_batch_generator,
                                         epochs=self._nb_epochs,
