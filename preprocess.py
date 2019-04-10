@@ -161,6 +161,7 @@ def do_PCA(data, n_components):
 #    print("Variance explanation : "+str(pca.explained_variance_ratio_))
     return (train_pca, pca.fit_transform(test_data))
 
+
 def decompose_raw(data, shape, overlap=0,pad_t=False, pad_f=False):
     shape_x = shape[0]
     shape_y = shape[1]
@@ -197,6 +198,30 @@ def decompose(data, shape, overlap=0,pad_t=False, pad_f=True):
     else:
         return out.reshape(x*y, shape_x, shape_y, 1)
 
+def macro_decompose(data, merge_shape, input_shape, overlap=0,pad_t=False, pad_f=True):
+    """
+    decompose for macro detector
+    """
+    # print(data.shape, merge_shape, input_shape, overlap)
+    (x,y,out) = decompose_raw(data, merge_shape, overlap,pad_t=pad_t, pad_f=pad_f)
+    # print(x,y,out.shape)
+    out = np.mean(out, axis=(2,3))
+    # print(x,y)
+    # print(out.shape)
+    number_split = math.floor(x / input_shape[0])
+    # print(number_split, number_split * input_shape[0])
+    out = out[:number_split * input_shape[0],:]
+    # print(out.shape)
+    out = np.array(np.vsplit(out, number_split))
+    # print(out.shape)
+
+    if K.image_data_format() == 'channels_first':
+        return out.reshape(out.shape[0], 1, out.shape[1], out.shape[2])
+    else:
+        return out.reshape(out.shape[0], out.shape[1], out.shape[2], 1)
+
+
+
 def read_file(filename, quant=False, int_type=True):
     """
         Read one file
@@ -222,7 +247,8 @@ def read_files_from_timestamp(date_min, date_max, directory_list, quant=False, i
 def read_files(files_list, quant=False, int_type=True):
     data = []
     i = 1
-    print(len(files_list))
+    if len(files_list) >= 100:
+        print(len(files_list))
     for fname in files_list:
         if i % 100 == 0:
             print(i,"/",len(files_list))

@@ -312,7 +312,7 @@ class MultiExtractors(MultiModels):
         """
         super().add_model(model, period_always)
 
-    def save_all(self):
+    def save_all(self, suffix=""):
         """
         Sauvegarde spéciale (chaque autoencodeur a sa sauvegarde)
         """

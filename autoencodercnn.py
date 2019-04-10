@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split
 from models import AnomalyDetector, FeatureExtractor
-
+import traceback
 # reduce TF verbosity
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -25,30 +25,23 @@ from config import Config
 
 class Macro_Batch_Generator(Sequence):
 
-    def __init__(self, filenames, batch_size, input_shape, overlap, inf, sup, quant, macro_autoencoder_sweep_merge):
+    def __init__(self, filenames, batch_size, merge_shape, input_shape, overlap, quant):
         self._overlap = overlap
         self.filenames = filenames
         self.batch_size = batch_size
+        self._merge_shape = merge_shape
         self._input_shape = input_shape
-        self._size_x = input_shape[0]
-        self._size_y = input_shape[1]
-        self._inf = inf
-        self._sup = sup
         self._quant = quant
-        self._macro_autoencoder_sweep_merge = macro_autoencoder_sweep_merge
+
     def __len__(self):
         return int(np.ceil(len(self.filenames) / float(self.batch_size)))
 
     def __getitem__(self, idx):
         try:
             batch_x = self.filenames[idx * self.batch_size : (idx + 1) * self.batch_size]
-            out = [decompose(
-#                crop_sample(
-                        read_file(file_name, quant=self._quant)[:,self._inf:self._sup],
-#                    self._size_x, self._size_y),
-                self._input_shape, self._overlap)
-            for file_name in batch_x]
-            out = np.concatenate(out)
+            out = read_files(batch_x, quant=self._quant)
+            out = np.vstack(out)
+            out = macro_decompose(out, self._merge_shape, self._input_shape, self._overlap)
 #            if self._quant:
 #                quantify(out)
             # print(out.shape)
@@ -56,7 +49,8 @@ class Macro_Batch_Generator(Sequence):
             # print(out.shape)
             return out, out # parce que la sortie et l'entrée de l'autoencoder doivent être identiques
         except ValueError as e:
-            print(e, batch_x)
+            traceback.print_exc()
+            print(e)
             raise
 
 
@@ -154,32 +148,41 @@ class CNN(FeatureExtractor, AnomalyDetector):
             overlap = self._overlap
         return decompose(data, self._shape, overlap)
 
-    def __init__(self, number):
+    def __init__(self, number, macro=False):
         """
             i: beginning of the spectral band
             s: end of the spectral band
             shape: input shape
             nb_epoches: self-explanatory
         """
-
+        if macro:
+            suffix = "macro_"
+        else:
+            suffix = ""
         self._thresholds = []
         self._all_th = []
         self._config = Config()
         self._number = number
-        (self._i, self._s) = self._config.get_config_eval('waterfall_frequency_bands')[number]
-        self._shape = self._config.get_config_eval('autoenc_dimensions')[number]
-        self._features_number = self._config.get_config_eval('features_number')[number]
-        self._nb_epochs = self._config.get_config_eval('nb_epochs')[number]
+        (self._i, self._s) = self._config.get_config_eval(suffix+'waterfall_frequency_bands')[number]
+        self._shape = self._config.get_config_eval(suffix+'autoenc_dimensions')[number]
+        self._features_number = self._config.get_config_eval(suffix+'features_number')[number]
+        self._nb_epochs = self._config.get_config_eval(suffix+'nb_epochs')[number]
         self._batch_size = self._config.get_config_eval('batch_size')
 #        self._nb_epochs = self._config.get_config_eval('nb_epochs')
         self._original_shape = (self._config.get_config_eval('waterfall_dimensions')[0], self._s - self._i)
         self._quant = self._config.get_config_eval('quantification')
-        self._overlap = self._config.get_config_eval('window_overlap_training')
-        self._overlap_test = self._config.get_config_eval('extractors_window_overlap_testing')
+        self._overlap = self._config.get_config_eval(suffix+'window_overlap_training')
+        self._overlap_test = self._config.get_config_eval(suffix+'extractors_window_overlap_testing')
 
 #        self._shape = shape
 #        self._overlap = overlap
 #        self._input_shape = None
+        # if macro:
+        #     if K.image_data_format() == 'channels_first':
+        #         self._input_shape = (1, self._shape[0])
+        #     else:
+        #         self._input_shape = (self._shape[0], 1)
+        # else:
         if K.image_data_format() == 'channels_first':
             self._input_shape = (1, self._shape[0], self._shape[1])
         else:
@@ -192,6 +195,22 @@ class CNN(FeatureExtractor, AnomalyDetector):
 #        self._delta_timestamp = np.array(range(2*x)) * step_x * waterfall_duration / self._original_shape[0] + self._size_x / 2 * waterfall_duration / self._original_shape[0]
 #        self._delta_timestamp = self._delta_timestamp[self._delta_timestamp < waterfall_duration]
 #        self._delta_timestamp = self._delta_timestamp.reshape(self._delta_timestamp.shape[0], 1)
+
+    def _new_macro_model(self):
+        m = Flatten()(self._input_tensor)
+        m = Dense(self._features_number, activation='sigmoid')(m)
+        self._coder = Model(self._input_tensor, m)
+        self._coder.compile(loss='mean_squared_error', # useless parameters
+                                  optimizer='adam')
+        m = Dense(self._input_shape[0] * self._input_shape[1], activation='sigmoid')(m) # or linear
+        decoded = Reshape(self._input_shape)(m)
+
+        self._autoencoder = Model(self._input_tensor, decoded)
+        self._autoencoder.compile(loss='mean_squared_error', optimizer='adam') # TODO : nadam
+        self._autoencoder.summary()
+
+
+
 
     def _new_model_2(self):
         m = Flatten()(self._input_tensor)
@@ -273,11 +292,20 @@ class CNN(FeatureExtractor, AnomalyDetector):
     def get_memory_size(self):
         return 0
 
-    def learn_extractor(self, filenames, inf, sup):
-        self._new_model()
+    def learn_extractor(self, filenames, inf, sup, macro=False, macro_merge_shape=None, macro_input_shape=None):
+        if macro:
+            self._new_macro_model()
+        else:
+            self._new_model()
         [training_filenames, validation_filenames] = train_test_split(filenames)
-        training_batch_generator = Batch_Generator(training_filenames, self._batch_size, self._input_shape, self._overlap, inf, sup, self._quant)
-        validation_batch_generator = Batch_Generator(validation_filenames, self._batch_size, self._input_shape, self._overlap, inf, sup, self._quant)
+        if macro:
+            training_batch_generator = Macro_Batch_Generator(training_filenames, self._batch_size, macro_merge_shape, macro_input_shape, self._overlap, self._quant)
+        else:
+            training_batch_generator = Batch_Generator(training_filenames, self._batch_size, self._input_shape, self._overlap, inf, sup, self._quant)
+        if macro:
+            validation_batch_generator = Macro_Batch_Generator(validation_filenames, self._batch_size, macro_merge_shape, macro_input_shape, self._overlap, self._quant)
+        else:
+            validation_batch_generator = Batch_Generator(validation_filenames, self._batch_size, self._input_shape, self._overlap, inf, sup, self._quant)
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
 
         # early stopping TODO tester
