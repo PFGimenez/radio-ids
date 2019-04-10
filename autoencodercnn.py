@@ -234,8 +234,6 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # TODO: taux d'apprentissage
         m = Conv2D(15, (3, 5), strides=(1,2), activation='relu', padding='same')(self._input_tensor)
         m = MaxPooling2D(pool_size=(2,2))(m)
-        m = Conv2D(15, (3, 5), strides=(1,2), activation='relu', padding='same')(m)
-        m = MaxPooling2D(pool_size=(2,2))(m)
         m = Flatten()(m)
         # m = Dense(self._features_number, activation='relu')(m)
         # m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
@@ -246,7 +244,6 @@ class CNN(FeatureExtractor, AnomalyDetector):
         self._coder.compile(loss='mean_squared_error',
                                   optimizer='adam')
 
-        m = Dense(self._features_number, activation='relu')(m)
         # Permet d'éviter l'overfitting
         # m = Dropout(0.5)(m) # TODO vérifier ?
 
