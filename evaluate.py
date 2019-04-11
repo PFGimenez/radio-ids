@@ -13,6 +13,13 @@ import matplotlib.pyplot as plt
 import datetime
 import itertools
 import random
+from enum import Enum
+
+class DetectorState(Enum):
+    NOT_DETECTING = 0
+    DETECTING = 1
+    TRIGGERED = 2
+    RESTING = 3
 
 def get_derivative(scores):
     out = {}
@@ -145,6 +152,8 @@ class Evaluator:
             print("f-measure for "+ident+": "+str(fmeasure[ident]))
 
         print("tp",true_positive, "fp",false_positive,"precision",precision,"recall",recall,"f-measure",fmeasure)
+
+        print("Mean f-measure: ", sum(fmeasure.values()) / len(fmeasure))
 
         # if show_hist:
         #     plt.hist(true_positive_score, color='red', bins=100, histtype='step', log=True)
@@ -317,38 +326,58 @@ def score_extractors(extractors, path_examples, folders_test):
     joblib.dump(scores, path_examples)
     return scores
 
-def predict_extractors(extractors, scores, threshold_autoencoder):
+def predict_extractors(models, scores, threshold_autoencoder):
     start = time.time()
-    consecutive = 0
+    low_threshold_autoencoder = [0.8 * t for t in threshold_autoencoder]
     example_pos = {}
-    example_neg = {}
     timestamps = sorted(scores.keys())
-    for timestamp in timestamps:
-        score = scores[timestamp]
-        # print(timestamp)
-        if extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
-            # print("OK")
-            consecutive += 1
-        else:
-            # if consecutive > 0:
-                # print("NOK",consecutive)
-            consecutive = 0
-        if consecutive > 5:
-            if isinstance(score, dict):
-                example_pos[timestamp] = extractors.get_predictor(score,optimistic=False,threshold=threshold_autoencoder)
-            else:
-                example_pos[timestamp] = score
-        else:
-            if isinstance(score, dict):
-                # on enregistre le plus haut score (ne sert qu'à l'affichage)
-                example_neg[timestamp] = max(score,key=score.get)
-            else:
-                example_neg[timestamp] = score
+
+    for (_,m) in models:
+
+        state = DetectorState.NOT_DETECTING
+        detection_duration = 5
+        resting_duration = 5
+        consecutive = 0
+        for timestamp in timestamps:
+            score = scores[timestamp].get(m._number)
+
+            if state == DetectorState.NOT_DETECTING and m.predict_thr(score,threshold=threshold_autoencoder[m._number]):
+            # if state == DetectorState.NOT_DETECTING and extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
+                state = DetectorState.DETECTING
+                consecutive = 0
+
+            elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
+            # elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and not extractors.predict_thr(score,optimistic=False,threshold=low_threshold_autoencoder):
+                consecutive = 0
+                state = DetectorState.RESTING
+
+            elif state == DetectorState.DETECTING:
+                consecutive += 1
+                if consecutive > detection_duration:
+                    # attack detected !
+                    # example_pos[timestamp] = extractors.get_predictor(score,optimistic=False,threshold=threshold_autoencoder)
+                    previous = example_pos.get(timestamp)
+                    if previous == None:
+                        example_pos[timestamp] = [m._number]
+                    else:
+                        example_pos[timestamp].append(m._number)
+                    consecutive = 0
+                    state = DetectorState.TRIGGERED
+
+            elif state == DetectorState.RESTING:
+                # if extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
+                if m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
+                    consecutive = 0
+                else:
+                    consecutive += 1
+                if consecutive > resting_duration:
+                    state = DetectorState.NOT_DETECTING
+                    consecutive = 0
 
     end = time.time()
     print("Detection time:",(end-start),"s")
     print("Positive:",len(example_pos))
-    return (example_pos, example_neg)
+    return example_pos
 
 
 
@@ -453,7 +482,7 @@ threshold_macro = config.get_config_eval("threshold_macro")
 threshold_micro = config.get_config_eval("threshold_micro")
 # chargement du jeu de données de test micro
 
-show_time = True
+show_time = False # TODO
 show_hist = False
 # modèle micro
 
@@ -530,11 +559,11 @@ if use_autoenc:
             assert l == len(threshold_autoencoder)
             threshold_autoencoder.append(thr.get(l)[threshold_autoencoder_number])
         # TODO:
-        threshold_autoencoder = [0.007, 0.008, 0.03]
+        threshold_autoencoder = [0.010, 0.008, 0.03]
         print("Autoencoder thresholds:", threshold_autoencoder)
     # scores_ex = get_derivative(scores_ex)
     # scores_ex = moyenne_glissante(scores_ex)
-    (example_pos_extractors, example_neg_extractors) = predict_extractors(extractors, scores_ex, threshold_autoencoder)
+    example_pos_extractors = predict_extractors(extractors._models, scores_ex, threshold_autoencoder)
 
 for e in evaluators:
     # print("***",e._id)
