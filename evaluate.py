@@ -23,7 +23,7 @@ class DetectorState(Enum):
 
 def get_derivative(scores):
     out = {}
-    keys = list(scores.keys())
+    keys = sorted(list(scores.keys()))
     for i in range(len(scores)-1):
         score_old = scores[keys[i]]
         score_new = scores[keys[i+1]]
@@ -33,25 +33,53 @@ def get_derivative(scores):
                 tmp[k] = score_new.get(k) - score_old.get(k)
             out[keys[i+1]] = tmp
         else:
+            assert False
             out[keys[i+1]] = score_new - score_old
     return out
 
 
+def passe_haut(scores):
+    alpha = 0.999
+    out = {}
+    keys = sorted(list(scores.keys()))
+    for i in range(len(scores)):
+        out[keys[i]] = {}
+
+    out[keys[0]] = scores[keys[0]]
+
+    # for each model
+    for k in scores[keys[0]]:
+        y = scores[keys[0]][k]
+        out[keys[0]][k] = y
+        for i in range(1, len(keys)):
+            x_old = scores[keys[i-1]][k]
+            x_new = scores[keys[i]][k]
+            y = alpha * (y + x_new - x_old)
+            out[keys[i]][k] = y
+
+    return out
+
+
+
 def moyenne_glissante(scores):
     out = {}
-    keys = list(scores.keys())
+    keys = sorted(list(scores.keys()))
+    print(keys)
+    # keys : timestamps
     n = 1000
-
     m = {}
+    number = {}
     for k in scores[keys[0]]:
+        # k : model number
         s = 0
-        for j in range(0,n):
+        number[k] = int(n/2)
+        for j in range(0,n/2):
             s += scores[keys[j]].get(k)
         m[k] = s
 
-    for i in range(n,len(scores)-1-n):
-        if i % 1000 == 0:
-            print(i)
+    for i in range(n/2,len(scores)-1):
+        # if i % 1000 == 0:
+            # print(i)
         tmp = {}
         for k in scores[keys[i]]:
             m[k] += scores[keys[i]].get(k)
@@ -153,7 +181,7 @@ class Evaluator:
 
         print("tp",true_positive, "fp",false_positive,"precision",precision,"recall",recall,"f-measure",fmeasure)
 
-        print("Mean f-measure: ", sum(fmeasure.values()) / len(fmeasure))
+        print("Mean f-measure:", sum(fmeasure.values()) / len(fmeasure))
 
         # if show_hist:
         #     plt.hist(true_positive_score, color='red', bins=100, histtype='step', log=True)
@@ -482,7 +510,7 @@ threshold_macro = config.get_config_eval("threshold_macro")
 threshold_micro = config.get_config_eval("threshold_micro")
 # chargement du jeu de données de test micro
 
-show_time = False # TODO
+show_time = True # TODO
 show_hist = False
 # modèle micro
 
@@ -559,10 +587,11 @@ if use_autoenc:
             assert l == len(threshold_autoencoder)
             threshold_autoencoder.append(thr.get(l)[threshold_autoencoder_number])
         # TODO:
-        threshold_autoencoder = [0.010, 0.008, 0.03]
+        # threshold_autoencoder = [0.010, 0.008, 0.03]
         print("Autoencoder thresholds:", threshold_autoencoder)
     # scores_ex = get_derivative(scores_ex)
     # scores_ex = moyenne_glissante(scores_ex)
+    # scores_ex = passe_haut(scores_ex)
     example_pos_extractors = predict_extractors(extractors._models, scores_ex, threshold_autoencoder)
 
 for e in evaluators:
