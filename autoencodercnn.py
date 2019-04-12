@@ -74,13 +74,20 @@ class Batch_Generator(Sequence):
     def __getitem__(self, idx):
         try:
             batch_x = self.filenames[idx * self.batch_size : (idx + 1) * self.batch_size]
-            out = [decompose(
-#                crop_sample(
-                        read_file(file_name, quant=self._quant)[:,self._inf:self._sup],
-#                    self._size_x, self._size_y),
-                self._input_shape, self._overlap)
-            for file_name in batch_x]
-            out = np.concatenate(out)
+
+            out = read_files(batch_x, quant=self._quant)
+            out = np.vstack(out)[:,self._inf:self._sup]
+            out = decompose(out, self._input_shape, self._overlap)
+
+
+            # out = [decompose(
+# #                crop_sample(
+            #             read_file(file_name, quant=self._quant)[:,self._inf:self._sup],
+# #                    self._size_x, self._size_y),
+            #     self._input_shape, self._overlap)
+            # for file_name in batch_x]
+            # out = np.concatenate(out)
+
 #            if self._quant:
 #                quantify(out)
             # print(out.shape)
@@ -297,7 +304,9 @@ class CNN(FeatureExtractor, AnomalyDetector):
             self._new_macro_model()
         else:
             self._new_model()
-        [training_filenames, validation_filenames] = train_test_split(filenames)
+        [training_filenames, validation_filenames] = train_test_split(filenames, shuffle=False)
+        training_filenames = sorted(training_filenames)
+        validation_filenames = sorted(validation_filenames)
         if macro:
             training_batch_generator = Macro_Batch_Generator(training_filenames, self._batch_size, macro_merge_shape, macro_input_shape, self._overlap, self._quant)
         else:
@@ -309,7 +318,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
 
         # early stopping TODO tester
-        es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=2)
+        es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
 
         self._autoencoder.fit_generator(generator=training_batch_generator,
                                         epochs=self._nb_epochs,

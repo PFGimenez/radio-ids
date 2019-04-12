@@ -363,8 +363,8 @@ def predict_extractors(models, scores, threshold_autoencoder):
     for (_,m) in models:
 
         state = DetectorState.NOT_DETECTING
-        detection_duration = 5
-        resting_duration = 5
+        detection_duration = 10
+        resting_duration = 10
         consecutive = 0
         for timestamp in timestamps:
             score = scores[timestamp].get(m._number)
@@ -412,6 +412,7 @@ def predict_extractors(models, scores, threshold_autoencoder):
 use_micro = False
 use_macro = False
 use_autoenc = False
+use_autoenc_macro = False
 name_attack = None
 train = False
 mini = False
@@ -425,6 +426,8 @@ while i < len(sys.argv):
         name_attack.append(sys.argv[i])
     elif sys.argv[i] == "-autoenc":
         use_autoenc = True
+    elif sys.argv[i] == "-autoenc-macro":
+        use_autoenc_macro = True
     elif sys.argv[i] == "-micro":
         use_micro = True
     elif sys.argv[i] == "-macro":
@@ -438,8 +441,8 @@ while i < len(sys.argv):
         exit()
     i += 1
 
-if not use_autoenc and not use_micro and not use_macro:
-    print("Aucun détecteur ! Utilisez -micro, -macro ou -autoenc")
+if not use_autoenc and not use_micro and not use_macro and not use_autoenc_macro:
+    print("Aucun détecteur ! Utilisez -micro, -macro, -autoenc ou -autoenc-macro")
     exit()
 
 # lecture config
@@ -463,7 +466,8 @@ directories = [x.strip() for x in folders]
 attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
 
 # TODO : pour ne garder que les attaques d'un certain jour
-# attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[1])/1000).day == 28])
+attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[2])/1000).day != 4])
+# il y a des attaques en trop le 4 avril
 print(attack)
 identifiers = np.unique(attack[:,0])
 
