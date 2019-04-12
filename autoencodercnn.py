@@ -304,9 +304,26 @@ class CNN(FeatureExtractor, AnomalyDetector):
             self._new_macro_model()
         else:
             self._new_model()
-        [training_filenames, validation_filenames] = train_test_split(filenames, shuffle=False)
-        training_filenames = sorted(training_filenames)
-        validation_filenames = sorted(validation_filenames)
+
+        filenames = sorted(filenames)
+        training_filenames = []
+        validation_filenames = []
+        # i = 0
+        # for f in filenames:
+        #     if int(i / self._batch_size) % 4 == 0:
+        #         validation_filenames.append(f)
+        #     else:
+        #         training_filenames.append(f)
+        #     i += 1
+
+
+        [training_nb, validation_nb] = train_test_split(range(0,int(len(filenames)/self._batch_size)))
+
+        for n in training_nb:
+            training_filenames += filenames[n * self._batch_size : (n + 1) * self._batch_size]
+        for n in validation_nb:
+            validation_filenames += filenames[n * self._batch_size : (n + 1) * self._batch_size]
+
         if macro:
             training_batch_generator = Macro_Batch_Generator(training_filenames, self._batch_size, macro_merge_shape, macro_input_shape, self._overlap, self._quant)
         else:
