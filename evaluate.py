@@ -363,25 +363,26 @@ def predict_extractors(models, scores, threshold_autoencoder):
     for (_,m) in models:
 
         state = DetectorState.NOT_DETECTING
-        detection_duration = 10
-        resting_duration = 10
-        consecutive = 0
+        detection_duration = 500
+        resting_duration = 500
+        # consecutive = 0
+        previous_timestamp = None
         for timestamp in timestamps:
             score = scores[timestamp].get(m._number)
 
             if state == DetectorState.NOT_DETECTING and m.predict_thr(score,threshold=threshold_autoencoder[m._number]):
             # if state == DetectorState.NOT_DETECTING and extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
                 state = DetectorState.DETECTING
-                consecutive = 0
+                previous_timestamp = timestamp
 
             elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
-            # elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and not extractors.predict_thr(score,optimistic=False,threshold=low_threshold_autoencoder):
-                consecutive = 0
+                previous_timestamp = timestamp
                 state = DetectorState.RESTING
 
             elif state == DetectorState.DETECTING:
-                consecutive += 1
-                if consecutive > detection_duration:
+                # consecutive += 1
+                # if consecutive > detection_duration:
+                if timestamp - previous_timestamp > detection_duration:
                     # attack detected !
                     # example_pos[timestamp] = extractors.get_predictor(score,optimistic=False,threshold=threshold_autoencoder)
                     previous = example_pos.get(timestamp)
@@ -389,18 +390,20 @@ def predict_extractors(models, scores, threshold_autoencoder):
                         example_pos[timestamp] = [m._number]
                     else:
                         example_pos[timestamp].append(m._number)
-                    consecutive = 0
+                    # consecutive = 0
                     state = DetectorState.TRIGGERED
 
             elif state == DetectorState.RESTING:
                 # if extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
                 if m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
-                    consecutive = 0
-                else:
-                    consecutive += 1
-                if consecutive > resting_duration:
+                    # consecutive = 0
+                    previous_timestamp = timestamp
+                # else:
+                    # consecutive += 1
+                if timestamp - previous_timestamp > resting_duration:
+                # if consecutive > resting_duration:
                     state = DetectorState.NOT_DETECTING
-                    consecutive = 0
+                    # consecutive = 0
 
     end = time.time()
     print("Detection time:",(end-start),"s")
@@ -591,7 +594,7 @@ if use_autoenc:
             assert l == len(threshold_autoencoder)
             threshold_autoencoder.append(thr.get(l)[threshold_autoencoder_number])
         # TODO:
-        # threshold_autoencoder = [0.010, 0.008, 0.03]
+        threshold_autoencoder = [0.010, 0.008, 0.03]
         print("Autoencoder thresholds:", threshold_autoencoder)
     # scores_ex = get_derivative(scores_ex)
     # scores_ex = moyenne_glissante(scores_ex)

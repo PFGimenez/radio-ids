@@ -134,7 +134,7 @@ if load_autoenc:
     # diff = np.abs(data_reconstructed[:,:900] - data_q[:data_reconstructed.shape[0],:900])
     # diff2 = np.abs(data_reconstructed[:,900:] - data_q[:data_reconstructed.shape[0],1000:])
     # diff = np.concatenate((diff, diff2), axis=1)
-    diff[diff < 0.32] = 0
+    # diff[diff < 0.32] = 0
 
 # vérification quantification
 if mode == "quant":

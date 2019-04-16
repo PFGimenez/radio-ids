@@ -258,8 +258,11 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # TODO: faire une couche juste sur spectral
         # TODO: 6 filtres (~ autant que de cases 3*5)
         # TODO: taux d'apprentissage
-        m = Conv2D(15, (3, 5), strides=(1,4), activation='relu', padding='same')(self._input_tensor)
+        m = Conv2D(5, (3, 5), strides=(1,2), activation='sigmoid', padding='same')(self._input_tensor)
+        m = Conv2D(5, (3, 5), strides=(1,2), activation='sigmoid', padding='same')(m)
         m = MaxPooling2D(pool_size=(2,2))(m)
+        # m = Conv2D(5, (3, 5), strides=(1,1), activation='sigmoid', padding='same')(m)
+        # m = Conv2D(5, (3, 5), strides=(1,1), activation='sigmoid', padding='same')(m)
         m = Flatten()(m)
         # m = Dense(self._features_number, activation='relu')(m)
         # m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
@@ -335,13 +338,14 @@ class CNN(FeatureExtractor, AnomalyDetector):
 #        train_X,valid_X,train_ground,valid_ground = train_test_split(data, data, test_size=0.2)
 
         # early stopping TODO tester
-        es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
+        es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
 
         self._autoencoder.fit_generator(generator=training_batch_generator,
                                         epochs=self._nb_epochs,
                                         verbose=1,
                                         validation_data=validation_batch_generator,
-                                        callbacks=[es],
+# TODO
+                                        # callbacks=[es],
                                         use_multiprocessing=True,
                                         workers=8,
                                         max_queue_size=32)
