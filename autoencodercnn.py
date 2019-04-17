@@ -13,7 +13,7 @@ session = tf.Session(config=config)
 from keras.callbacks import EarlyStopping
 from keras.models import Model
 from keras.layers import Input, Reshape, Dense, Dropout, Activation, Flatten
-from keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Conv2DTranspose
+from keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Conv2DTranspose, Conv1D, MaxPooling1D
 from keras import regularizers
 from keras import backend as K
 from preprocess import *
@@ -203,6 +203,9 @@ class CNN(FeatureExtractor, AnomalyDetector):
 #        self._delta_timestamp = self._delta_timestamp[self._delta_timestamp < waterfall_duration]
 #        self._delta_timestamp = self._delta_timestamp.reshape(self._delta_timestamp.shape[0], 1)
 
+    def _new_lstm_model(self):
+        pass
+
     def _new_macro_model(self):
         m = Flatten()(self._input_tensor)
         m = Dense(self._features_number, activation='sigmoid')(m)
@@ -242,6 +245,24 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
         self._autoencoder.summary()
 
+    def _new_model_3(self):
+        m = Reshape((self._input_shape[0],self._input_shape[1]))(self._input_tensor)
+        m = Conv1D(500, 5, activation='sigmoid', padding='valid')(m)
+        m = Conv1D(500, 5, activation='sigmoid', padding='valid')(m)
+        m = Dense(self._features_number, activation='relu')(m)
+        self._coder = Model(self._input_tensor, m)
+        self._coder.compile(loss='mean_squared_error',
+                                  optimizer='adam')
+        m = Dense(self._input_shape[0] * self._input_shape[1], activation='sigmoid')(m) # or linear
+        decoded = Reshape(self._input_shape)(m)
+
+        self._autoencoder = Model(self._input_tensor, decoded)
+
+        self._autoencoder.compile(loss='mean_squared_error', optimizer='adam')
+
+        self._autoencoder.summary()
+
+
 
     def _new_model(self):
         """
@@ -258,9 +279,14 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # TODO: faire une couche juste sur spectral
         # TODO: 6 filtres (~ autant que de cases 3*5)
         # TODO: taux d'apprentissage
-        m = Conv2D(5, (3, 5), strides=(1,2), activation='sigmoid', padding='same')(self._input_tensor)
-        m = Conv2D(5, (3, 5), strides=(1,2), activation='sigmoid', padding='same')(m)
-        m = MaxPooling2D(pool_size=(2,2))(m)
+        m = Reshape((self._input_shape[0],self._input_shape[1]))(self._input_tensor)
+        m = Conv1D(500, 5, activation='relu', padding='valid')(m)
+        # m = Conv1D(500, 5, activation='sigmoid', padding='valid')(m)
+        # m = Conv2D(500, (3, 1000), strides=(1,1000), activation='sigmoid', padding='valid')(m)
+        # m = Conv2D(5, (3, 5), strides=(1,2), activation='sigmoid', padding='same')(self._input_tensor)
+        # m = Conv2D(5, (3, 5), strides=(1,2), activation='sigmoid', padding='same')(m)
+        # m = MaxPooling2D(pool_size=(2,2))(m)
+        # m = MaxPooling1D(pool_size=2)(m)
         # m = Conv2D(5, (3, 5), strides=(1,1), activation='sigmoid', padding='same')(m)
         # m = Conv2D(5, (3, 5), strides=(1,1), activation='sigmoid', padding='same')(m)
         m = Flatten()(m)
@@ -268,7 +294,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
         # m = MaxPooling2D(pool_size=(2,2))(m)
         # m = Dense(self._features_number, activation='relu')(m)
-        m = Dense(self._features_number, activation='relu')(m)
+        m = Dense(self._features_number, activation='sigmoid')(m)
         self._coder = Model(self._input_tensor, m)
         self._coder.compile(loss='mean_squared_error',
                                   optimizer='adam')
