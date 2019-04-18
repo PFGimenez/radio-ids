@@ -281,6 +281,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # TODO: taux d'apprentissage
         m = Reshape((self._input_shape[0],self._input_shape[1]))(self._input_tensor)
         m = Conv1D(500, 5, activation='relu', padding='valid')(m)
+        # m = Conv1D(500, 5, activation='relu', padding='valid')(m)
         # m = Conv1D(500, 5, activation='sigmoid', padding='valid')(m)
         # m = Conv2D(500, (3, 1000), strides=(1,1000), activation='sigmoid', padding='valid')(m)
         # m = Conv2D(5, (3, 5), strides=(1,2), activation='sigmoid', padding='same')(self._input_tensor)
@@ -293,6 +294,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # m = Dense(self._features_number, activation='relu')(m)
         # m = Conv2D(10, (3, 5), strides=(1,2), activation='relu', padding='same', input_shape=self._input_shape)(m)
         # m = MaxPooling2D(pool_size=(2,2))(m)
+        # m = Dense(self._features_number, activation='relu')(m)
         # m = Dense(self._features_number, activation='relu')(m)
         m = Dense(self._features_number, activation='sigmoid')(m)
         self._coder = Model(self._input_tensor, m)
@@ -370,8 +372,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
                                         epochs=self._nb_epochs,
                                         verbose=1,
                                         validation_data=validation_batch_generator,
-# TODO
-                                        # callbacks=[es],
+                                        callbacks=[es],
                                         use_multiprocessing=True,
                                         workers=8,
                                         max_queue_size=32)

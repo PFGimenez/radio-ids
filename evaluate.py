@@ -348,7 +348,7 @@ def score_extractors(extractors, path_examples, folders_test):
         if i % 100 == 0:
             print(i,"/",len(paths))
         i += 1
-        scores[timestamp] = extractors.get_score(data, timestamp)
+        scores = {**scores, **extractors.get_score(data, timestamp)}
     end = time.time()
     print("Scoring time:",(end-start),"s")
     joblib.dump(scores, path_examples)
@@ -363,8 +363,8 @@ def predict_extractors(models, scores, threshold_autoencoder):
     for (_,m) in models:
 
         state = DetectorState.NOT_DETECTING
-        detection_duration = 500
-        resting_duration = 500
+        detection_duration = 2000
+        resting_duration = 2000
         # consecutive = 0
         previous_timestamp = None
         for timestamp in timestamps:
@@ -586,15 +586,17 @@ if use_autoenc:
             # extractors.add_model(m)
         scores_ex = score_extractors(extractors, path_examples_extractors, directories)
     if not train:
-        scores_train = joblib.load(path_examples_train_extractors)
-        thr = extractors.learn_threshold_from_scores(scores_train)
-        threshold_autoencoder = []
-        for l in thr:
-            # check the order of the keys
-            assert l == len(threshold_autoencoder)
-            threshold_autoencoder.append(thr.get(l)[threshold_autoencoder_number])
-        # TODO:
-        threshold_autoencoder = [0.010, 0.008, 0.03]
+        try:
+            scores_train = joblib.load(path_examples_train_extractors)
+            thr = extractors.learn_threshold_from_scores(scores_train)
+            threshold_autoencoder = []
+            for l in thr:
+                # check the order of the keys
+                assert l == len(threshold_autoencoder)
+                threshold_autoencoder.append(thr.get(l)[threshold_autoencoder_number])
+            # TODO:
+        except:
+            threshold_autoencoder = [0.010, 0.008, 0.03]
         print("Autoencoder thresholds:", threshold_autoencoder)
     # scores_ex = get_derivative(scores_ex)
     # scores_ex = moyenne_glissante(scores_ex)

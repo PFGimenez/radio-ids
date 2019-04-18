@@ -302,6 +302,11 @@ class MultiExtractors(MultiModels):
     def __init__(self):
         super().__init__()
         self._config = Config()
+        overlap_test = self._config.get_config_eval('extractors_window_overlap_testing')
+        waterfall_duration = 3685
+        autoenc_dimensions_t = self._config.get_config_eval("autoenc_dimensions")[0][0]
+        waterfall_dimensions_t = self._config.get_config_eval("waterfall_dimensions")[0]
+        self._delta_t = int(waterfall_duration * autoenc_dimensions_t / waterfall_dimensions_t * (1 - overlap_test))
 
     def add_model(self, model):
         """
@@ -381,9 +386,17 @@ class MultiExtractors(MultiModels):
             m._learn_threshold_from_scores(np.array(scores[m]).flatten())
 
     def get_score(self, data, epoch=None):
-        scores = {}
+        s = []
         for (_,m) in self._models:
-            scores[m._number] = max(m.get_score_vector(data))
+            s.append(m.get_score_vector(data))
+        scores = {}
+        for i in range(len(s[0])):
+            l = {}
+            j = 0
+            for (_,m) in self._models:
+                l[m._number] = s[j][i]
+                j += 1
+            scores[epoch + i*self._delta_t] = l
         return scores
 
 class FeatureExtractor(ABC):
