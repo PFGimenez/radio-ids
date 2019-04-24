@@ -36,17 +36,23 @@ def period_weekend(time):
     (day, time) = process_unix_time(time)
     return day == JourSemaine.SAMEDI or day == JourSemaine.DIMANCHE
 
+def period_weekend_and_night(time):
+    return period_weekend(time) or period_night(time)
+
 def period_week(time):
     (day, time) = process_unix_time(time)
     return not period_weekend(day)
 
+def period_day_not_weekend(time):
+    return period_day(time) and not period_weekend(time)
+
 def period_day(time):
     (day, time) = process_unix_time(time)
-    return time > 7*3600 and time < 19*3600
+    return time >= 8*3600 and time <= 19.5*3600
 
 def period_night(time):
     (day, time) = process_unix_time(time)
-    return time < 9*3600 or time > 18*3600
+    return time < 8*3600 or time > 19.5*3600
 
 def extract_period(data, fun):
     return data[list(map(fun, data[:,0]))]

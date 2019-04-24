@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 from models import MultiModels, MultiExtractors
+import multimodels
 from preprocess import *
 import numpy as np
 from config import Config
@@ -190,9 +191,19 @@ class Evaluator:
         #     # plt.hist(true_negative_score, color='blue', bins=100, histtype='step', log=True)
         #     plt.title(self._id)
         #     plt.show()
-
+        print(thr)
         if show_time:
-            x = list(scores.keys())
+            x = sorted(list(scores.keys()))
+            threshold = []
+            for i in range(3):
+                t = {}
+                for d in x:
+                    for p in thr:
+                        if p(d):
+                            t[d] = thr[p][i]
+                            break
+                threshold.append(t)
+
             if isinstance(models, MultiModels):
                 nbcols = len(models._models)
             else:
@@ -210,9 +221,10 @@ class Evaluator:
                 for col in row:
                     col.xaxis.set_major_formatter(hfmt)
                     plt.setp(col.get_xticklabels(), rotation=15)
-                    if thr:
-                        col.axhline(thr[i],0,1,color="green")
-                    i += 1
+                    # color = {multimodels.period_weekend_and_night: "green", multimodels.period_day_not_weekend: "blue", multimodels.period_always: "magenta"}
+                    # for p in thr:
+                        # col.axhline(thr[p][i],0,1,color=color[p])
+                    # i += 1
 
             for a in self._attack:
                 l = self._all_attack[self._all_attack[:,1] == str(a[0])]
@@ -254,9 +266,11 @@ class Evaluator:
                     for col in row:
                         if i < nbcols:
                             val = [scores[k].get(i) for k in x]
+                            valTh = [threshold[i][k] for k in x]
                             x, val = zip(*sorted(zip(x, val)))
                             x_dates = mdates.date2num([datetime.datetime.fromtimestamp(t/1000) for t in x])
                             col.plot(x_dates, val, alpha=0.7, label=labels[i])
+                            col.plot(x_dates, valTh, alpha=0.7, color="magenta")
                             i += 1
                             col.legend(loc='upper left')
 
@@ -354,20 +368,25 @@ def score_extractors(extractors, path_examples, folders_test):
     joblib.dump(scores, path_examples)
     return scores
 
-def predict_extractors(models, scores, threshold_autoencoder):
+def predict_extractors(models, scores, all_t):
     start = time.time()
-    low_threshold_autoencoder = [0.8 * t for t in threshold_autoencoder]
     example_pos = {}
     timestamps = sorted(scores.keys())
 
     for (_,m) in models:
-
         state = DetectorState.NOT_DETECTING
         detection_duration = 2000
         resting_duration = 2000
         # consecutive = 0
         previous_timestamp = None
         for timestamp in timestamps:
+            found = False
+            for p in all_t:
+                if p(timestamp):
+                    found = True
+                    threshold_autoencoder = all_t[p]
+                    low_threshold_autoencoder = [0.8 * t for t in threshold_autoencoder]
+            assert found, multimodels.process_unix_time(timestamp)
             score = scores[timestamp].get(m._number)
 
             if state == DetectorState.NOT_DETECTING and m.predict_thr(score,threshold=threshold_autoencoder[m._number]):
@@ -512,7 +531,6 @@ nb_features = sum(config.get_config_eval("features_number"))
 nb_features_macro = config.get_config_eval("nb_features_macro")
 prefix = config.get_config("section")
 threshold_autoencoder_number = config.get_config_eval("threshold_autoencoder")
-threshold_autoencoder = [1,0.11,1]
 threshold_macro = config.get_config_eval("threshold_macro")
 threshold_micro = config.get_config_eval("threshold_micro")
 # chargement du jeu de données de test micro
@@ -585,19 +603,28 @@ if use_autoenc:
             extractors.load_model(m)
             # extractors.add_model(m)
         scores_ex = score_extractors(extractors, path_examples_extractors, directories)
+    threshold_autoencoder = {}
+    periods = [multimodels.period_weekend_and_night, multimodels.period_day_not_weekend]
     if not train:
         try:
             scores_train = joblib.load(path_examples_train_extractors)
-            thr = extractors.learn_threshold_from_scores(scores_train)
-            threshold_autoencoder = []
-            for l in thr:
-                # check the order of the keys
-                assert l == len(threshold_autoencoder)
-                threshold_autoencoder.append(thr.get(l)[threshold_autoencoder_number])
-            # TODO:
+            for p in periods:
+                print("Period",p.__name__)
+                thr = extractors.learn_threshold_from_scores(scores_train, period=p)
+                t = []
+                for l in thr:
+                    # check the order of the keys
+                    assert l == len(t)
+                    t.append(thr.get(l)[threshold_autoencoder_number])
+                threshold_autoencoder[p] = t
         except:
-            threshold_autoencoder = [0.010, 0.008, 0.03]
+            print("No score loaded")
+
+            # threshold_autoencoder = {multimodels.period_always: [0.010, 0.008, 0.03]}
+    if threshold_autoencoder == {}:
+        threshold_autoencoder = {multimodels.period_always: [0.010, 0.008, 0.03]}
         print("Autoencoder thresholds:", threshold_autoencoder)
+    # threshold_autoencoder = [0.010, 0.008, 0.03]
     # scores_ex = get_derivative(scores_ex)
     # scores_ex = moyenne_glissante(scores_ex)
     # scores_ex = passe_haut(scores_ex)
