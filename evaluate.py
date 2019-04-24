@@ -142,7 +142,8 @@ class Evaluator:
 
     def evaluate(self, detected_positive_dico, scores, models, typestr, thr=None, colors=None):
         self._seen_attack = []
-        detected_positive = np.array([k for k in detected_positive_dico])
+        detected_positive = np.array([k for (k,_) in detected_positive_dico])
+        # detected_positive_both_timestamps = np.array([k for k in detected_positive_dico])
         total_positives = len(detected_positive)
         true_positive_list = detected_positive[list(map(self.is_in_attack_detected, detected_positive))]
         false_positive_list = detected_positive[[t not in true_positive_list for t in detected_positive]]
@@ -239,15 +240,15 @@ class Evaluator:
                            color=colors[ident])
                         nb += 1
 
-            for t in detected_positive_dico:
+            for (t1, t2) in detected_positive_dico:
                 # TODO
                 i = 0
                 for row in ax:
                     for col in row:
-                        if i in detected_positive_dico[t]:
+                        if i in detected_positive_dico[(t1,t2)]:
                             col.hlines(-0.001,
-                            mdates.date2num(datetime.datetime.fromtimestamp(t/1000)),
-                            mdates.date2num(datetime.datetime.fromtimestamp(t/1000+10)),
+                            mdates.date2num(datetime.datetime.fromtimestamp(t1/1000)),
+                            mdates.date2num(datetime.datetime.fromtimestamp(t2/1000)),
                             color='green')
                         i += 1
 
@@ -375,8 +376,8 @@ def predict_extractors(models, scores, all_t):
 
     for (_,m) in models:
         state = DetectorState.NOT_DETECTING
-        detection_duration = 2000
-        resting_duration = 2000
+        detection_duration = 20000
+        resting_duration = 20000
         # consecutive = 0
         previous_timestamp = None
         for timestamp in timestamps:
@@ -389,12 +390,21 @@ def predict_extractors(models, scores, all_t):
             assert found, multimodels.process_unix_time(timestamp)
             score = scores[timestamp].get(m._number)
 
+
             if state == DetectorState.NOT_DETECTING and m.predict_thr(score,threshold=threshold_autoencoder[m._number]):
             # if state == DetectorState.NOT_DETECTING and extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
                 state = DetectorState.DETECTING
                 previous_timestamp = timestamp
 
             elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
+                if state == DetectorState.TRIGGERED:
+                    # End of the attack
+                    # waterfalls = read_files_from_timestamp(previous_timestamp, timestamp)
+
+                    # extractors.get_score(waterfalls, previous_timestamp)
+                    # median = weighted_median(data, weights)
+                    example_pos[(previous_timestamp, timestamp)] = [m._number]
+                    # frequencies[(previous_timestamp, timestamp)] = index_to_frequency(median)
                 previous_timestamp = timestamp
                 state = DetectorState.RESTING
 
@@ -404,11 +414,10 @@ def predict_extractors(models, scores, all_t):
                 if timestamp - previous_timestamp > detection_duration:
                     # attack detected !
                     # example_pos[timestamp] = extractors.get_predictor(score,optimistic=False,threshold=threshold_autoencoder)
-                    previous = example_pos.get(timestamp)
-                    if previous == None:
-                        example_pos[timestamp] = [m._number]
-                    else:
-                        example_pos[timestamp].append(m._number)
+                    # previous = example_pos.get(timestamp)
+                    # if previous == None:
+                    # else:
+                        # example_pos[timestamp].append(m._number)
                     # consecutive = 0
                     state = DetectorState.TRIGGERED
 
@@ -618,7 +627,7 @@ if use_autoenc:
                     t.append(thr.get(l)[threshold_autoencoder_number])
                 threshold_autoencoder[p] = t
         except:
-            print("No score loaded")
+            print("No train score loaded")
 
             # threshold_autoencoder = {multimodels.period_always: [0.010, 0.008, 0.03]}
     if threshold_autoencoder == {}:

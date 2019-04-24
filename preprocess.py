@@ -240,7 +240,7 @@ def get_files_names(directory_list, pattern=""):
     names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if pattern in s]
     return names
 
-def read_files_from_timestamp(date_min, date_max, directory_list, quant=False, int_type=True):
+def read_files_from_timestamp(date_min, date_max, directory_list, quant=True, int_type=True):
     names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if int(s) > date_min and int(s) < date_max]
     return read_files(names, quant=quant, int_type=int_type)
 
@@ -306,4 +306,39 @@ def test_prediction(data, model):
     for i in range(1,len(data)):
         predictions.append(model.predict(data[:i,:]))
     return predictions
+
+
+"""
+calculate a weighted median
+@author Jack Peterson (jack@tinybike.net)
+source : https://gist.github.com/tinybike/d9ff1dad515b66cc0d87
+"""
+
+def weighted_median(data, weights):
+    """
+    Args:
+      data (list or numpy.array): data
+      weights (list or numpy.array): weights
+    """
+    data, weights = np.array(data).squeeze(), np.array(weights).squeeze()
+    s_data, s_weights = map(np.array, zip(*sorted(zip(data, weights))))
+    midpoint = 0.5 * sum(s_weights)
+    if any(weights > midpoint):
+        w_median = (data[weights == np.max(weights)])[0]
+    else:
+        cs_weights = np.cumsum(s_weights)
+        idx = np.where(cs_weights <= midpoint)[0][-1]
+        if cs_weights[idx] == midpoint:
+            w_median = np.mean(s_data[idx:idx+2])
+        else:
+            w_median = s_data[idx+1]
+    return w_median
+
+def index_to_frequency(index):
+    assert index >= 0 and index < 3000, index
+    if index < 1000:
+        return 400 + index / 10
+    if index < 2000:
+        return 800 + (index - 1000) / 10
+    return 2400 + (index - 2000) / 10
 

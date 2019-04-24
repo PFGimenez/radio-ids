@@ -145,6 +145,8 @@ class CNN(FeatureExtractor, AnomalyDetector):
         out = np.sqrt(out)
         return out
 
+    # def get_diff(self, data, epoch=None)
+
     def decompose_test(self, data, overlap=None):
         if overlap == None:
             overlap = self._overlap_test
