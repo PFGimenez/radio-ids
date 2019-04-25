@@ -453,12 +453,7 @@ def predict_extractors(models, scores, all_t):
             elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
                 if state == DetectorState.TRIGGERED:
                     # End of the attack
-                    # waterfalls = read_files_from_timestamp(previous_timestamp, timestamp)
-
-                    # extractors.get_score(waterfalls, previous_timestamp)
-                    # median = weighted_median(data, weights)
                     example_pos[(previous_timestamp, timestamp)] = [m._number]
-                    # frequencies[(previous_timestamp, timestamp)] = index_to_frequency(median)
                 previous_timestamp = timestamp
                 state = DetectorState.RESTING
 
@@ -493,6 +488,16 @@ def predict_extractors(models, scores, all_t):
     return example_pos
 
 
+def predict_frequencies(example_pos, folders):
+    frequencies = {}
+    for (t1, t2) in example_pos:
+        waterfalls = read_files_from_timestamp(t1, t2, folders)
+        (weights, data) = extractors.get_frequencies(waterfalls)
+        median = weighted_median(data, weights)
+        f = index_to_frequency(median)
+        print(f)
+        frequencies[(t1, t2)] = f
+    return frequencies
 
 use_micro = False
 use_macro = False
@@ -501,6 +506,7 @@ use_autoenc_macro = False
 name_attack = None
 train = False
 mini = False
+predict_freq = False
 
 i = 1
 while i < len(sys.argv):
@@ -521,6 +527,8 @@ while i < len(sys.argv):
         train = True
     elif sys.argv[i] == "-mini":
         mini = True
+    elif sys.argv[i] == "-freq":
+        predict_freq = True
     else:
         print("Erreur:",sys.argv[i])
         exit()
@@ -565,6 +573,7 @@ for i in identifiers:
 print("Attacks list:",identifiers)
 
 attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "strong868": 1}
+attack_freq = {"scan433": [432,434], "strong433": [432,434], "scan868":[867,869], "strong868":[867,869]}
 
 # we add the plot number of the attack
 attack_tmp = []
@@ -633,7 +642,10 @@ extractors = MultiExtractors()
 for j in range(len(bands)):
     (i,s) = bands[j]
     m = CNN(j)
-    extractors.add_model(m) # dummy is enough for most cases
+    if predict_freq:
+        extractors.load_model(m)
+    else:
+        extractors.add_model(m) # dummy is enough for most cases
 
 # évaluation
 
@@ -651,20 +663,20 @@ if use_macro:
     scores_macro = scores_micro_macro(models_macro, path_examples_macro, data_macro)
     (example_pos_macro, example_neg_macro) = predict(models_macro, scores_macro, threshold_macro)
 if use_autoenc:
-    print("Prediction for autoencoders…")
     try:
+        print("Loading scores…")
         # chargement des prédictions si possible
 #        (example_pos, example_neg) = joblib.load(path_examples)
         scores_ex = joblib.load(path_examples_extractors)
         print("Scores loaded")
     except Exception as e:
         print("Scores not found:",e)
+        print("Prediction for autoencoders…")
         extractors = MultiExtractors()
-        for j in range(len(bands)):
-            (i,s) = bands[j]
-            m = CNN(j)
-            extractors.load_model(m)
-            # extractors.add_model(m)
+        # for j in range(len(bands)):
+            # (i,s) = bands[j]
+            # m = CNN(j)
+            # extractors.load_model(m)
         scores_ex = score_extractors(extractors, path_examples_extractors, directories)
     threshold_autoencoder = {}
     periods = [multimodels.period_weekend_and_night, multimodels.period_day_not_weekend]
@@ -692,6 +704,8 @@ if use_autoenc:
     # scores_ex = moyenne_glissante(scores_ex)
     # scores_ex = passe_haut(scores_ex)
     example_pos_extractors = predict_extractors(extractors._models, scores_ex, threshold_autoencoder)
+    if predict_freq:
+        freq = predict_frequencies(example_pos_extractors, directories)
 
 for e in evaluators:
     # print("***",e._id)

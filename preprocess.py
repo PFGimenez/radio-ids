@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 
 _config = Config()
 _waterfall_dim = _config.get_config_eval('waterfall_dimensions')
+_waterfall_duration = _config.get_config_eval("waterfall_duration")
+_delta_t = int(_waterfall_duration / _waterfall_dim[0])
+
 # _l_high = [-65,-50,-35,-20,-10,0]
 # _l_low= [-65,-50,-35,-20,-10,0]
 _l_high = [-50,-45,-40,-35,-30,-25,-20,-15,-10,0]
@@ -241,8 +244,16 @@ def get_files_names(directory_list, pattern=""):
     return names
 
 def read_files_from_timestamp(date_min, date_max, directory_list, quant=True, int_type=True):
-    names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if int(s) > date_min and int(s) < date_max]
-    return read_files(names, quant=quant, int_type=int_type)
+    names = [os.path.join(d, s) for d in directory_list for s in sorted(os.listdir(d)) if int(s) > date_min - _waterfall_duration and int(s) < date_max]
+    if names == []:
+        return None
+    first_date = int([s for d in directory_list for s in sorted(os.listdir(d)) if int(s) > date_min - _waterfall_duration and int(s) < date_max + 1000][0]) # un peu de rab au cas où (_waterfall_duration n'est qu'une moyenne)
+    index_start = int((date_min - first_date) / _delta_t)
+    length = int((date_max - date_min) / _delta_t)
+    # print(first_date,index_start,length)
+    out = np.vstack(read_files(names, quant=quant, int_type=int_type))[index_start:index_start+length,:]
+    # print(out.shape)
+    return out
 
 def read_files(files_list, quant=False, int_type=True):
     data = []

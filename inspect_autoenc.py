@@ -109,15 +109,15 @@ if name_attack:
 if mode == "data":
     fig = plt.figure()
 if mode == "quant" or mode == "data":
-    data = np.vstack(read_files_from_timestamp(date_min, date_max, folders, quant=False))
+    data = read_files_from_timestamp(date_min, date_max, folders, quant=False)
 if mode == "quant":
     fig, ax = plt.subplots(nrows=2, ncols=1)
-    data_d = np.vstack(read_files_from_timestamp(date_min, date_max, folders, quant=True))
+    data_d = read_files_from_timestamp(date_min, date_max, folders, quant=True)
     dequantify(data_d)
 if mode == "autoenc":
     fig, ax = plt.subplots(nrows=3, ncols=1)
 if mode == "autoenc" or mode == "diff":
-    data_q = np.vstack(read_files_from_timestamp(date_min, date_max, folders, quant=True))
+    data_q = read_files_from_timestamp(date_min, date_max, folders, quant=True)
 
 #data = read_directory(folders[0], quant=True)[0,:,:]
 #data = read_files_from_timestamp(int(some_attack[1]), int(some_attack[2]), folders, quant=True)
@@ -135,6 +135,11 @@ if load_autoenc:
     # diff2 = np.abs(data_reconstructed[:,900:] - data_q[:data_reconstructed.shape[0],1000:])
     # diff = np.concatenate((diff, diff2), axis=1)
     diff[diff < 0.32] = 0
+    (weights, data) = extractors.get_frequencies(data_q)
+    median = weighted_median(data, weights)
+    f = index_to_frequency(median)
+    print("Index atk:",median)
+    print("Frequency atk:",f)
 
 # vérification quantification
 if mode == "quant":

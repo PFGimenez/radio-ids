@@ -116,6 +116,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
     def get_score(self, data, epoch=None):
         """
             Renvoie une valeur
+            Pas utilisé (?)
         """
         # print("GET_SCORE",self)
         # print("get",data.shape)
@@ -131,6 +132,18 @@ class CNN(FeatureExtractor, AnomalyDetector):
         out = np.mean(out)
         out = np.sqrt(out)
         # print("fin get",out.shape)
+        return out
+
+    def get_diff_vector(self, data, epoch=None):
+        """
+            Renvoie un tableau
+            Pas de mean
+            Utilisé pour la localisation fréquentielle
+        """
+        data = self.decompose(data[:,self._i:self._s], self._overlap_test)
+        out = np.array(self.squared_diff(data))
+        out[out < 0.1] = 0
+        out = np.sqrt(out)
         return out
 
 
@@ -380,7 +393,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
                                         max_queue_size=32)
 
     def save(self, prefix):
-        joblib.dump(self._thresholds, os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")+".thr"))
+        # joblib.dump(self._thresholds, os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")+".thr"))
         filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename")+".h5")
         self._coder.save(filename_coder)
         filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename")+".h5")
@@ -388,8 +401,8 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
     def load(self, prefix):
         print("Loading autoencoder from",prefix+"…"+self._config.get_config("autoenc_filename")+".h5")
-        self._thresholds = joblib.load(os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")+".thr"))
-        print("Thresholds :",self._thresholds)
+        # self._thresholds = joblib.load(os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")+".thr"))
+        # print("Thresholds :",self._thresholds)
         filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename")+".h5")
         self._coder = load_model(filename_coder)
         filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename")+".h5")

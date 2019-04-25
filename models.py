@@ -303,7 +303,7 @@ class MultiExtractors(MultiModels):
         super().__init__()
         self._config = Config()
         overlap_test = self._config.get_config_eval('extractors_window_overlap_testing')
-        waterfall_duration = 3685
+        waterfall_duration = self._config.get_config_eval("waterfall_duration")
         autoenc_dimensions_t = self._config.get_config_eval("autoenc_dimensions")[0][0]
         waterfall_dimensions_t = self._config.get_config_eval("waterfall_dimensions")[0]
         self._delta_t = int(waterfall_duration * autoenc_dimensions_t / waterfall_dimensions_t * (1 - overlap_test))
@@ -385,6 +385,21 @@ class MultiExtractors(MultiModels):
                 scores[m].append([m.get_score_vector(d) for d in data])
         for (_,m) in self._models:
             m._learn_threshold_from_scores(np.array(scores[m]).flatten())
+
+    def get_frequencies(self, data, number=None):
+        s = []
+        if number == None:
+            for (_,m) in self._models:
+                s.append(m.get_diff_vector(data))
+        else:
+            self._models[number][1].get_diff_vector(data)
+        s = np.array(s)
+        s = np.dstack(s)
+        s = np.vstack(s)
+        nz = np.nonzero(s)
+        index = list(nz[1])
+        data = s[nz]
+        return (data, index)
 
     def get_score(self, data, epoch=None):
         s = []
