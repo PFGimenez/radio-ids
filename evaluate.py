@@ -60,7 +60,12 @@ def passe_haut(scores):
 
     return out
 
-
+def intersect(interval1, interval2):
+    start = max(interval1[0], interval2[0])
+    end = min(interval1[1], interval2[1])
+    if start < end:
+        return (start, end)
+    return None
 
 def moyenne_glissante(scores):
     out = {}
@@ -110,6 +115,7 @@ class Evaluator:
         # print(all_attack)
         self._all_attack = all_attack
         self._attack = np.array(all_attack[:,1:].astype(np.integer))
+        self._attack_couple = [(a,b) for [a,b,_] in self._attack]
         # else:
             # self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
 
@@ -140,47 +146,94 @@ class Evaluator:
     def roc(self, detected_positive_dico, scores, models, typestr):
         pass # TODO
 
-    def evaluate(self, detected_positive_dico, scores, models, typestr, thr=None, colors=None):
+    def evaluate(self, detected_positive_dico):
         self._seen_attack = []
         detected_positive = np.array([k for (k,_) in detected_positive_dico])
-        # detected_positive_both_timestamps = np.array([k for k in detected_positive_dico])
         total_positives = len(detected_positive)
         true_positive_list = detected_positive[list(map(self.is_in_attack_detected, detected_positive))]
         false_positive_list = detected_positive[[t not in true_positive_list for t in detected_positive]]
         true_positive = len(true_positive_list)
         false_positive = total_positives - true_positive
 
+        recall = {}
         print("Detected : ",len(self._seen_attack),"/",len(self._attack))
 
         # true_positive_score = np.array([detected_positive_dico[t] for t in true_positive_list])
         # false_positive_score = np.array([detected_positive_dico[t] for t in false_positive_list])
 
-        if false_positive + len(self._seen_attack) == 0:
-            precision = 1
+        new_method = True
+        if new_method:
+            l_i = 0
+            l_a = 0
+
+            identifiers = np.unique(self._all_attack[:,0])
+            for ident in identifiers:
+                attack_id = self._all_attack[self._all_attack[:,0] == ident]
+                attack_id = np.array(attack_id[:,1:].astype(np.integer))
+                attack_id = [(a,b) for [a,b,_] in attack_id]
+                atk_number = len(attack_id)
+                atk_detected = 0
+                l_i_tmp = 0
+                l_a_tmp = 0
+                for (a1,a2) in attack_id:
+                    l_a_tmp += a2 - a1
+
+                    detected = False
+                    for (d1,d2) in detected_positive_dico:
+                        i = intersect((d1,d2), (a1,a2))
+                        if i:
+                            detected = True
+                            l_i_tmp += i[1] - i[0]
+                    if detected:
+                        atk_detected += 1
+                l_i += l_i_tmp
+                l_a += l_a_tmp
+
+                print("Recall for",ident,":",l_i_tmp / l_a_tmp)
+                recall[ident] = l_i_tmp / l_a_tmp
+
+
+                print("Detected for",ident,":",atk_detected,"/",atk_number,"=",atk_detected/atk_number)
+
+            l_d = 0
+            for (d1,d2) in detected_positive_dico:
+                l_d += d2 - d1
+
+            p = l_i / l_d
+            r = l_i / l_a
+            f = 2*p*r/(p+r)
+            print("Precision",p,"Recall",r,"f-measure",f)
+
+            precision = p
+
         else:
-            # precision = len(self._seen_attack) / (false_positive + len(self._seen_attack))
-            precision = len(self._seen_attack) / (false_positive + len(self._seen_attack))
-        print("Overall precision:",precision)
+            if false_positive + len(self._seen_attack) == 0:
+                precision = 1
+            else:
+                # precision = len(self._seen_attack) / (false_positive + len(self._seen_attack))
+                precision = len(self._seen_attack) / (false_positive + len(self._seen_attack))
 
-        recall = {}
+            identifiers = np.unique(self._all_attack[:,0])
+            for ident in identifiers:
+                attack_id = self._all_attack[self._all_attack[:,0] == ident]
+                r = 0
+                for i in attack_id:
+                    if int(i[1]) in self._seen_attack:
+                        r += 1
+                r = r / len(attack_id)
+                print("Recall for "+ident+": "+str(r))
+                recall[ident] = r
+
         fmeasure = {}
-        identifiers = np.unique(self._all_attack[:,0])
         for ident in identifiers:
-            attack_id = self._all_attack[self._all_attack[:,0] == ident]
-            r = 0
-            for i in attack_id:
-                if int(i[1]) in self._seen_attack:
-                    r += 1
-            r = r / len(attack_id)
-            print("Recall for "+ident+": "+str(r))
-            recall[ident] = r
-
             if precision + recall[ident] != 0:
                 fmeasure[ident] = 2*(precision * recall[ident]) / (precision + recall[ident])
             else:
                 fmeasure[ident] = float('nan')
             print("f-measure for "+ident+": "+str(fmeasure[ident]))
 
+
+        print("Overall precision:",precision)
         print("tp",true_positive, "fp",false_positive,"precision",precision,"recall",recall,"f-measure",fmeasure)
 
         print("Mean f-measure:", sum(fmeasure.values()) / len(fmeasure))
@@ -192,97 +245,97 @@ class Evaluator:
         #     # plt.hist(true_negative_score, color='blue', bins=100, histtype='step', log=True)
         #     plt.title(self._id)
         #     plt.show()
-        print(thr)
-        if show_time:
-            x = sorted(list(scores.keys()))
-            threshold = []
-            for i in range(3):
-                t = {}
-                for d in x:
-                    for p in thr:
-                        if p(d):
-                            t[d] = thr[p][i]
-                            break
-                threshold.append(t)
+    def print_score(self, detected_positive_dico, scores, models, typestr, thr=None, colors=None):
+        # print(thr)
+        x = sorted(list(scores.keys()))
+        threshold = []
+        for i in range(3):
+            t = {}
+            for d in x:
+                for p in thr:
+                    if p(d):
+                        t[d] = thr[p][i]
+                        break
+            threshold.append(t)
 
-            if isinstance(models, MultiModels):
-                nbcols = len(models._models)
-            else:
-                nbcols = 1
-            if nbcols > 1:
-                fig, ax = plt.subplots(nrows=1, ncols=nbcols)
-                ax = np.expand_dims(ax, 1)
-            else:
-                fig, ax = plt.subplots(nrows=1, ncols=1)
-                ax = np.expand_dims(ax, 1)
-                ax = np.expand_dims(ax, 2)
-            hfmt = mdates.DateFormatter('%d/%m %H:%M:%S')
+        if isinstance(models, MultiModels):
+            nbcols = len(models._models)
+        else:
+            nbcols = 1
+        if nbcols > 1:
+            fig, ax = plt.subplots(nrows=1, ncols=nbcols)
+            ax = np.expand_dims(ax, 1)
+        else:
+            fig, ax = plt.subplots(nrows=1, ncols=1)
+            ax = np.expand_dims(ax, 1)
+            ax = np.expand_dims(ax, 2)
+        hfmt = mdates.DateFormatter('%d/%m %H:%M:%S')
+        i = 0
+        for row in ax:
+            for col in row:
+                col.xaxis.set_major_formatter(hfmt)
+                plt.setp(col.get_xticklabels(), rotation=15)
+                # color = {multimodels.period_weekend_and_night: "green", multimodels.period_day_not_weekend: "blue", multimodels.period_always: "magenta"}
+                # for p in thr:
+                    # col.axhline(thr[p][i],0,1,color=color[p])
+                # i += 1
+
+        for a in self._attack:
+            l = self._all_attack[self._all_attack[:,1] == str(a[0])]
+            ident = l[0,0]
+            nb = 0
+            for row in ax:
+                for col in row:
+                    if a[2] == nb:
+                        col.hlines(0,
+                        mdates.date2num(datetime.datetime.fromtimestamp(a[0]/1000)),
+                        mdates.date2num(datetime.datetime.fromtimestamp(a[1]/1000)),
+                        color=colors[ident])
+                    nb += 1
+
+        for (t1, t2) in detected_positive_dico:
+            # TODO
             i = 0
             for row in ax:
                 for col in row:
-                    col.xaxis.set_major_formatter(hfmt)
-                    plt.setp(col.get_xticklabels(), rotation=15)
-                    # color = {multimodels.period_weekend_and_night: "green", multimodels.period_day_not_weekend: "blue", multimodels.period_always: "magenta"}
-                    # for p in thr:
-                        # col.axhline(thr[p][i],0,1,color=color[p])
-                    # i += 1
+                    if i in detected_positive_dico[(t1,t2)]:
+                        col.hlines(-0.001,
+                        mdates.date2num(datetime.datetime.fromtimestamp(t1/1000)),
+                        mdates.date2num(datetime.datetime.fromtimestamp(t2/1000)),
+                        color='green')
+                    i += 1
 
-            for a in self._attack:
-                l = self._all_attack[self._all_attack[:,1] == str(a[0])]
-                ident = l[0,0]
-                nb = 0
-                for row in ax:
-                    for col in row:
-                        if a[2] == nb:
-                            col.hlines(0,
-                           mdates.date2num(datetime.datetime.fromtimestamp(a[0]/1000)),
-                           mdates.date2num(datetime.datetime.fromtimestamp(a[1]/1000)),
-                           color=colors[ident])
-                        nb += 1
 
-            for (t1, t2) in detected_positive_dico:
-                # TODO
-                i = 0
-                for row in ax:
-                    for col in row:
-                        if i in detected_positive_dico[(t1,t2)]:
-                            col.hlines(-0.001,
-                            mdates.date2num(datetime.datetime.fromtimestamp(t1/1000)),
-                            mdates.date2num(datetime.datetime.fromtimestamp(t2/1000)),
-                            color='green')
+
+        # for t in detected_positive:
+        #     plt.vlines(t, 0.85, 0.9, color='red' if self.is_in_attack(t) else 'blue')
+        if isinstance(models, MultiModels):
+            if typestr == "autoenc":
+                labels = ["400-500","800-900","2400-2500"]
+            elif typestr == "micro":
+                labels = [f.__name__ for (f,_) in models._models]
+
+            i = 0
+            for row in ax:
+                for col in row:
+                    if i < nbcols:
+                        val = [scores[k].get(i) for k in x]
+                        valTh = [threshold[i][k] for k in x]
+                        x, val = zip(*sorted(zip(x, val)))
+                        x_dates = mdates.date2num([datetime.datetime.fromtimestamp(t/1000) for t in x])
+                        col.plot(x_dates, val, alpha=0.7, label=labels[i])
+                        col.plot(x_dates, valTh, alpha=0.7, color="magenta")
                         i += 1
+                        col.legend(loc='upper left')
 
-
-
-            # for t in detected_positive:
-            #     plt.vlines(t, 0.85, 0.9, color='red' if self.is_in_attack(t) else 'blue')
-            if isinstance(models, MultiModels):
-                if typestr == "autoenc":
-                    labels = ["400-500","800-900","2400-2500"]
-                elif typestr == "micro":
-                    labels = [f.__name__ for (f,_) in models._models]
-
-                i = 0
-                for row in ax:
-                    for col in row:
-                        if i < nbcols:
-                            val = [scores[k].get(i) for k in x]
-                            valTh = [threshold[i][k] for k in x]
-                            x, val = zip(*sorted(zip(x, val)))
-                            x_dates = mdates.date2num([datetime.datetime.fromtimestamp(t/1000) for t in x])
-                            col.plot(x_dates, val, alpha=0.7, label=labels[i])
-                            col.plot(x_dates, valTh, alpha=0.7, color="magenta")
-                            i += 1
-                            col.legend(loc='upper left')
-
-            else:
-                val = list(scores.values())
-                x, val = zip(*sorted(zip(x, val)))
-                plt.plot(x, val)
-            plt.show()
+        else:
+            val = list(scores.values())
+            x, val = zip(*sorted(zip(x, val)))
+            plt.plot(x, val)
+        plt.show()
 
         # print("Cumulative detected : ",len(self._cumulative_seen_attack),"/",len(self._attack))
-        return (true_positive, false_positive)
+        # return (true_positive, false_positive)
 
 def predict(models, scores, threshold):
     start = time.time()
@@ -377,7 +430,7 @@ def predict_extractors(models, scores, all_t):
     for (_,m) in models:
         state = DetectorState.NOT_DETECTING
         detection_duration = 20000
-        resting_duration = 20000
+        resting_duration = 0
         # consecutive = 0
         previous_timestamp = None
         for timestamp in timestamps:
@@ -386,7 +439,8 @@ def predict_extractors(models, scores, all_t):
                 if p(timestamp):
                     found = True
                     threshold_autoencoder = all_t[p]
-                    low_threshold_autoencoder = [0.8 * t for t in threshold_autoencoder]
+                    low_threshold_autoencoder = threshold_autoencoder
+                    # low_threshold_autoencoder = [0.8 * t for t in threshold_autoencoder]
             assert found, multimodels.process_unix_time(timestamp)
             score = scores[timestamp].get(m._number)
 
@@ -624,7 +678,7 @@ if use_autoenc:
                 for l in thr:
                     # check the order of the keys
                     assert l == len(t)
-                    t.append(thr.get(l)[threshold_autoencoder_number])
+                    t.append(thr.get(l)[threshold_autoencoder_number]+0.0001) # TODO
                 threshold_autoencoder[p] = t
         except:
             print("No train score loaded")
@@ -652,4 +706,6 @@ for e in evaluators:
 #               list(set(example_neg+example_neg_macro)))
     if use_autoenc:
         print("Results autoencoders: ",end='')
-        e.evaluate(example_pos_extractors, scores_ex, extractors,"autoenc", threshold_autoencoder, colors)
+        e.evaluate(example_pos_extractors)
+        if show_time:
+            e.print_score(example_pos_extractors, scores_ex, extractors,"autoenc", threshold_autoencoder, colors)

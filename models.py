@@ -371,7 +371,7 @@ class MultiExtractors(MultiModels):
                     if val != None:
                         score_model.append(val)
             thr[m._number] = [np.percentile(score_model, p) for p in r]
-            print("Model ",m._number,":",thr[m._number])
+            print("Model",m._number,":",thr[m._number])
         return thr
 
     def learn_threshold(self, fnames):
