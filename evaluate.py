@@ -102,7 +102,7 @@ class Evaluator:
         F-score = 2 * (precision * rappel) / (precision + rappel)
     """
 
-    def __init__(self, all_attack, identifier=None):
+    def __init__(self, all_attack, attack_freq, identifier=None):
         """
             format all_attack : shape (-1,3)
             column 0 : attack start timestamp
@@ -113,9 +113,9 @@ class Evaluator:
         # if self._id == None:
         self._id = "All"
         # print(all_attack)
+        self.attack_freq = attack_freq
         self._all_attack = all_attack
         self._attack = np.array(all_attack[:,1:].astype(np.integer))
-        self._attack_couple = [(a,b) for [a,b,_] in self._attack]
         # else:
             # self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
 
@@ -145,6 +145,16 @@ class Evaluator:
 
     def roc(self, detected_positive_dico, scores, models, typestr):
         pass # TODO
+
+    def evaluate_freq(self, detected_freq):
+        error = 0
+        nb = 0
+        for (d1,d2) in detected_freq:
+            for (a1,a2) in self.attack_freq:
+                if intersect((a1,a2),(d1,d2)) != None:
+                    error += abs(detected_freq[(d1,d2)] - self.attack_freq[(a1,a2)])
+                    nb += 1
+        print(error, error/nb)
 
     def evaluate(self, detected_positive_dico):
         self._seen_attack = []
@@ -573,15 +583,20 @@ for i in identifiers:
 print("Attacks list:",identifiers)
 
 attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "strong868": 1}
-attack_freq = {"scan433": [432,434], "strong433": [432,434], "scan868":[867,869], "strong868":[867,869]}
+attack_freq_type = {"scan433": [432,434], "strong433": [432,434], "scan868":[867,869], "strong868":[867,869]}
 
 # we add the plot number of the attack
 attack_tmp = []
+attack_freq = {}
 for a in attack:
     plot_nb = attack_plot.get(a[0])
     if plot_nb == None: # par défaut: 2400-2500
         plot_nb = 2
     attack_tmp.append([a[0], a[1], a[2], plot_nb])
+    f = attack_freq_type.get(a[0])
+    if f == None:
+        f = 2550 # TODO
+    attack_freq[(int(a[1]),int(a[2]))] = f
 attack = np.array(attack_tmp)
 
 if name_attack:
@@ -595,7 +610,7 @@ print(attack)
 evaluators = []
 # if not name_attack:
 # evaluators = [Evaluator(attack, i) for i in identifiers]
-evaluators.append(Evaluator(attack))
+evaluators.append(Evaluator(attack, attack_freq))
 # else:
     # for n in name_attack:
         # evaluators.append(Evaluator(attack, n))
@@ -648,7 +663,7 @@ for j in range(len(bands)):
         extractors.add_model(m) # dummy is enough for most cases
 
 # évaluation
-
+path_frequencies = os.path.join(prefix, prefix_result+"results-frequencies.joblib")
 path_examples = os.path.join(prefix, prefix_result+"results-OCSVM-micro.joblib")
 path_examples_macro = os.path.join(prefix, prefix_result+"results-HMM-macro.joblib")
 path_examples_extractors = os.path.join(prefix, prefix_result+config.get_config("autoenc_filename")+"-results-autoenc.joblib")
@@ -705,7 +720,11 @@ if use_autoenc:
     # scores_ex = passe_haut(scores_ex)
     example_pos_extractors = predict_extractors(extractors._models, scores_ex, threshold_autoencoder)
     if predict_freq:
-        freq = predict_frequencies(example_pos_extractors, directories)
+        try:
+            detected_freq = joblib.load(path_frequencies)
+        except:
+            detected_freq = predict_frequencies(example_pos_extractors, directories)
+            joblib.dump(detected_freq, path_frequencies)
 
 for e in evaluators:
     # print("***",e._id)
@@ -723,3 +742,4 @@ for e in evaluators:
         e.evaluate(example_pos_extractors)
         if show_time:
             e.print_score(example_pos_extractors, scores_ex, extractors,"autoenc", threshold_autoencoder, colors)
+        e.evaluate_freq(detected_freq)
