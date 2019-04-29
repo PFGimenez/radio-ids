@@ -554,13 +554,13 @@ config = Config()
 prefix_result_train = "train-"
 if train:
     prefix_result = "train-"
-    folder_file = "train_folders"
+    folder_file = config.get_config("train_folders")
 elif mini:
     prefix_result = "mini-"
     folder_file = "mini_folders"
 else:
     prefix_result = ""
-    folder_file = "test_folders"
+    folder_file = config.get_config("test_folders")
 with open(folder_file) as f:
     folders = f.readlines()
 

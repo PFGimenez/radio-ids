@@ -56,15 +56,15 @@ if mode == None:
 np.random.seed()
 random.seed()
 
+config = Config()
 if not folders:
-    with open("train_folders") as f:
+    with open(config.get_config("train_folders")) as f:
         folders1 = f.readlines()
     folders = [x.strip() for x in folders1]
 
-    with open("test_folders") as f:
+    with open(config.get_config("test_folders")) as f:
         folders2 = f.readlines()
     folders += [x.strip() for x in folders2]
-config = Config()
 
 
 bands = config.get_config_eval('waterfall_frequency_bands')

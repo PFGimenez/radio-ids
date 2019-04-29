@@ -237,7 +237,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
 
 
-    def _new_model_2(self):
+    def _new_model_dense(self):
         m = Flatten()(self._input_tensor)
         # if self._features_number != 5000:
             # m = Dense(5000, activation='sigmoid')(m)
@@ -260,7 +260,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
         self._autoencoder.summary()
 
-    def _new_model_3(self):
+    def _new_model_cnn_old(self):
         m = Reshape((self._input_shape[0],self._input_shape[1]))(self._input_tensor)
         m = Conv1D(500, 5, activation='sigmoid', padding='valid')(m)
         m = Conv1D(500, 5, activation='sigmoid', padding='valid')(m)
@@ -279,7 +279,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 
 
 
-    def _new_model(self):
+    def _new_model_cnn(self):
         """
             À utiliser si l'autoencoder n'est pas chargé mais appris
         """
@@ -346,10 +346,15 @@ class CNN(FeatureExtractor, AnomalyDetector):
         return 0
 
     def learn_extractor(self, filenames, inf, sup, macro=False, macro_merge_shape=None, macro_input_shape=None):
-        if macro:
+        nn_type = self._config.get_config("nn_type")
+        if nn_type == "macro":
             self._new_macro_model()
+        elif nn_type == "CNN":
+            self._new_model_cnn()
+        elif nn_type == "dense":
+            self._new_model_dense()
         else:
-            self._new_model()
+            raise ValueError
 
         filenames = sorted(filenames)
         training_filenames = []

@@ -23,7 +23,10 @@ class Config():
         Config._config[key]=str(val)
 
     def get_config(self, key):
-        return Config._config[Config._section][key]
+        out = Config._config[Config._section].get(key)
+        if out == None:
+            return Config._config["DEFAULT"][key]
+        return out
 
     def get_config_eval(self, key):
         return eval(self.get_config(key))

@@ -8,12 +8,13 @@ from config import Config
 import random
 import sys
 
-with open("train_folders") as f: # TODO
+config = Config()
+folder_file = config.get_config("train_folders")
+with open(folder_file) as f:
     folders = f.readlines()
 folders = [x.strip() for x in folders]
 #folders = ['data-test', 'data-test']
 # folders = [folders[0]] # TODO
-config = Config()
 bands = config.get_config_eval('waterfall_frequency_bands')
 extractors = MultiExtractors()
 dims = config.get_config_eval('autoenc_dimensions')
