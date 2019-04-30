@@ -148,13 +148,18 @@ class Evaluator:
 
     def evaluate_freq(self, detected_freq):
         error = 0
+        ok = 0
         nb = 0
-        for (d1,d2) in detected_freq:
-            for (a1,a2) in self.attack_freq:
-                if intersect((a1,a2),(d1,d2)) != None:
-                    error += abs(detected_freq[(d1,d2)] - self.attack_freq[(a1,a2)])
+        for d in detected_freq:
+            for a in self.attack_freq:
+                if intersect(a,d) != None:
+                    (f1,f2) = self.attack_freq[a]
+                    if detected_freq[d] >= f1 and detected_freq[d] <= f2:
+                        ok += 1
+                    error += abs(detected_freq[d] - (f1+f2)/2)
                     nb += 1
-        print(error, error/nb)
+                    print(ok, error, nb)
+        print(error, error/nb, ok/nb)
 
     def evaluate(self, detected_positive_dico):
         self._seen_attack = []
@@ -347,72 +352,72 @@ class Evaluator:
         # print("Cumulative detected : ",len(self._cumulative_seen_attack),"/",len(self._attack))
         # return (true_positive, false_positive)
 
-def predict(models, scores, threshold):
-    start = time.time()
-    memory_size = models.get_memory_size()
-    example_pos = {}
-    example_neg = {}
-#        memory = []
+# def predict(models, scores, threshold):
+#     start = time.time()
+#     memory_size = models.get_memory_size()
+#     example_pos = {}
+#     example_neg = {}
+# #        memory = []
 
-#        data = data[20000:30000]
-#        for i in range(memory_size+1,1000):
-    for i in range(memory_size+1,len(data)): # TODO
-        # if i % 100 == 0:
-            # print(i,"/",len(data))
+# #        data = data[20000:30000]
+# #        for i in range(memory_size+1,1000):
+#     for i in range(memory_size+1,len(data)): # TODO
+#         # if i % 100 == 0:
+#             # print(i,"/",len(data))
 
-#            if len(memory) == memory_size:
-#                memory.pop(0)
-#            memory.append(f[1:]) # hors timestamp
-        d = data[i-1-memory_size:i]
-#            print(data.shape, d.shape, d[0,0],d[0,1:])
-#            print(d[0,0].shape, d[:,1:].shape)
-        score = scores[d[0,0]]
-        if models.predict_thr(score, optimistic=False, threshold=threshold):
-#                print("Attack detected at",d[0,0])
-            if isinstance(score, dict):
-                example_pos[d[0,0]] = score[max(score,key=score.get)]
-            else:
-                example_pos[d[0,0]] = score
-        else:
-            if isinstance(score, dict):
-                # on enregistre le plus haut score (ne sert qu'à l'affichage)
-                example_neg[d[0,0]] = score[max(score,key=score.get)]
-            else:
-                example_neg[d[0,0]] = score
+# #            if len(memory) == memory_size:
+# #                memory.pop(0)
+# #            memory.append(f[1:]) # hors timestamp
+#         d = data[i-1-memory_size:i]
+# #            print(data.shape, d.shape, d[0,0],d[0,1:])
+# #            print(d[0,0].shape, d[:,1:].shape)
+#         score = scores[d[0,0]]
+#         if models.predict_thr(score, optimistic=False, threshold=threshold):
+# #                print("Attack detected at",d[0,0])
+#             if isinstance(score, dict):
+#                 example_pos[d[0,0]] = score[max(score,key=score.get)]
+#             else:
+#                 example_pos[d[0,0]] = score
+#         else:
+#             if isinstance(score, dict):
+#                 # on enregistre le plus haut score (ne sert qu'à l'affichage)
+#                 example_neg[d[0,0]] = score[max(score,key=score.get)]
+#             else:
+#                 example_neg[d[0,0]] = score
 
-    end = time.time()
-    print("Detection time:",(end-start),"s")
-    return (example_pos, example_neg)
+#     end = time.time()
+#     print("Detection time:",(end-start),"s")
+#     return (example_pos, example_neg)
 
-def scores_micro_macro(models, path_examples, data):
-    try:
-        # chargement des prédictions si possible
-        scores = joblib.load(path_examples)
-        print("Scores loaded")
-    except:
-        start = time.time()
-        memory_size = models.get_memory_size()
-        scores = {}
-#        memory = []
+# def scores_micro_macro(models, path_examples, data):
+#     try:
+#         # chargement des prédictions si possible
+#         scores = joblib.load(path_examples)
+#         print("Scores loaded")
+#     except:
+#         start = time.time()
+#         memory_size = models.get_memory_size()
+#         scores = {}
+# #        memory = []
 
-#        data = data[20000:30000]
-#        for i in range(memory_size+1,1000):
-        for i in range(memory_size+1,len(data)): # TODO
-            if i % 100 == 0:
-                print(i,"/",len(data))
+# #        data = data[20000:30000]
+# #        for i in range(memory_size+1,1000):
+#         for i in range(memory_size+1,len(data)): # TODO
+#             if i % 100 == 0:
+#                 print(i,"/",len(data))
 
-#            if len(memory) == memory_size:
-#                memory.pop(0)
-#            memory.append(f[1:]) # hors timestamp
-            d = data[i-1-memory_size:i]
-#            print(data.shape, d.shape, d[0,0],d[0,1:])
-#            print(d[0,0].shape, d[:,1:].shape)
-            scores[d[0,0]] = models.get_score(d[:,1:], d[0,0])
+# #            if len(memory) == memory_size:
+# #                memory.pop(0)
+# #            memory.append(f[1:]) # hors timestamp
+#             d = data[i-1-memory_size:i]
+# #            print(data.shape, d.shape, d[0,0],d[0,1:])
+# #            print(d[0,0].shape, d[:,1:].shape)
+#             scores[d[0,0]] = models.get_score(d[:,1:], d[0,0])
 
-        end = time.time()
-        print("Scoring time:",(end-start),"s")
-        joblib.dump(scores, path_examples)
-    return scores
+#         end = time.time()
+#         print("Scoring time:",(end-start),"s")
+#         joblib.dump(scores, path_examples)
+#     return scores
 
 def score_extractors(extractors, path_examples, folders_test):
     scores = {}
@@ -573,8 +578,8 @@ def predict_frequencies(example_pos, folders):
         frequencies[(t1, t2)] = f
     return frequencies
 
-use_micro = False
-use_macro = False
+# use_micro = False
+# use_macro = False
 use_autoenc = False
 use_autoenc_macro = False
 name_attack = None
@@ -593,10 +598,10 @@ while i < len(sys.argv):
         use_autoenc = True
     elif sys.argv[i] == "-autoenc-macro":
         use_autoenc_macro = True
-    elif sys.argv[i] == "-micro":
-        use_micro = True
-    elif sys.argv[i] == "-macro":
-        use_macro = True
+    # elif sys.argv[i] == "-micro":
+        # use_micro = True
+    # elif sys.argv[i] == "-macro":
+        # use_macro = True
     elif sys.argv[i] == "-train":
         train = True
     elif sys.argv[i] == "-mini":
@@ -608,8 +613,8 @@ while i < len(sys.argv):
         exit()
     i += 1
 
-if not use_autoenc and not use_micro and not use_macro and not use_autoenc_macro:
-    print("Aucun détecteur ! Utilisez -micro, -macro, -autoenc ou -autoenc-macro")
+if not use_autoenc and not use_autoenc_macro:
+    print("Aucun détecteur ! Utilisez -autoenc ou -autoenc-macro")
     exit()
 
 # lecture config
@@ -659,7 +664,7 @@ for a in attack:
     attack_tmp.append([a[0], a[1], a[2], plot_nb])
     f = attack_freq_type.get(a[0])
     if f == None:
-        f = 2550 # TODO
+        f = [2540,2560] # TODO
     attack_freq[(int(a[1]),int(a[2]))] = f
 attack = np.array(attack_tmp)
 
@@ -678,41 +683,41 @@ evaluators.append(Evaluator(attack, attack_freq))
 # else:
     # for n in name_attack:
         # evaluators.append(Evaluator(attack, n))
-nb_features = sum(config.get_config_eval("features_number"))
-nb_features_macro = config.get_config_eval("nb_features_macro")
+# nb_features = sum(config.get_config_eval("features_number"))
+# nb_features_macro = config.get_config_eval("nb_features_macro")
 prefix = config.get_config("section")
 threshold_autoencoder_number = config.get_config_eval("threshold_autoencoder")
-threshold_macro = config.get_config_eval("threshold_macro")
-threshold_micro = config.get_config_eval("threshold_micro")
+# threshold_macro = config.get_config_eval("threshold_macro")
+# threshold_micro = config.get_config_eval("threshold_micro")
 # chargement du jeu de données de test micro
 
 show_time = True # TODO
 show_hist = False
 # modèle micro
 
-if use_micro:
-    models = MultiModels()
-    try:
-        models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
-        files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
-        print(files)
-        data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
-        print("data micro:",data.shape)
-    except Exception as e:
-        print("Loading failed:",e)
-        use_micro = False
+# if use_micro:
+#     models = MultiModels()
+#     try:
+#         models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
+#         files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
+#         print(files)
+#         data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
+#         print("data micro:",data.shape)
+#     except Exception as e:
+#         print("Loading failed:",e)
+#         use_micro = False
 
-# modèle macro
-if use_macro:
-    models_macro = MultiModels()
-    try:
-        models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
-        test_macro_filename = os.path.join(config.get_config("section"), "test_"+config.get_config("macro_features_stage_2"))
-        data_macro = np.fromfile(test_macro_filename).reshape(-1, nb_features_macro + 1)
-        print("data macro:",data_macro.shape)
-    except Exception as e:
-        print("Loading failed:",e)
-        use_macro = False
+# # modèle macro
+# if use_macro:
+#     models_macro = MultiModels()
+#     try:
+#         models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
+#         test_macro_filename = os.path.join(config.get_config("section"), "test_"+config.get_config("macro_features_stage_2"))
+#         data_macro = np.fromfile(test_macro_filename).reshape(-1, nb_features_macro + 1)
+#         print("data macro:",data_macro.shape)
+#     except Exception as e:
+#         print("Loading failed:",e)
+#         use_macro = False
 
 # autoencoders
 bands = config.get_config_eval('waterfall_frequency_bands')
@@ -728,19 +733,19 @@ for j in range(len(bands)):
 
 # évaluation
 path_frequencies = os.path.join(prefix, prefix_result+"results-frequencies.joblib")
-path_examples = os.path.join(prefix, prefix_result+"results-OCSVM-micro.joblib")
-path_examples_macro = os.path.join(prefix, prefix_result+"results-HMM-macro.joblib")
+# path_examples = os.path.join(prefix, prefix_result+"results-OCSVM-micro.joblib")
+# path_examples_macro = os.path.join(prefix, prefix_result+"results-HMM-macro.joblib")
 path_examples_extractors = os.path.join(prefix, prefix_result+config.get_config("autoenc_filename")+"-results-autoenc.joblib")
 path_examples_train_extractors = os.path.join(prefix, prefix_result_train+config.get_config("autoenc_filename")+"-results-autoenc.joblib")
 
-if use_micro:
-    print("Prediction for micro…")
-    scores_micro = scores_micro_macro(models, path_examples, data)
-    (example_pos, example_neg) = predict(models, scores_micro, threshold_micro)
-if use_macro:
-    print("Prediction for macro…")
-    scores_macro = scores_micro_macro(models_macro, path_examples_macro, data_macro)
-    (example_pos_macro, example_neg_macro) = predict(models_macro, scores_macro, threshold_macro)
+# if use_micro:
+#     print("Prediction for micro…")
+#     scores_micro = scores_micro_macro(models, path_examples, data)
+#     (example_pos, example_neg) = predict(models, scores_micro, threshold_micro)
+# if use_macro:
+#     print("Prediction for macro…")
+#     scores_macro = scores_micro_macro(models_macro, path_examples_macro, data_macro)
+#     (example_pos_macro, example_neg_macro) = predict(models_macro, scores_macro, threshold_macro)
 if use_autoenc:
     try:
         print("Loading scores…")
@@ -786,24 +791,26 @@ if use_autoenc:
     if predict_freq:
         try:
             detected_freq = joblib.load(path_frequencies)
+            print(detected_freq)
         except:
             detected_freq = predict_frequencies(example_pos_extractors, directories)
             joblib.dump(detected_freq, path_frequencies)
 
 for e in evaluators:
     # print("***",e._id)
-    if use_micro:
-        print("Results micro: ",end='')
-        e.evaluate(example_pos, scores_micro, models,"micro", colors)
-    if use_macro:
-        print("Results macro: ",end='')
-        e.evaluate(example_pos_macro, scores_macro, models_macro,"macro", colors)
+    # if use_micro:
+    #     print("Results micro: ",end='')
+    #     e.evaluate(example_pos, scores_micro, models,"micro", colors)
+    # if use_macro:
+    #     print("Results macro: ",end='')
+    #     e.evaluate(example_pos_macro, scores_macro, models_macro,"macro", colors)
 #    print("Results micro and macro")
 #    e.evaluate(list(set(example_pos+example_pos_macro)),
 #               list(set(example_neg+example_neg_macro)))
     if use_autoenc:
         print("Results autoencoders: ",end='')
         e.evaluate(example_pos_extractors)
+        if predict_freq:
+            e.evaluate_freq(detected_freq)
         if show_time:
             e.print_score(example_pos_extractors, scores_ex, extractors,"autoenc", threshold_autoencoder, colors)
-        e.evaluate_freq(detected_freq)
