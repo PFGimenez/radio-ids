@@ -432,6 +432,70 @@ def score_extractors(extractors, path_examples, folders_test):
     joblib.dump(scores, path_examples)
     return scores
 
+def predict_extractors_cumul(models, scores, all_t):
+    start = time.time()
+    example_pos = {}
+    timestamps = sorted(scores.keys())
+
+    for (_,m) in models:
+        state = DetectorState.NOT_DETECTING
+        cumulated_threshold = 0.1
+        resting_duration = 0
+        cumul = 0
+        # consecutive = 0
+        previous_timestamp = None
+        for timestamp in timestamps:
+            found = False
+            for p in all_t:
+                if p(timestamp):
+                    found = True
+                    threshold_autoencoder = all_t[p]
+                    low_threshold_autoencoder = threshold_autoencoder
+                    # low_threshold_autoencoder = [0.8 * t for t in threshold_autoencoder]
+            assert found, multimodels.process_unix_time(timestamp)
+            score = scores[timestamp].get(m._number)
+
+
+            if state == DetectorState.NOT_DETECTING and m.predict_thr(score,threshold=threshold_autoencoder[m._number]):
+            # if state == DetectorState.NOT_DETECTING and extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
+                state = DetectorState.DETECTING
+                cumul = 0
+                previous_timestamp = timestamp
+
+            elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
+                if state == DetectorState.TRIGGERED:
+                    # End of the attack
+                    example_pos[(previous_timestamp, timestamp)] = [m._number]
+                previous_timestamp = timestamp
+                state = DetectorState.RESTING
+
+            elif state == DetectorState.DETECTING:
+                if cumul > cumulated_threshold:
+                    state = DetectorState.TRIGGERED
+
+            elif state == DetectorState.RESTING:
+                # if extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
+                if m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
+                    # consecutive = 0
+                    previous_timestamp = timestamp
+                # else:
+                    # consecutive += 1
+                if timestamp - previous_timestamp > resting_duration:
+                # if consecutive > resting_duration:
+                    state = DetectorState.NOT_DETECTING
+                    # consecutive = 0
+
+            if state == DetectorState.DETECTING:
+                cumul += abs(score - threshold_autoencoder[m._number])
+
+    end = time.time()
+    print("Detection time:",(end-start),"s")
+    print("Positive:",len(example_pos))
+    return example_pos
+
+
+
+
 def predict_extractors(models, scores, all_t):
     start = time.time()
     example_pos = {}
