@@ -387,15 +387,18 @@ class MultiExtractors(MultiModels):
             m._learn_threshold_from_scores(np.array(scores[m]).flatten())
 
     def get_frequencies(self, data, number=None):
-        s = []
         if number == None:
+            s = []
             for (_,m) in self._models:
                 s.append(m.get_diff_vector(data))
         else:
-            self._models[number][1].get_diff_vector(data)
+            s = [self._models[number][1].get_diff_vector(data)]
         s = np.array(s)
+        # print(s.shape)
         s = np.dstack(s)
-        s = np.vstack(s)
+        # print(s.shape)
+        s = np.sum(s, axis=1)
+        # print(s.shape)
         nz = np.nonzero(s)
         index = list(nz[1])
         data = s[nz]

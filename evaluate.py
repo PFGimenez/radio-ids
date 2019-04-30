@@ -147,19 +147,42 @@ class Evaluator:
         pass # TODO
 
     def evaluate_freq(self, detected_freq):
-        error = 0
-        ok = 0
-        nb = 0
-        for d in detected_freq:
-            for a in self.attack_freq:
-                if intersect(a,d) != None:
-                    (f1,f2) = self.attack_freq[a]
-                    if detected_freq[d] >= f1 and detected_freq[d] <= f2:
-                        ok += 1
-                    error += abs(detected_freq[d] - (f1+f2)/2)
-                    nb += 1
-                    print(ok, error, nb)
-        print(error, error/nb, ok/nb)
+
+        identifiers = np.unique(self._all_attack[:,0])
+        for ident in identifiers:
+            errors = []
+            ok = 0
+            nb = 0
+            attack_ident = self._all_attack[self._all_attack[:,0] == ident]
+            # print(attack_ident)
+            for [_, a1, a2, a_band] in attack_ident:
+                a1 = int(a1)
+                a2 = int(a2)
+                a_band = int(a_band)
+                # print(a1,a2,a_band)
+                for d in self.true_positive_dates:
+                    # we check only the true positive detection
+                    (f,d_band) = detected_freq[d]
+                    # print(d,f,d_band)
+                    if a_band == d_band and intersect((a1,a2),d) != None:
+                        (f1,f2) = self.attack_freq[(a1,a2)]
+                        if f >= f1 and f <= f2:
+                            ok += 1
+                        errors.append(abs(f - (f1+f2)/2))
+                        nb += 1
+            print("    Results for",ident)
+            if nb > 0:
+                # print(ok, nb)
+                print("Proportion within 1MHz:",ok/nb)
+                print("Mean error:",np.mean(errors))
+                # print(errors)
+                # print(np.percentile(errors, 50))
+                # print(np.percentile(errors, 80))
+                # print(np.percentile(errors, 90))
+                print("95% of errors below:", np.percentile(errors, 95))
+                # print(np.percentile(errors, 99))
+            else:
+                print("No attack detected")
 
     def evaluate(self, detected_positive_dico):
         self._seen_attack = []
@@ -169,7 +192,9 @@ class Evaluator:
         false_positive_list = detected_positive[[t not in true_positive_list for t in detected_positive]]
         true_positive = len(true_positive_list)
         false_positive = total_positives - true_positive
-
+        self.true_positive_dates = [(a,b) for (a,b) in detected_positive_dico if a in true_positive_list]
+        # print(len(true_positive_list))
+        # print(len(self.true_positive_dico))
         recall = {}
         print("Detected : ",len(self._seen_attack),"/",len(self._attack))
 
@@ -184,21 +209,28 @@ class Evaluator:
             identifiers = np.unique(self._all_attack[:,0])
             for ident in identifiers:
                 attack_id = self._all_attack[self._all_attack[:,0] == ident]
-                attack_id = np.array(attack_id[:,1:].astype(np.integer))
-                attack_id = [(a,b) for [a,b,_] in attack_id]
+                # attack_id = np.array(attack_id[:,1:].astype(np.integer))
+                # attack_id = [(a,b) for [a,b,_] in attack_id]
                 atk_number = len(attack_id)
                 atk_detected = 0
                 l_i_tmp = 0
                 l_a_tmp = 0
-                for (a1,a2) in attack_id:
+                # for (a1,a2) in attack_id:
+                for [_, a1, a2, a_band] in attack_id:
+                    a1 = int(a1)
+                    a2 = int(a2)
+                    a_band = int(a_band)
+
                     l_a_tmp += a2 - a1
 
                     detected = False
                     for (d1,d2) in detected_positive_dico:
-                        i = intersect((d1,d2), (a1,a2))
-                        if i:
-                            detected = True
-                            l_i_tmp += i[1] - i[0]
+                        d_band = detected_positive_dico[(d1,d2)][0]
+                        if a_band == d_band:
+                            i = intersect((d1,d2), (a1,a2))
+                            if i:
+                                detected = True
+                                l_i_tmp += i[1] - i[0]
                     if detected:
                         atk_detected += 1
                 l_i += l_i_tmp
@@ -309,7 +341,6 @@ class Evaluator:
                     nb += 1
 
         for (t1, t2) in detected_positive_dico:
-            # TODO
             i = 0
             for row in ax:
                 for col in row:
@@ -570,12 +601,20 @@ def predict_extractors(models, scores, all_t):
 def predict_frequencies(example_pos, folders):
     frequencies = {}
     for (t1, t2) in example_pos:
+        nb = example_pos[(t1,t2)][0]
+        # print(nb)
         waterfalls = read_files_from_timestamp(t1, t2, folders)
-        (weights, data) = extractors.get_frequencies(waterfalls)
+        # print("S",waterfalls.shape)
+        waterfalls[:,0:nb*1000] = 0
+        waterfalls[:,(nb+1)*1000:3000] = 0
+        # print("S après",waterfalls.shape)
+        (weights, data) = extractors.get_frequencies(waterfalls, number=nb)
         median = weighted_median(data, weights)
+        # print("Median:",median)
+        median += nb*1000
         f = index_to_frequency(median)
-        print(f)
-        frequencies[(t1, t2)] = f
+        # print(f)
+        frequencies[(t1, t2)] = (f,nb)
     return frequencies
 
 # use_micro = False
@@ -791,7 +830,7 @@ if use_autoenc:
     if predict_freq:
         try:
             detected_freq = joblib.load(path_frequencies)
-            print(detected_freq)
+            # print(detected_freq)
         except:
             detected_freq = predict_frequencies(example_pos_extractors, directories)
             joblib.dump(detected_freq, path_frequencies)
@@ -808,7 +847,7 @@ for e in evaluators:
 #    e.evaluate(list(set(example_pos+example_pos_macro)),
 #               list(set(example_neg+example_neg_macro)))
     if use_autoenc:
-        print("Results autoencoders: ",end='')
+        # print("Results autoencoders: ",end='')
         e.evaluate(example_pos_extractors)
         if predict_freq:
             e.evaluate_freq(detected_freq)
