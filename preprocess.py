@@ -15,8 +15,9 @@ _delta_t = int(_waterfall_duration / _waterfall_dim[0])
 
 # _l_high = [-65,-50,-35,-20,-10,0]
 # _l_low= [-65,-50,-35,-20,-10,0]
-_l_high = [-50,-45,-40,-35,-30,-25,-20,-15,-10,0]
-_l_low = [-50,-45,-40,-35,-30,-25,-20,-15,-10,0]
+_l_2425 = [-50,-45,-40,-35,-30,-25,-20,-15,-10,0]
+_l_45 = [-50,-45,-40,-35,-30,-25,-20,-15,-10,0]
+_l_89 = [-50,-45,-40,-35,-30,-25,-20,-15,-10,0]
 
 def show_histo(data, log=False, flatten=False):
     """
@@ -28,33 +29,45 @@ def show_histo(data, log=False, flatten=False):
 
 def dequantify(data):
     # print("Dequantification…")
-    valmax = len(_l_high)-1
     data[data == 0] = -80
-    dl = data[:,0:2000]
+    dl = data[:,:1000]
+    dm = data[:,1000:2000]
     dh = data[:,2000:3000]
-    for i in range(1,len(_l_high)):
-        dh[dh == i/valmax] = (_l_high[i-1] + _l_high[i]) / 2
 
-    valmax = len(_l_low)-1
-    for i in range(1,len(_l_low)):
-        dl[dl == i/valmax] = (_l_low[i-1] + _l_low[i]) / 2
+    valmax = len(_l_2425)-1
+    for i in range(1,len(_l_2425)):
+        dh[dh == i/valmax] = (_l_2425[i-1] + _l_2425[i]) / 2
+
+    valmax = len(_l_89)-1
+    for i in range(1,len(_l_89)):
+        dm[dm == i/valmax] = (_l_89[i-1] + _l_89[i]) / 2
+
+    valmax = len(_l_45)-1
+    for i in range(1,len(_l_45)):
+        dl[dl == i/valmax] = (_l_45[i-1] + _l_45[i]) / 2
 
     # print("Dequantification done")
 
 def quantify(data):
     # print("Quantification…")
-    valmax = len(_l_high)-1
     assert np.all(data < 0) # pour être sûr qu'on ne l'utilise pas deux fois de suite
     data[data >= 0] = -1 # qui devient ensuite 12
-    dl = data[:,0:2000]
+    dl = data[:,:1000]
+    dm = data[:,1000:2000]
     dh = data[:,2000:3000]
 
-    for i in range(len(_l_high)):
-        dh[dh < _l_high[i]] = i/valmax
+    valmax = len(_l_2425)-1
+    for i in range(len(_l_2425)):
+        dh[dh < _l_2425[i]] = i/valmax
 
-    valmax = len(_l_low)-1
-    for i in range(len(_l_low)):
-        dl[dl < _l_low[i]] = i/valmax
+    valmax = len(_l_89)-1
+    for i in range(len(_l_89)):
+        dm[dm < _l_89[i]] = i/valmax
+
+    valmax = len(_l_45)-1
+    for i in range(len(_l_45)):
+        dl[dl < _l_45[i]] = i/valmax
+
     # print("Quantification done")
 
 def subsample(data, prop=0.01):
