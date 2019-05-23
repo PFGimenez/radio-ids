@@ -345,7 +345,7 @@ class Evaluator:
             for row in ax:
                 for col in row:
                     if i in detected_positive_dico[(t1,t2)]:
-                        col.hlines(-0.001,
+                        col.hlines(-0.0001,
                         mdates.date2num(datetime.datetime.fromtimestamp(t1/1000)),
                         mdates.date2num(datetime.datetime.fromtimestamp(t2/1000)),
                         color='green')
@@ -475,11 +475,12 @@ def predict_extractors_cumul(models, scores, all_t):
 
     for (_,m) in models:
         state = DetectorState.NOT_DETECTING
-        cumulated_threshold = 0.1
+        cumulated_threshold = 0.7
         resting_duration = 0
         cumul = 0
         # consecutive = 0
         previous_timestamp = None
+        discontinuity_timestamp = None
         for timestamp in timestamps:
             found = False
             for p in all_t:
@@ -501,6 +502,8 @@ def predict_extractors_cumul(models, scores, all_t):
             elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
                 if state == DetectorState.TRIGGERED:
                     # End of the attack
+                    if timestamp - discontinuity_timestamp > 3600000: # discontinuité dans les données
+                        timestamp = discontinuity_timestamp
                     example_pos[(previous_timestamp, timestamp)] = [m._number]
                 previous_timestamp = timestamp
                 state = DetectorState.RESTING
@@ -523,6 +526,10 @@ def predict_extractors_cumul(models, scores, all_t):
 
             if state == DetectorState.DETECTING:
                 cumul += abs(score - threshold_autoencoder[m._number])
+                if timestamp - previous_timestamp > 3600000: # discontinuité dans les données
+                    state = DetectorState.NOT_DETECTING
+
+            discontinuity_timestamp = timestamp
 
     end = time.time()
     print("Detection time:",(end-start),"s")
@@ -543,6 +550,7 @@ def predict_extractors(models, scores, all_t):
         resting_duration = 0
         # consecutive = 0
         previous_timestamp = None
+        discontinuity_timestamp = None
         for timestamp in timestamps:
             found = False
             for p in all_t:
@@ -563,6 +571,8 @@ def predict_extractors(models, scores, all_t):
             elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
                 if state == DetectorState.TRIGGERED:
                     # End of the attack
+                    if timestamp - discontinuity_timestamp > 3600000: # discontinuité dans les données
+                        timestamp = discontinuity_timestamp
                     example_pos[(previous_timestamp, timestamp)] = [m._number]
                 previous_timestamp = timestamp
                 state = DetectorState.RESTING
@@ -570,7 +580,11 @@ def predict_extractors(models, scores, all_t):
             elif state == DetectorState.DETECTING:
                 # consecutive += 1
                 # if consecutive > detection_duration:
-                if timestamp - previous_timestamp > detection_duration:
+
+                if timestamp - previous_timestamp > 3600000: # discontinuité dans les données
+                    state = DetectorState.NOT_DETECTING
+
+                elif timestamp - previous_timestamp > detection_duration:
                     # attack detected !
                     # example_pos[timestamp] = extractors.get_predictor(score,optimistic=False,threshold=threshold_autoencoder)
                     # previous = example_pos.get(timestamp)
@@ -591,6 +605,7 @@ def predict_extractors(models, scores, all_t):
                 # if consecutive > resting_duration:
                     state = DetectorState.NOT_DETECTING
                     # consecutive = 0
+            discontinuity_timestamp = timestamp
 
     end = time.time()
     print("Detection time:",(end-start),"s")
@@ -625,6 +640,9 @@ name_attack = None
 train = False
 mini = False
 predict_freq = False
+use_cumul = False
+show_time = True # TODO
+show_hist = False
 
 i = 1
 while i < len(sys.argv):
@@ -635,8 +653,12 @@ while i < len(sys.argv):
         name_attack.append(sys.argv[i])
     elif sys.argv[i] == "-autoenc":
         use_autoenc = True
+    elif sys.argv[i] == "-no-time":
+        show_time = False
     elif sys.argv[i] == "-autoenc-macro":
         use_autoenc_macro = True
+    elif sys.argv[i] == "-cumul":
+        use_cumul = True
     # elif sys.argv[i] == "-micro":
         # use_micro = True
     # elif sys.argv[i] == "-macro":
@@ -674,7 +696,7 @@ with open(folder_file) as f:
 
 directories = [x.strip() for x in folders]
 
-attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
+attack = np.loadtxt("logattack", dtype='<U13')
 
 # TODO : pour ne garder que les attaques d'un certain jour
 attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[2])/1000).day != 4])
@@ -683,15 +705,15 @@ print(attack)
 identifiers = np.unique(attack[:,0])
 
 colors = {}
-all_colors = {'red', 'green', 'blue', 'cyan', 'magenta', 'yellow', 'black', 'purple', 'fuchsia', 'grey', 'chocolate', 'lawngreen', 'salmon'}
+all_colors = {'red', 'green', 'blue', 'cyan', 'magenta', 'yellow', 'black', 'purple', 'fuchsia', 'grey', 'chocolate', 'lawngreen', 'salmon', 'indianred', 'turquoise', 'royalblue', 'lime', 'teal', 'orange'}
 for i in identifiers:
     colors[i] = all_colors.pop()
     print(i,"is",colors[i])
 
 print("Attacks list:",identifiers)
 
-attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "strong868": 1}
-attack_freq_type = {"scan433": [432,434], "strong433": [432,434], "scan868":[867,869], "strong868":[867,869]}
+attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0}
+attack_freq_type = {"scan433": [432,434], "strong433": [432,434], "scan868":[867,869], "strong868":[867,869], "tvDOS":[485,499], "bruijnSequenc":[432,434]}
 
 # we add the plot number of the attack
 attack_tmp = []
@@ -730,8 +752,6 @@ threshold_autoencoder_number = config.get_config_eval("threshold_autoencoder")
 # threshold_micro = config.get_config_eval("threshold_micro")
 # chargement du jeu de données de test micro
 
-show_time = True # TODO
-show_hist = False
 # modèle micro
 
 # if use_micro:
@@ -771,9 +791,14 @@ for j in range(len(bands)):
         extractors.add_model(m) # dummy is enough for most cases
 
 # évaluation
-path_frequencies = os.path.join(prefix, prefix_result+"results-frequencies.joblib")
-# path_examples = os.path.join(prefix, prefix_result+"results-OCSVM-micro.joblib")
-# path_examples_macro = os.path.join(prefix, prefix_result+"results-HMM-macro.joblib")
+if use_cumul:
+    path_detection_intervals = os.path.join(prefix, prefix_result+"results-detection-intervals-cumul.joblib")
+    path_frequencies = os.path.join(prefix, prefix_result+"results-frequencies-cumul.joblib")
+else:
+    path_detection_intervals = os.path.join(prefix, prefix_result+"results-detection-intervals.joblib")
+    path_frequencies = os.path.join(prefix, prefix_result+"results-frequencies.joblib")
+
+# les scores
 path_examples_extractors = os.path.join(prefix, prefix_result+config.get_config("autoenc_filename")+"-results-autoenc.joblib")
 path_examples_train_extractors = os.path.join(prefix, prefix_result_train+config.get_config("autoenc_filename")+"-results-autoenc.joblib")
 
@@ -796,10 +821,10 @@ if use_autoenc:
         print("Scores not found:",e)
         print("Prediction for autoencoders…")
         extractors = MultiExtractors()
-        # for j in range(len(bands)):
-            # (i,s) = bands[j]
-            # m = CNN(j)
-            # extractors.load_model(m)
+        for j in range(len(bands)):
+            (i,s) = bands[j]
+            m = CNN(j)
+            extractors.load_model(m)
         scores_ex = score_extractors(extractors, path_examples_extractors, directories)
     threshold_autoencoder = {}
     periods = [multimodels.period_weekend_and_night, multimodels.period_day_not_weekend]
@@ -826,7 +851,16 @@ if use_autoenc:
     # scores_ex = get_derivative(scores_ex)
     # scores_ex = moyenne_glissante(scores_ex)
     # scores_ex = passe_haut(scores_ex)
-    example_pos_extractors = predict_extractors(extractors._models, scores_ex, threshold_autoencoder)
+
+    try :
+        example_pos_extractors = joblib.load(path_detection_intervals)
+    except:
+        if use_cumul:
+            example_pos_extractors = predict_extractors_cumul(extractors._models, scores_ex, threshold_autoencoder)
+        else:
+            example_pos_extractors = predict_extractors(extractors._models, scores_ex, threshold_autoencoder)
+        joblib.dump(example_pos_extractors, path_detection_intervals)
+
     if predict_freq:
         try:
             detected_freq = joblib.load(path_frequencies)
@@ -846,7 +880,7 @@ for e in evaluators:
 #    print("Results micro and macro")
 #    e.evaluate(list(set(example_pos+example_pos_macro)),
 #               list(set(example_neg+example_neg_macro)))
-    if use_autoenc:
+    if use_autoenc and not train:
         # print("Results autoencoders: ",end='')
         e.evaluate(example_pos_extractors)
         if predict_freq:

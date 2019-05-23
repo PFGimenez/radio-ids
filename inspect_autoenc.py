@@ -22,10 +22,20 @@ while i < len(sys.argv):
         i += 1
         date_min = int(time.mktime(datetime.datetime.strptime(sys.argv[i],
             "%d/%m/%Y %H:%M:%S").timetuple()))*1000
+        print(date_min)
     elif sys.argv[i] == "-f":
         i += 1
         date_max = int(time.mktime(datetime.datetime.strptime(sys.argv[i],
             "%d/%m/%Y %H:%M:%S").timetuple()))*1000
+        print(date_max)
+    elif sys.argv[i] == "-D":
+        i += 1
+        date_min = int(sys.argv[i])
+        print(datetime.datetime.fromtimestamp(date_min/1000))
+    elif sys.argv[i] == "-F":
+        i += 1
+        date_max = int(sys.argv[i])
+        print(datetime.datetime.fromtimestamp(date_max/1000))
     elif sys.argv[i] == "-a":
         i += 1
         name_attack = sys.argv[i]
@@ -150,6 +160,9 @@ if mode == "quant":
 
 # juste data
 elif mode == "data":
+    # print(np.median(data[:1000,:]))
+    # print(np.median(data[1000:2000,:]))
+    # print(np.median(data[2000:,:]))
     plt.imshow(data, cmap='hot', interpolation='nearest', aspect='auto')
     plt.title("Original data")
 
