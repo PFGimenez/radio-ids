@@ -27,7 +27,7 @@ def show_histo(data, log=False, flatten=False):
     plt.title("Histogram")
     plt.show()
 
-def dequantify(data):
+def dequantify_old(data):
     # print("Dequantification…")
     data[data == 0] = -80
     dl = data[:,:1000]
@@ -48,7 +48,18 @@ def dequantify(data):
 
     # print("Dequantification done")
 
+def dequantify(data):
+    np.multiply(data, 50, data)
+    np.add(data, -50, data)
+
 def quantify(data):
+    np.add(data, 50, data)
+    np.multiply(data, 1/50, data)
+    np.clip(data,0,1,data)
+    # data[data <= 0] = 0
+    # data[data >= 1] = 1
+
+def quantify_old(data):
     # print("Quantification…")
     assert np.all(data < 0) # pour être sûr qu'on ne l'utilise pas deux fois de suite
     data[data >= 0] = -1 # qui devient ensuite 12
