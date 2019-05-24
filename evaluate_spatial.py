@@ -23,15 +23,18 @@ while i < len(sys.argv):
 
 path = "merged-intervals.joblib"
 intervals = joblib.load(path)
-print(intervals)
+
 median = {probes45: [-68,-68,-68], probes2425: [-64,-64,-64], probes89: [-65,-65,-64]}
 
 with open("test_folders_rp1") as f:
     f1 = f.readlines()
+    f1 = [x.strip() for x in f1]
 with open("test_folders_rp2") as f:
     f2 = f.readlines()
+    f2 = [x.strip() for x in f2]
 with open("test_folders_rp3") as f:
     f3 = f.readlines()
+    f3 = [x.strip() for x in f3]
 
 folders = {probes45: f1, probes89: f3, probes2425: f2}
 

@@ -32,8 +32,8 @@ intervals89 = {}
 intervals2425 = {}
 if probes45:
     intervals45 = joblib.load(os.path.join(probes45, path))
-    print(intervals45)
-    exit()
+    # print(intervals45)
+    # exit()
 if probes89:
     intervals89 = joblib.load(os.path.join(probes89, path))
 if probes2425:
@@ -51,7 +51,9 @@ merged = evaluate.merge({**merged1, **merged2, **merged3})
 path_output = "merged-intervals.joblib"
 joblib.dump(merged, path_output)
 
+    # out = {k:v for (k,v) in bestProbe.items() if v[1] == number}
+merged_without_frequencies = {t:[v] for (t,(_,v)) in merged.items()}
 _,attack,attack_freq = evaluate.load_attacks()
 e = evaluate.Evaluator(attack, attack_freq)
-e.evaluate(merged)
+e.evaluate(merged_without_frequencies)
 

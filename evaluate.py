@@ -23,7 +23,7 @@ class DetectorState(Enum):
     RESTING = 3
 
 def load_attacks():
-    attack = np.loadtxt("logattack", dtype='<U13')
+    attack = np.loadtxt("logattack", dtype='<U13', usecols=(0,1,2))
 
 # TODO : pour ne garder que les attaques d'un certain jour
     attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[2])/1000).day != 4])
@@ -108,8 +108,6 @@ def merge_all(number, bestProbe, probe1, probe2):
     # out = merge(out)
     # print(len(out))
     return out
-
-
 
 def get_derivative(scores):
     out = {}
@@ -261,7 +259,7 @@ class Evaluator:
             print("    Results for",ident)
             if nb > 0:
                 # print(ok, nb)
-                print("Proportion within 1MHz:",ok/nb)
+                print("Proportion in the right band:",ok/nb)
                 print("Mean error:",np.mean(errors))
                 # print(errors)
                 # print(np.percentile(errors, 50))
@@ -634,11 +632,14 @@ def get_snr(example_pos, folders_list, median):
         freq = frequency_to_index(example_pos[(t1,t2)][0])
         nb = example_pos[(t1,t2)][1]
         for folders in folders_list:
+            print(folders)
             m = median[folders][nb]
-            w = read_files_from_timestamp(t1, t2, folders_list[folders])[:,freq-2,freq+2]
-            l.append((np.mean(w)-m, np.max(w)-m, np.std(w)))
+            # print(t1,t2,folders_list[folders],freq)
+            w = read_files_from_timestamp(t1, t2, folders_list[folders],quant=False)[:,freq-2:freq+2]
+            l.append((np.mean(w)-m, np.median(w)-m, np.std(w)))
         l.append(nb)
         snr[(t1,t2)]=l
+        print(l)
     return snr
 
 def predict_frequencies(example_pos, folders, extractors):
