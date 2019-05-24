@@ -22,12 +22,18 @@ while i < len(sys.argv):
         probes2425 = sys.argv[i]
     i += 1
 
-path = "results-detection-intervals-cumul.joblib"
+print("Merge intervals…")
+
+path = "results-frequencies-cumul.joblib"
+# path = "results-detection-intervals-cumul.joblib"
+
 intervals45 = {}
 intervals89 = {}
 intervals2425 = {}
 if probes45:
     intervals45 = joblib.load(os.path.join(probes45, path))
+    print(intervals45)
+    exit()
 if probes89:
     intervals89 = joblib.load(os.path.join(probes89, path))
 if probes2425:
@@ -42,6 +48,10 @@ merged2 = evaluate.merge_all(1,intervals89,intervals45,intervals2425)
 merged3 = evaluate.merge_all(2,intervals2425,intervals89,intervals45)
 merged = evaluate.merge({**merged1, **merged2, **merged3})
 
+path_output = "merged-intervals.joblib"
+joblib.dump(merged, path_output)
+
 _,attack,attack_freq = evaluate.load_attacks()
 e = evaluate.Evaluator(attack, attack_freq)
 e.evaluate(merged)
+

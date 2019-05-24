@@ -377,3 +377,10 @@ def index_to_frequency(index):
         return 800 + (index - 1000) / 10
     return 2400 + (index - 2000) / 10
 
+def frequency_to_index(freq):
+    if freq >= 2400:
+        return int((freq - 2400) * 10 + 2000 + 0.5)
+    if freq >= 800:
+        return int((freq - 800) * 10 + 1000 + 0.5)
+    else:
+        return int((freq - 400) * 10 + 0.5)

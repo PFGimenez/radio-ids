@@ -202,11 +202,12 @@ if use_autoenc:
         joblib.dump(example_pos_extractors, path_detection_intervals)
 
     if predict_freq:
+        print("Frequency localization")
         try:
             detected_freq = joblib.load(path_frequencies)
             # print(detected_freq)
         except:
-            detected_freq = evaluate.predict_frequencies(example_pos_extractors, directories)
+            detected_freq = evaluate.predict_frequencies(example_pos_extractors, directories, extractors)
             joblib.dump(detected_freq, path_frequencies)
 
 for e in evaluators:

@@ -74,12 +74,17 @@ def merge(dico):
     for i in range(len(l)):
         if i not in merged:
             current = l[i]
-            current_val = dico[current]
+            merged_number = 1
+            cumulated_freq = dico[current][0]
+            number = dico[current][1]
             for j in range(i+1,len(l)):
-                if current_val == dico[l[j]] and intersect(current,l[j]):
+                # on vérifie qu'il s'agit bien de la même band
+                if number == dico[l[j]][1] and intersect(current,l[j]):
+                    merged_number += 1
+                    cumulated_freq += dico[l[j]][0]
                     merged.append(j)
                     current = (min(current[0], l[j][0]), max(current[1], l[j][1]))
-            out[current] = current_val
+            out[current] = [cumulated_freq / merged_number, number]
     return out
 
 def merge_all(number, bestProbe, probe1, probe2):
@@ -89,16 +94,16 @@ def merge_all(number, bestProbe, probe1, probe2):
     sinon, il faut au moins deux sondes pour valider l'attaque
     équation: attaques = bestProbe union (probe1 inter probe2)
     """
-    out = {k:v for (k,v) in bestProbe.items() if v == [number]}
+    out = {k:v for (k,v) in bestProbe.items() if v[1] == number}
     # print(len(out))
     for i in probe1:
-        if probe1[i] == [number]:
+        if probe1[i][1] == number:
             for j in probe2:
-                if probe2[j] == [number]:
+                if probe2[j][1] == number:
                     interval = intersect(i,j)
                     if interval:
                         # print("Add:",interval)
-                        out[interval] = [number]
+                        out[interval] = [(probe1[i][0] + probe2[j][0]) / 2, number]
     # print(len(out))
     # out = merge(out)
     # print(len(out))
@@ -622,23 +627,46 @@ def predict_extractors(models, scores, all_t):
     print("Positive:",len(example_pos))
     return example_pos
 
-def predict_frequencies(example_pos, folders):
+def get_snr(example_pos, folders_list, median):
+    snr = {}
+    for (t1, t2) in example_pos:
+        l = []
+        freq = frequency_to_index(example_pos[(t1,t2)][0])
+        nb = example_pos[(t1,t2)][1]
+        for folders in folders_list:
+            m = median[folders][nb]
+            w = read_files_from_timestamp(t1, t2, folders_list[folders])[:,freq-2,freq+2]
+            l.append((np.mean(w)-m, np.max(w)-m, np.std(w)))
+        l.append(nb)
+        snr[(t1,t2)]=l
+    return snr
+
+def predict_frequencies(example_pos, folders, extractors):
     frequencies = {}
     for (t1, t2) in example_pos:
         nb = example_pos[(t1,t2)][0]
         # print(nb)
         waterfalls = read_files_from_timestamp(t1, t2, folders)
+        # print(waterfalls.shape)
+        # print(nb)
         # print("S",waterfalls.shape)
         waterfalls[:,0:nb*1000] = 0
         waterfalls[:,(nb+1)*1000:3000] = 0
         # print("S après",waterfalls.shape)
         (weights, data) = extractors.get_frequencies(waterfalls, number=nb)
-        median = weighted_median(data, weights)
-        # print("Median:",median)
-        median += nb*1000
+        # print(data, weights)
+        if len(data) >= 2:
+            median = weighted_median(data, weights)
+            # print("Median:",median)
+            median += nb*1000
+        elif len(data) == 1:
+            median = data[0] + nb*1000
+        else:
+            median = nb*1000+500 # absence of signal
+            # print(f)
         f = index_to_frequency(median)
-        # print(f)
         frequencies[(t1, t2)] = (f,nb)
+
     return frequencies
 
 def load_scores(path_examples_extractors, extractors, bands):
