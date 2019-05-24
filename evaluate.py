@@ -22,6 +22,90 @@ class DetectorState(Enum):
     TRIGGERED = 2
     RESTING = 3
 
+def load_attacks():
+    attack = np.loadtxt("logattack", dtype='<U13')
+
+# TODO : pour ne garder que les attaques d'un certain jour
+    attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[2])/1000).day != 4])
+# il y a des attaques en trop le 4 avril
+    print(attack)
+    identifiers = np.unique(attack[:,0])
+
+    colors = {}
+    all_colors = {'red', 'green', 'blue', 'cyan', 'magenta', 'yellow', 'black', 'purple', 'fuchsia', 'grey', 'chocolate', 'lawngreen', 'salmon', 'indianred', 'turquoise', 'royalblue', 'lime', 'teal', 'orange'}
+    for i in identifiers:
+        colors[i] = all_colors.pop()
+        print(i,"is",colors[i])
+
+    print("Attacks list:",identifiers)
+
+    attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0}
+    attack_freq_type = {"scan433": [432,434], "strong433": [432,434], "scan868":[867,869], "strong868":[867,869], "tvDOS":[485,499], "bruijnSequenc":[432,434]}
+
+# we add the plot number of the attack
+    attack_tmp = []
+    attack_freq = {}
+    for a in attack:
+        plot_nb = attack_plot.get(a[0])
+        if plot_nb == None: # par défaut: 2400-2500
+            plot_nb = 2
+        attack_tmp.append([a[0], a[1], a[2], plot_nb])
+        f = attack_freq_type.get(a[0])
+        if f == None:
+            f = [2540,2560] # TODO
+        attack_freq[(int(a[1]),int(a[2]))] = f
+    attack = np.array(attack_tmp)
+
+    # if name_attack:
+    #     a = []
+    #     for n in name_attack:
+    #         a.append(attack[attack[:,0] == n])
+    #     attack = np.concatenate((a))
+
+    return colors, attack, attack_freq
+
+def merge(dico):
+    """
+    merge simplement les intersections
+    """
+    l = list(dico.keys())
+    out = {}
+    merged = []
+    for i in range(len(l)):
+        if i not in merged:
+            current = l[i]
+            current_val = dico[current]
+            for j in range(i+1,len(l)):
+                if current_val == dico[l[j]] and intersect(current,l[j]):
+                    merged.append(j)
+                    current = (min(current[0], l[j][0]), max(current[1], l[j][1]))
+            out[current] = current_val
+    return out
+
+def merge_all(number, bestProbe, probe1, probe2):
+    """
+    merge les attaques des 3 sondes pour la bande "number"
+    si 1 sonde voit une attaque sur la bande sur laquelle elle est sensible on la valide
+    sinon, il faut au moins deux sondes pour valider l'attaque
+    équation: attaques = bestProbe union (probe1 inter probe2)
+    """
+    out = {k:v for (k,v) in bestProbe.items() if v == [number]}
+    # print(len(out))
+    for i in probe1:
+        if probe1[i] == [number]:
+            for j in probe2:
+                if probe2[j] == [number]:
+                    interval = intersect(i,j)
+                    if interval:
+                        # print("Add:",interval)
+                        out[interval] = [number]
+    # print(len(out))
+    # out = merge(out)
+    # print(len(out))
+    return out
+
+
+
 def get_derivative(scores):
     out = {}
     keys = sorted(list(scores.keys()))
@@ -37,7 +121,6 @@ def get_derivative(scores):
             assert False
             out[keys[i+1]] = score_new - score_old
     return out
-
 
 def passe_haut(scores):
     alpha = 0.999
@@ -380,76 +463,6 @@ class Evaluator:
             plt.plot(x, val)
         plt.show()
 
-        # print("Cumulative detected : ",len(self._cumulative_seen_attack),"/",len(self._attack))
-        # return (true_positive, false_positive)
-
-# def predict(models, scores, threshold):
-#     start = time.time()
-#     memory_size = models.get_memory_size()
-#     example_pos = {}
-#     example_neg = {}
-# #        memory = []
-
-# #        data = data[20000:30000]
-# #        for i in range(memory_size+1,1000):
-#     for i in range(memory_size+1,len(data)): # TODO
-#         # if i % 100 == 0:
-#             # print(i,"/",len(data))
-
-# #            if len(memory) == memory_size:
-# #                memory.pop(0)
-# #            memory.append(f[1:]) # hors timestamp
-#         d = data[i-1-memory_size:i]
-# #            print(data.shape, d.shape, d[0,0],d[0,1:])
-# #            print(d[0,0].shape, d[:,1:].shape)
-#         score = scores[d[0,0]]
-#         if models.predict_thr(score, optimistic=False, threshold=threshold):
-# #                print("Attack detected at",d[0,0])
-#             if isinstance(score, dict):
-#                 example_pos[d[0,0]] = score[max(score,key=score.get)]
-#             else:
-#                 example_pos[d[0,0]] = score
-#         else:
-#             if isinstance(score, dict):
-#                 # on enregistre le plus haut score (ne sert qu'à l'affichage)
-#                 example_neg[d[0,0]] = score[max(score,key=score.get)]
-#             else:
-#                 example_neg[d[0,0]] = score
-
-#     end = time.time()
-#     print("Detection time:",(end-start),"s")
-#     return (example_pos, example_neg)
-
-# def scores_micro_macro(models, path_examples, data):
-#     try:
-#         # chargement des prédictions si possible
-#         scores = joblib.load(path_examples)
-#         print("Scores loaded")
-#     except:
-#         start = time.time()
-#         memory_size = models.get_memory_size()
-#         scores = {}
-# #        memory = []
-
-# #        data = data[20000:30000]
-# #        for i in range(memory_size+1,1000):
-#         for i in range(memory_size+1,len(data)): # TODO
-#             if i % 100 == 0:
-#                 print(i,"/",len(data))
-
-# #            if len(memory) == memory_size:
-# #                memory.pop(0)
-# #            memory.append(f[1:]) # hors timestamp
-#             d = data[i-1-memory_size:i]
-# #            print(data.shape, d.shape, d[0,0],d[0,1:])
-# #            print(d[0,0].shape, d[:,1:].shape)
-#             scores[d[0,0]] = models.get_score(d[:,1:], d[0,0])
-
-#         end = time.time()
-#         print("Scoring time:",(end-start),"s")
-#         joblib.dump(scores, path_examples)
-#     return scores
-
 def score_extractors(extractors, path_examples, folders_test):
     scores = {}
     start = time.time()
@@ -536,9 +549,6 @@ def predict_extractors_cumul(models, scores, all_t):
     print("Positive:",len(example_pos))
     return example_pos
 
-
-
-
 def predict_extractors(models, scores, all_t):
     start = time.time()
     example_pos = {}
@@ -612,7 +622,6 @@ def predict_extractors(models, scores, all_t):
     print("Positive:",len(example_pos))
     return example_pos
 
-
 def predict_frequencies(example_pos, folders):
     frequencies = {}
     for (t1, t2) in example_pos:
@@ -632,258 +641,21 @@ def predict_frequencies(example_pos, folders):
         frequencies[(t1, t2)] = (f,nb)
     return frequencies
 
-# use_micro = False
-# use_macro = False
-use_autoenc = False
-use_autoenc_macro = False
-name_attack = None
-train = False
-mini = False
-predict_freq = False
-use_cumul = False
-show_time = True # TODO
-show_hist = False
-
-i = 1
-while i < len(sys.argv):
-    if sys.argv[i] == "-a":
-        i += 1
-        if not name_attack:
-            name_attack = []
-        name_attack.append(sys.argv[i])
-    elif sys.argv[i] == "-autoenc":
-        use_autoenc = True
-    elif sys.argv[i] == "-no-time":
-        show_time = False
-    elif sys.argv[i] == "-autoenc-macro":
-        use_autoenc_macro = True
-    elif sys.argv[i] == "-cumul":
-        use_cumul = True
-    # elif sys.argv[i] == "-micro":
-        # use_micro = True
-    # elif sys.argv[i] == "-macro":
-        # use_macro = True
-    elif sys.argv[i] == "-train":
-        train = True
-    elif sys.argv[i] == "-mini":
-        mini = True
-    elif sys.argv[i] == "-freq":
-        predict_freq = True
-    else:
-        print("Erreur:",sys.argv[i])
-        exit()
-    i += 1
-
-if not use_autoenc and not use_autoenc_macro:
-    print("Aucun détecteur ! Utilisez -autoenc ou -autoenc-macro")
-    exit()
-
-# lecture config
-
-config = Config()
-prefix_result_train = "train-"
-if train:
-    prefix_result = "train-"
-    folder_file = config.get_config("train_folders")
-elif mini:
-    prefix_result = "mini-"
-    folder_file = "mini_folders"
-else:
-    prefix_result = ""
-    folder_file = config.get_config("test_folders")
-with open(folder_file) as f:
-    folders = f.readlines()
-
-directories = [x.strip() for x in folders]
-
-attack = np.loadtxt("logattack", dtype='<U13')
-
-# TODO : pour ne garder que les attaques d'un certain jour
-attack = np.array([a for a in attack if datetime.datetime.fromtimestamp(int(a[2])/1000).day != 4])
-# il y a des attaques en trop le 4 avril
-print(attack)
-identifiers = np.unique(attack[:,0])
-
-colors = {}
-all_colors = {'red', 'green', 'blue', 'cyan', 'magenta', 'yellow', 'black', 'purple', 'fuchsia', 'grey', 'chocolate', 'lawngreen', 'salmon', 'indianred', 'turquoise', 'royalblue', 'lime', 'teal', 'orange'}
-for i in identifiers:
-    colors[i] = all_colors.pop()
-    print(i,"is",colors[i])
-
-print("Attacks list:",identifiers)
-
-attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0}
-attack_freq_type = {"scan433": [432,434], "strong433": [432,434], "scan868":[867,869], "strong868":[867,869], "tvDOS":[485,499], "bruijnSequenc":[432,434]}
-
-# we add the plot number of the attack
-attack_tmp = []
-attack_freq = {}
-for a in attack:
-    plot_nb = attack_plot.get(a[0])
-    if plot_nb == None: # par défaut: 2400-2500
-        plot_nb = 2
-    attack_tmp.append([a[0], a[1], a[2], plot_nb])
-    f = attack_freq_type.get(a[0])
-    if f == None:
-        f = [2540,2560] # TODO
-    attack_freq[(int(a[1]),int(a[2]))] = f
-attack = np.array(attack_tmp)
-
-if name_attack:
-    a = []
-    for n in name_attack:
-        a.append(attack[attack[:,0] == n])
-    attack = np.concatenate((a))
-
-print(attack)
-# evaluators = [Evaluator(attack, i) for i in identifiers]
-evaluators = []
-# if not name_attack:
-# evaluators = [Evaluator(attack, i) for i in identifiers]
-evaluators.append(Evaluator(attack, attack_freq))
-# else:
-    # for n in name_attack:
-        # evaluators.append(Evaluator(attack, n))
-# nb_features = sum(config.get_config_eval("features_number"))
-# nb_features_macro = config.get_config_eval("nb_features_macro")
-prefix = config.get_config("section")
-threshold_autoencoder_number = config.get_config_eval("threshold_autoencoder")
-# threshold_macro = config.get_config_eval("threshold_macro")
-# threshold_micro = config.get_config_eval("threshold_micro")
-# chargement du jeu de données de test micro
-
-# modèle micro
-
-# if use_micro:
-#     models = MultiModels()
-#     try:
-#         models.load(os.path.join(prefix, "micro-OCSVM.joblib"))
-#         files = [os.path.join(prefix, "features-"+d.split("/")[-1]) for d in directories]
-#         print(files)
-#         data = np.concatenate([np.fromfile(f).reshape(-1, nb_features + 1) for f in files])
-#         print("data micro:",data.shape)
-#     except Exception as e:
-#         print("Loading failed:",e)
-#         use_micro = False
-
-# # modèle macro
-# if use_macro:
-#     models_macro = MultiModels()
-#     try:
-#         models_macro.load(os.path.join(prefix, "macro-HMM.joblib"))
-#         test_macro_filename = os.path.join(config.get_config("section"), "test_"+config.get_config("macro_features_stage_2"))
-#         data_macro = np.fromfile(test_macro_filename).reshape(-1, nb_features_macro + 1)
-#         print("data macro:",data_macro.shape)
-#     except Exception as e:
-#         print("Loading failed:",e)
-#         use_macro = False
-
-# autoencoders
-bands = config.get_config_eval('waterfall_frequency_bands')
-dims = config.get_config_eval('autoenc_dimensions')
-extractors = MultiExtractors()
-for j in range(len(bands)):
-    (i,s) = bands[j]
-    m = CNN(j)
-    if predict_freq:
-        extractors.load_model(m)
-    else:
-        extractors.add_model(m) # dummy is enough for most cases
-
-# évaluation
-if use_cumul:
-    path_detection_intervals = os.path.join(prefix, prefix_result+"results-detection-intervals-cumul.joblib")
-    path_frequencies = os.path.join(prefix, prefix_result+"results-frequencies-cumul.joblib")
-else:
-    path_detection_intervals = os.path.join(prefix, prefix_result+"results-detection-intervals.joblib")
-    path_frequencies = os.path.join(prefix, prefix_result+"results-frequencies.joblib")
-
-# les scores
-path_examples_extractors = os.path.join(prefix, prefix_result+config.get_config("autoenc_filename")+"-results-autoenc.joblib")
-path_examples_train_extractors = os.path.join(prefix, prefix_result_train+config.get_config("autoenc_filename")+"-results-autoenc.joblib")
-
-# if use_micro:
-#     print("Prediction for micro…")
-#     scores_micro = scores_micro_macro(models, path_examples, data)
-#     (example_pos, example_neg) = predict(models, scores_micro, threshold_micro)
-# if use_macro:
-#     print("Prediction for macro…")
-#     scores_macro = scores_micro_macro(models_macro, path_examples_macro, data_macro)
-#     (example_pos_macro, example_neg_macro) = predict(models_macro, scores_macro, threshold_macro)
-if use_autoenc:
+def load_scores(path_examples_extractors, extractors, bands):
     try:
         print("Loading scores…")
         # chargement des prédictions si possible
 #        (example_pos, example_neg) = joblib.load(path_examples)
-        scores_ex = joblib.load(path_examples_extractors)
+        s = joblib.load(path_examples_extractors)
         print("Scores loaded")
+        return s
     except Exception as e:
         print("Scores not found:",e)
         print("Prediction for autoencoders…")
-        extractors = MultiExtractors()
+        # extractors = MultiExtractors()
         for j in range(len(bands)):
             (i,s) = bands[j]
             m = CNN(j)
             extractors.load_model(m)
-        scores_ex = score_extractors(extractors, path_examples_extractors, directories)
-    threshold_autoencoder = {}
-    periods = [multimodels.period_weekend_and_night, multimodels.period_day_not_weekend]
-    if not train:
-        try:
-            scores_train = joblib.load(path_examples_train_extractors)
-            for p in periods:
-                print("Period",p.__name__)
-                thr = extractors.learn_threshold_from_scores(scores_train, period=p)
-                t = []
-                for l in thr:
-                    # check the order of the keys
-                    assert l == len(t)
-                    t.append(thr.get(l)[threshold_autoencoder_number]+0.0001) # TODO
-                threshold_autoencoder[p] = t
-        except:
-            print("No train score loaded")
+        return score_extractors(extractors, path_examples_extractors, directories)
 
-            # threshold_autoencoder = {multimodels.period_always: [0.010, 0.008, 0.03]}
-    if threshold_autoencoder == {}:
-        threshold_autoencoder = {multimodels.period_always: [0.010, 0.008, 0.03]}
-        print("Autoencoder thresholds:", threshold_autoencoder)
-    # threshold_autoencoder = [0.010, 0.008, 0.03]
-    # scores_ex = get_derivative(scores_ex)
-    # scores_ex = moyenne_glissante(scores_ex)
-    # scores_ex = passe_haut(scores_ex)
-
-    try :
-        example_pos_extractors = joblib.load(path_detection_intervals)
-    except:
-        if use_cumul:
-            example_pos_extractors = predict_extractors_cumul(extractors._models, scores_ex, threshold_autoencoder)
-        else:
-            example_pos_extractors = predict_extractors(extractors._models, scores_ex, threshold_autoencoder)
-        joblib.dump(example_pos_extractors, path_detection_intervals)
-
-    if predict_freq:
-        try:
-            detected_freq = joblib.load(path_frequencies)
-            # print(detected_freq)
-        except:
-            detected_freq = predict_frequencies(example_pos_extractors, directories)
-            joblib.dump(detected_freq, path_frequencies)
-
-for e in evaluators:
-    # print("***",e._id)
-    # if use_micro:
-    #     print("Results micro: ",end='')
-    #     e.evaluate(example_pos, scores_micro, models,"micro", colors)
-    # if use_macro:
-    #     print("Results macro: ",end='')
-    #     e.evaluate(example_pos_macro, scores_macro, models_macro,"macro", colors)
-#    print("Results micro and macro")
-#    e.evaluate(list(set(example_pos+example_pos_macro)),
-#               list(set(example_neg+example_neg_macro)))
-    if use_autoenc and not train:
-        # print("Results autoencoders: ",end='')
-        e.evaluate(example_pos_extractors)
-        if predict_freq:
-            e.evaluate_freq(detected_freq)
-        if show_time:
-            e.print_score(example_pos_extractors, scores_ex, extractors,"autoenc", threshold_autoencoder, colors)
