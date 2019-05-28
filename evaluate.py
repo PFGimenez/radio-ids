@@ -492,7 +492,7 @@ def predict_extractors_cumul(models, scores, all_t):
     for (_,m) in models:
         state = DetectorState.NOT_DETECTING
         cumulated_threshold = 0.7
-        resting_duration = 0
+        # resting_duration = 0
         cumul = 0
         # consecutive = 0
         previous_timestamp = None
@@ -522,23 +522,17 @@ def predict_extractors_cumul(models, scores, all_t):
                         timestamp = discontinuity_timestamp
                     example_pos[(previous_timestamp, timestamp)] = [m._number]
                 previous_timestamp = timestamp
-                state = DetectorState.RESTING
+                state = DetectorState.NOT_DETECTING
 
             elif state == DetectorState.DETECTING:
                 if cumul > cumulated_threshold:
                     state = DetectorState.TRIGGERED
 
-            elif state == DetectorState.RESTING:
-                # if extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
-                if m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
-                    # consecutive = 0
-                    previous_timestamp = timestamp
-                # else:
-                    # consecutive += 1
-                if timestamp - previous_timestamp > resting_duration:
-                # if consecutive > resting_duration:
-                    state = DetectorState.NOT_DETECTING
-                    # consecutive = 0
+            # elif state == DetectorState.RESTING:
+            #     if m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
+            #         previous_timestamp = timestamp
+            #     if timestamp - previous_timestamp > resting_duration:
+            #         state = DetectorState.NOT_DETECTING
 
             if state == DetectorState.DETECTING:
                 cumul += abs(score - threshold_autoencoder[m._number])
