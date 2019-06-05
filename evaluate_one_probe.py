@@ -137,10 +137,10 @@ extractors = MultiExtractors()
 for j in range(len(bands)):
     (i,s) = bands[j]
     m = CNN(j)
-    if predict_freq:
-        extractors.load_model(m)
-    else:
-        extractors.add_model(m) # dummy is enough for most cases
+    # if predict_freq:
+    extractors.load_model(m)
+    # else:
+        # extractors.add_model(m) # dummy is enough for most cases
 
 # évaluation
 if use_cumul:
@@ -194,7 +194,7 @@ if use_autoenc:
         example_pos_extractors = joblib.load(path_detection_intervals)
     except:
         if scores_ex == None:
-            scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands)
+            scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands, directories)
         if use_cumul:
             example_pos_extractors = evaluate.predict_extractors_cumul(extractors._models, scores_ex, threshold_autoencoder)
         else:
@@ -228,5 +228,5 @@ for e in evaluators:
             e.evaluate_freq(detected_freq)
         if show_time:
             if scores_ex == None:
-                scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands)
+                scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands, directories)
             e.print_score(example_pos_extractors, scores_ex, extractors,"autoenc", threshold_autoencoder, colors)

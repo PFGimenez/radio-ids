@@ -625,11 +625,9 @@ def get_snr(example_pos, folders_list, median):
         l = []
         freq = frequency_to_index(example_pos[(t1,t2)][0])
         nb = example_pos[(t1,t2)][1]
-        for folders in folders_list:
-            print(folders)
-            m = median[folders][nb]
-            # print(t1,t2,folders_list[folders],freq)
-            w = read_files_from_timestamp(t1, t2, folders_list[folders],quant=False)[:,freq-2:freq+2]
+        for i in range(3):
+            m = median[i][nb]
+            w = read_files_from_timestamp(t1, t2, folders_list[i],quant=False)[:,freq-2:freq+2]
             l.append((np.mean(w)-m, np.median(w)-m, np.std(w)))
         l.append(nb)
         snr[(t1,t2)]=l
@@ -664,7 +662,7 @@ def predict_frequencies(example_pos, folders, extractors):
 
     return frequencies
 
-def load_scores(path_examples_extractors, extractors, bands):
+def load_scores(path_examples_extractors, extractors, bands, directories):
     try:
         print("Loading scores…")
         # chargement des prédictions si possible
