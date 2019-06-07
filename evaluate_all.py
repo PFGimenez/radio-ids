@@ -24,7 +24,9 @@ while i < len(sys.argv):
 
 print("Merge intervals…")
 
-path = "results-frequencies-cumul.joblib"
+config = Config()
+cumulated_threshold = config.get_config_eval('cumul_threshold')
+path = "results-frequencies-cumul"+str(cumulated_threshold)+".joblib"
 # path = "results-detection-intervals-cumul.joblib"
 
 intervals45 = {}

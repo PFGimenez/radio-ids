@@ -295,7 +295,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # TODO: 6 filtres (~ autant que de cases 3*5)
         # TODO: taux d'apprentissage
         m = Reshape((self._input_shape[0],self._input_shape[1]))(self._input_tensor)
-        m = Conv1D(500, 5, activation='relu', padding='valid')(m)
+        m = Conv1D(500, 5, activation='relu', padding='valid')(m) # TODO: sigmoid a l'air d'être un peu mieux
         # m = Conv1D(500, 5, activation='relu', padding='valid')(m)
         # m = Conv1D(500, 5, activation='sigmoid', padding='valid')(m)
         # m = Conv2D(500, (3, 1000), strides=(1,1000), activation='sigmoid', padding='valid')(m)

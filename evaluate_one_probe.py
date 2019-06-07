@@ -133,6 +133,7 @@ threshold_autoencoder_number = config.get_config_eval("threshold_autoencoder")
 # autoencoders
 bands = config.get_config_eval('waterfall_frequency_bands')
 dims = config.get_config_eval('autoenc_dimensions')
+cumulated_threshold = config.get_config_eval('cumul_threshold')
 extractors = MultiExtractors()
 for j in range(len(bands)):
     (i,s) = bands[j]
@@ -144,8 +145,8 @@ for j in range(len(bands)):
 
 # évaluation
 if use_cumul:
-    path_detection_intervals = os.path.join(prefix, prefix_result+"results-detection-intervals-cumul.joblib")
-    path_frequencies = os.path.join(prefix, prefix_result+"results-frequencies-cumul.joblib")
+    path_detection_intervals = os.path.join(prefix, prefix_result+"results-detection-intervals-cumul"+str(cumulated_threshold)+".joblib")
+    path_frequencies = os.path.join(prefix, prefix_result+"results-frequencies-cumul"+str(cumulated_threshold)+".joblib")
 else:
     path_detection_intervals = os.path.join(prefix, prefix_result+"results-detection-intervals.joblib")
     path_frequencies = os.path.join(prefix, prefix_result+"results-frequencies.joblib")
@@ -196,7 +197,7 @@ if use_autoenc:
         if scores_ex == None:
             scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands, directories)
         if use_cumul:
-            example_pos_extractors = evaluate.predict_extractors_cumul(extractors._models, scores_ex, threshold_autoencoder)
+            example_pos_extractors = evaluate.predict_extractors_cumul(extractors._models, scores_ex, threshold_autoencoder, cumulated_threshold)
         else:
             example_pos_extractors = evaluate.predict_extractors(extractors._models, scores_ex, threshold_autoencoder)
         joblib.dump(example_pos_extractors, path_detection_intervals)

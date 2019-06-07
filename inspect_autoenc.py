@@ -140,11 +140,11 @@ if load_autoenc:
     print(data_reconstructed.shape)
     if save:
         data_reconstructed.tofile("reconstructed_data")
-    diff = np.abs(data_reconstructed - data_q[:data_reconstructed.shape[0],:])
+    diff = np.subtract(data_reconstructed, data_q[:data_reconstructed.shape[0],:])**2
     # diff = np.abs(data_reconstructed[:,:900] - data_q[:data_reconstructed.shape[0],:900])
     # diff2 = np.abs(data_reconstructed[:,900:] - data_q[:data_reconstructed.shape[0],1000:])
     # diff = np.concatenate((diff, diff2), axis=1)
-    diff[diff < 0.32] = 0
+    diff[diff < 0.1] = 0
     (weights, data) = extractors.get_frequencies(data_q)
     median = weighted_median(data, weights)
     f = index_to_frequency(median)

@@ -289,8 +289,8 @@ class Evaluator:
 
         new_method = True
         if new_method:
-            l_i = 0
-            l_a = 0
+            l_i = [0,0,0]
+            l_a = [0,0,0]
 
             identifiers = np.unique(self._all_attack[:,0])
             for ident in identifiers:
@@ -299,15 +299,15 @@ class Evaluator:
                 # attack_id = [(a,b) for [a,b,_] in attack_id]
                 atk_number = len(attack_id)
                 atk_detected = 0
-                l_i_tmp = 0
-                l_a_tmp = 0
+                l_i_tmp = [0,0,0]
+                l_a_tmp = [0,0,0]
                 # for (a1,a2) in attack_id:
                 for [_, a1, a2, a_band] in attack_id:
                     a1 = int(a1)
                     a2 = int(a2)
                     a_band = int(a_band)
 
-                    l_a_tmp += a2 - a1
+                    l_a_tmp[a_band] += a2 - a1
 
                     detected = False
                     for (d1,d2) in detected_positive_dico:
@@ -316,24 +316,31 @@ class Evaluator:
                             i = intersect((d1,d2), (a1,a2))
                             if i:
                                 detected = True
-                                l_i_tmp += i[1] - i[0]
+                                l_i_tmp[a_band] += i[1] - i[0]
                     if detected:
                         atk_detected += 1
-                l_i += l_i_tmp
-                l_a += l_a_tmp
+                for i in range(3):
+                    l_i[i] += l_i_tmp[i]
+                    l_a[i] += l_a_tmp[i]
 
-                print("Recall for",ident,":",l_i_tmp / l_a_tmp)
-                recall[ident] = l_i_tmp / l_a_tmp
+                print("Recall for",ident,":",sum(l_i_tmp) / sum(l_a_tmp))
+                recall[ident] = sum(l_i_tmp) / sum(l_a_tmp)
 
 
                 print("Detected for",ident,":",atk_detected,"/",atk_number,"=",atk_detected/atk_number)
 
-            l_d = 0
+            l_d = [0,0,0]
             for (d1,d2) in detected_positive_dico:
-                l_d += d2 - d1
+                l_d[detected_positive_dico[(d1,d2)][0]] += d2 - d1
 
-            p = l_i / l_d
-            r = l_i / l_a
+            for i in range(3):
+                p = l_i[i] / l_d[i]
+                print("Precision for band "+str(i)+": "+str(p))
+                r = l_i[i] / l_a[i]
+                print("Recall for band "+str(i)+": "+str(r))
+                print("f-measure for band "+str(i)+": "+str(2*p*r/(p+r)))
+            p = sum(l_i) / sum(l_d)
+            r = sum(l_i) / sum(l_a)
             f = 2*p*r/(p+r)
             print("Precision",p,"Recall",r,"f-measure",f)
 
@@ -484,14 +491,14 @@ def score_extractors(extractors, path_examples, folders_test):
     joblib.dump(scores, path_examples)
     return scores
 
-def predict_extractors_cumul(models, scores, all_t):
+def predict_extractors_cumul(models, scores, all_t, cumulated_threshold):
     start = time.time()
     example_pos = {}
     timestamps = sorted(scores.keys())
 
     for (_,m) in models:
         state = DetectorState.NOT_DETECTING
-        cumulated_threshold = 0.7
+        # cumulated_threshold = 0.7
         # resting_duration = 0
         cumul = 0
         # consecutive = 0
