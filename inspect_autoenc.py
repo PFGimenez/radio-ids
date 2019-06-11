@@ -43,6 +43,8 @@ while i < len(sys.argv):
         mode = "data"
     elif sys.argv[i] == "-quant":
         mode = "quant"
+    elif sys.argv[i] == "-article":
+        mode = "article"
     elif sys.argv[i] == "-diff":
         mode = "diff"
     elif sys.argv[i] == "-autoenc":
@@ -84,7 +86,7 @@ dims = config.get_config_eval('autoenc_dimensions')
 epochs = config.get_config_eval('nb_epochs')
 
 new = False
-load_autoenc = (mode == "autoenc" or mode == "diff")
+load_autoenc = (mode == "autoenc" or mode == "diff" or mode =="article")
 attack_nb_min = 0
 attack_nb_max = 1
 
@@ -126,7 +128,9 @@ if mode == "quant":
     dequantify(data_d)
 if mode == "autoenc":
     fig, ax = plt.subplots(nrows=3, ncols=1)
-if mode == "autoenc" or mode == "diff":
+if mode == "article":
+    fig, ax = plt.subplots(nrows=1, ncols=3)
+if mode == "autoenc" or mode == "diff" or mode == "article":
     data_q = read_files_from_timestamp(date_min, date_max, folders, quant=True)
 
 #data = read_directory(folders[0], quant=True)[0,:,:]
@@ -174,6 +178,33 @@ elif mode == "autoenc":
     ax[1].set_title("Reconstructed data")
     ax[2].imshow(diff, cmap='hot', interpolation='nearest', aspect='auto')
     ax[2].set_title("Difference")
+
+elif mode == "article":
+    vmax=0.85
+    data_q = data_q[:,0:1000]
+    data_reconstructed = data_reconstructed[:,0:1000]
+    diff = diff[:,0:1000]
+    print(np.max(data_q))
+    print(np.max(data_reconstructed))
+    print(np.max(diff))
+    ax[0].imshow(data_q.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=0,vmax=vmax,extent=[0,data_q.shape[0]*0.0375,400,300])
+    ax[0].set_title("Original data")
+    ax[0].set_xlabel("Time (s)")
+    ax[0].set_ylabel("Frequency (MHz)")
+
+    im = ax[1].imshow(data_reconstructed.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=0,vmax=vmax,extent=[0,data_q.shape[0]*0.0375,400,300])
+    ax[1].set_title("Reconstruction")
+    ax[1].set_xlabel("Time (s)")
+    # ax[1].set_ylabel("Frequency")
+
+    ax[2].imshow(diff.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=0,vmax=vmax,extent=[0,data_q.shape[0]*0.0375,400,300])
+    ax[2].set_title("Difference")
+    ax[2].set_xlabel("Time (s)")
+    # ax[2].set_ylabel("Frequency")
+
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.01, 0.7])
+    fig.colorbar(im, cax=cbar_ax)
 
 elif mode == "diff":
     plt.imshow(diff, cmap='hot', interpolation='nearest', aspect='auto')
