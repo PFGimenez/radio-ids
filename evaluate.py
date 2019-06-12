@@ -334,11 +334,14 @@ class Evaluator:
                 l_d[detected_positive_dico[(d1,d2)][0]] += d2 - d1
 
             for i in range(3):
-                p = l_i[i] / l_d[i]
-                print("Precision for band "+str(i)+": "+str(p))
-                r = l_i[i] / l_a[i]
-                print("Recall for band "+str(i)+": "+str(r))
-                print("f-measure for band "+str(i)+": "+str(2*p*r/(p+r)))
+                if l_d[i] > 0:
+                    p = l_i[i] / l_d[i]
+                    print("Precision for band "+str(i)+": "+str(p))
+                if l_a[i] > 0:
+                    r = l_i[i] / l_a[i]
+                    print("Recall for band "+str(i)+": "+str(r))
+                    if l_d[i] > 0:
+                        print("f-measure for band "+str(i)+": "+str(2*p*r/(p+r)))
             p = sum(l_i) / sum(l_d)
             r = sum(l_i) / sum(l_a)
             f = 2*p*r/(p+r)

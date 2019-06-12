@@ -3,6 +3,7 @@ import evaluate
 import sys
 from sklearn.externals import joblib
 import os
+import config as conf
 
 # ce script suppose que "evaluate_one_probe" ait déjà été utilisé pour chaque sonde
 probes45 = None
@@ -24,7 +25,7 @@ while i < len(sys.argv):
 
 print("Merge intervals…")
 
-config = Config()
+config = conf.Config()
 cumulated_threshold = config.get_config_eval('cumul_threshold')
 path = "results-frequencies-cumul"+str(cumulated_threshold)+".joblib"
 # path = "results-detection-intervals-cumul.joblib"
@@ -58,4 +59,4 @@ merged_without_frequencies = {t:[v] for (t,(_,v)) in merged.items()}
 _,attack,attack_freq = evaluate.load_attacks()
 e = evaluate.Evaluator(attack, attack_freq)
 e.evaluate(merged_without_frequencies)
-
+e.evaluate_freq(merged)
