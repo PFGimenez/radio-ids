@@ -32,15 +32,16 @@ def load_attacks():
     identifiers = np.unique(attack[:,0])
 
     colors = {}
-    all_colors = {'red', 'green', 'blue', 'cyan', 'magenta', 'yellow', 'black', 'purple', 'fuchsia', 'grey', 'chocolate', 'lawngreen', 'salmon', 'indianred', 'turquoise', 'royalblue', 'lime', 'teal', 'orange'}
+    all_colors = {'red', 'green', 'blue', 'cyan', 'magenta', 'yellow', 'black', 'purple', 'fuchsia', 'grey', 'chocolate', 'lawngreen', 'salmon', 'indianred', 'turquoise', 'royalblue', 'lime', 'teal', 'orange', 'ivory', 'olive', 'pink'}
     for i in identifiers:
         colors[i] = all_colors.pop()
         print(i,"is",colors[i])
 
     print("Attacks list:",identifiers)
 
-    attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0, "old-scan433": 0, "old-strong433": 0}
-    attack_freq_type = {"scan433": [432,434], "strong433": [432,434], "scan868":[867,869], "strong868":[867,869], "tvDOS":[485,499], "bruijnSequenc":[432,434], "bleScan": [2400,2480], "btScan": [2400,2480], "dosHackRF45": [400,500], "dosHackRF89": [800, 900], "floodZigbee": [2475,2485], "injectESB": [2400, 2500], "old-scan433": [432,434], "old-strong433": [432,434], "wifiDeauth": [2451,2473], "wifiRogueAP": [2461,2483], "wifiScan": [2400,2500], "zigbeeScan": [2400,2480]}
+    attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0, "old-scan433": 0, "old-strong433": 0, "anomaly": 0, "harmoBruijn": 1}
+    attack_freq_type = {"scan433": [433,433], "strong433": [433,433], "scan868":[868,868], "strong868":[868,868], "tvDOS":[485,499], "bruijnSequenc":[433,433], "bleScan": [2400,2480], "btScan": [2400,2480], "dosHackRF45": [400,500], "dosHackRF89": [800, 900], "floodZigbee": [2475,2485], "injectESB": [2400, 2500], "old-scan433": [433,433], "old-strong433": [433,433], "wifiDeauth": [2451,2473], "wifiRogueAP": [2461,2483], "wifiScan": [2400,2500], "zigbeeScan": [2400,2480], "anomaly":[462,462],
+                        "harmoBruijn": [866,866]}
 
 # we add the plot number of the attack
     attack_tmp = []
@@ -76,11 +77,15 @@ def merge(dico):
             current = l[i]
             merged_number = 1
             cumulated_freq = dico[current][0]
+            # merged_number = (l[i][1]-l[i][0])
+            # cumulated_freq = dico[current][0]*(l[i][1]-l[i][0])
             number = dico[current][1]
             for j in range(i+1,len(l)):
                 # on vérifie qu'il s'agit bien de la même band
                 if number == dico[l[j]][1] and intersect(current,l[j]):
+                    # merged_number += (l[j][1]-l[j][0])
                     merged_number += 1
+                    # cumulated_freq += dico[l[j]][0]*(l[j][1]-l[j][0])
                     cumulated_freq += dico[l[j]][0]
                     merged.append(j)
                     current = (min(current[0], l[j][0]), max(current[1], l[j][1]))
@@ -235,6 +240,7 @@ class Evaluator:
     def evaluate_freq(self, detected_freq):
 
         identifiers = np.unique(self._all_attack[:,0])
+        all_error = []
         for ident in identifiers:
             errors = []
             ok = 0
@@ -246,7 +252,8 @@ class Evaluator:
                 a2 = int(a2)
                 a_band = int(a_band)
                 # print(a1,a2,a_band)
-                for d in self.true_positive_dates:
+                for d in detected_freq:
+                # for d in self.true_positive_dates:
                     # we check only the true positive detection
                     (f,d_band) = detected_freq[d]
                     # print(d,f,d_band)
@@ -254,13 +261,16 @@ class Evaluator:
                         (f1,f2) = self.attack_freq[(a1,a2)]
                         if f >= f1 and f <= f2:
                             ok += 1
-                        errors.append(abs(f - (f1+f2)/2))
+                            errors.append(0)
+                        else:
+                            errors.append(min(abs(f1-f),abs(f2-f)))
                         nb += 1
             print("    Results for",ident)
             if nb > 0:
                 # print(ok, nb)
                 print("Proportion in the right band:",ok/nb)
                 print("Mean error:",np.mean(errors))
+                print("Median error:",np.median(errors))
                 # print(errors)
                 # print(np.percentile(errors, 50))
                 # print(np.percentile(errors, 80))
@@ -269,6 +279,8 @@ class Evaluator:
                 # print(np.percentile(errors, 99))
             else:
                 print("No attack detected")
+            all_error += errors
+        print("All mean:",np.mean(all_error))
 
     def evaluate(self, detected_positive_dico):
         self._seen_attack = []
@@ -279,6 +291,7 @@ class Evaluator:
         true_positive = len(true_positive_list)
         false_positive = total_positives - true_positive
         self.true_positive_dates = [(a,b) for (a,b) in detected_positive_dico if a in true_positive_list]
+        # print(len(self.true_positive_dates),len(detected_positive_dico))
         # print(len(true_positive_list))
         # print(len(self.true_positive_dico))
         recall = {}
@@ -336,12 +349,15 @@ class Evaluator:
             for i in range(3):
                 if l_d[i] > 0:
                     p = l_i[i] / l_d[i]
+                    print("Detected time on band "+str(i)+": "+str(l_d[i]))
                     print("Precision for band "+str(i)+": "+str(p))
                 if l_a[i] > 0:
                     r = l_i[i] / l_a[i]
+                    print("Total attack time on band "+str(i)+": "+str(l_a[i]))
                     print("Recall for band "+str(i)+": "+str(r))
                     if l_d[i] > 0:
                         print("f-measure for band "+str(i)+": "+str(2*p*r/(p+r)))
+            print("Total detected time: "+str(sum(l_d)))
             p = sum(l_i) / sum(l_d)
             r = sum(l_i) / sum(l_a)
             f = 2*p*r/(p+r)
@@ -466,6 +482,7 @@ class Evaluator:
                         x, val = zip(*sorted(zip(x, val)))
                         x_dates = mdates.date2num([datetime.datetime.fromtimestamp(t/1000) for t in x])
                         col.plot(x_dates, val, alpha=0.7, label=labels[i])
+                        # col.plot(x_dates, val, "bo-", alpha=0.7, label=labels[i])
                         col.plot(x_dates, valTh, alpha=0.7, color="magenta")
                         i += 1
                         col.legend(loc='upper left')
@@ -506,11 +523,13 @@ def predict_extractors_cumul(models, scores, all_t, cumulated_threshold):
         cumul = 0
         # consecutive = 0
         previous_timestamp = None
-        discontinuity_timestamp = None
+        discontinuity_timestamp = timestamps[0]
         for timestamp in timestamps:
+            discontinuity = (timestamp - discontinuity_timestamp > 3600000)
+            # print(timestamp, discontinuity_timestamp, discontinuity, state)
             found = False
             for p in all_t:
-                if p(timestamp):
+                if p(timestamp): # we get the threshold of this timestamp
                     found = True
                     threshold_autoencoder = all_t[p]
                     low_threshold_autoencoder = threshold_autoencoder
@@ -525,12 +544,11 @@ def predict_extractors_cumul(models, scores, all_t, cumulated_threshold):
                 cumul = 0
                 previous_timestamp = timestamp
 
-            elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
+            elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and (not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]) or discontinuity):
                 if state == DetectorState.TRIGGERED:
                     # End of the attack
-                    if timestamp - discontinuity_timestamp > 3600000: # discontinuité dans les données
-                        timestamp = discontinuity_timestamp
-                    example_pos[(previous_timestamp, timestamp)] = [m._number]
+                    # print("New attack !",previous_timestamp,discontinuity_timestamp)
+                    example_pos[(previous_timestamp, discontinuity_timestamp)] = [m._number]
                 previous_timestamp = timestamp
                 state = DetectorState.NOT_DETECTING
 
@@ -546,8 +564,6 @@ def predict_extractors_cumul(models, scores, all_t, cumulated_threshold):
 
             if state == DetectorState.DETECTING:
                 cumul += abs(score - threshold_autoencoder[m._number])
-                if timestamp - previous_timestamp > 3600000: # discontinuité dans les données
-                    state = DetectorState.NOT_DETECTING
 
             discontinuity_timestamp = timestamp
 
@@ -631,6 +647,7 @@ def predict_extractors(models, scores, all_t):
 
 def get_snr(example_pos, folders_list, median):
     snr = {}
+    start = time.time()
     for (t1, t2) in example_pos:
         l = []
         freq = frequency_to_index(example_pos[(t1,t2)][0])
@@ -642,14 +659,22 @@ def get_snr(example_pos, folders_list, median):
         l.append(nb)
         snr[(t1,t2)]=l
         print(l)
+    end = time.time()
+    print("SNR extraction:",(end-start),"s")
     return snr
 
 def predict_frequencies(example_pos, folders, extractors):
     frequencies = {}
+    start = time.time()
     for (t1, t2) in example_pos:
+        if t2-t1 > 3600000:
+            print("Attack too long ! Only 10mn")
+            tend = t1 + 600000
+        else:
+            tend = t2
         nb = example_pos[(t1,t2)][0]
         # print(nb)
-        waterfalls = read_files_from_timestamp(t1, t2, folders)
+        waterfalls = read_files_from_timestamp(t1, tend, folders)
         # print(waterfalls.shape)
         # print(nb)
         # print("S",waterfalls.shape)
@@ -663,13 +688,17 @@ def predict_frequencies(example_pos, folders, extractors):
             # print("Median:",median)
             median += nb*1000
         elif len(data) == 1:
+            print("Almost no signal!")
             median = data[0] + nb*1000
         else:
+            print("No signal!")
             median = nb*1000+500 # absence of signal
             # print(f)
         f = index_to_frequency(median)
         frequencies[(t1, t2)] = (f,nb)
 
+    end = time.time()
+    print("Freq localization:",(end-start),"s")
     return frequencies
 
 def load_scores(path_examples_extractors, extractors, bands, directories):
@@ -688,5 +717,6 @@ def load_scores(path_examples_extractors, extractors, bands, directories):
             (i,s) = bands[j]
             m = CNN(j)
             extractors.load_model(m)
+        extractors.set_dummy(False)
         return score_extractors(extractors, path_examples_extractors, directories)
 

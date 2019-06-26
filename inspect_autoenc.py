@@ -45,8 +45,12 @@ while i < len(sys.argv):
         mode = "quant"
     elif sys.argv[i] == "-article":
         mode = "article"
+        i += 1
+        band = int(sys.argv[i])
     elif sys.argv[i] == "-article-data":
         mode = "article-data"
+    elif sys.argv[i] == "-article-preprocess":
+        mode = "article-preprocess"
     elif sys.argv[i] == "-diff":
         mode = "diff"
     elif sys.argv[i] == "-autoenc":
@@ -122,6 +126,8 @@ if name_attack:
 
 if mode == "data":
     fig = plt.figure()
+if mode == "article-data":
+    fig = plt.figure()
 if mode == "quant" or mode == "data" or mode == "article-data":
     data = read_files_from_timestamp(date_min, date_max, folders, quant=False)
 if mode == "quant":
@@ -132,9 +138,12 @@ if mode == "autoenc":
     fig, ax = plt.subplots(nrows=3, ncols=1)
 if mode == "article":
     fig, ax = plt.subplots(nrows=1, ncols=3)
-if mode == "article-data":
-    fig, ax = plt.subplots(nrows=1, ncols=3)
+if mode == "article-preprocess":
+    fig, ax = plt.subplots(nrows=2, ncols=3)
 if mode == "autoenc" or mode == "diff" or mode == "article":
+    data_q = read_files_from_timestamp(date_min, date_max, folders, quant=True)
+if mode == "article-preprocess":
+    data = read_files_from_timestamp(date_min, date_max, folders, quant=False)
     data_q = read_files_from_timestamp(date_min, date_max, folders, quant=True)
 
 #data = read_directory(folders[0], quant=True)[0,:,:]
@@ -148,16 +157,19 @@ if load_autoenc:
     print(data_reconstructed.shape)
     if save:
         data_reconstructed.tofile("reconstructed_data")
-    diff = np.subtract(data_reconstructed, data_q[:data_reconstructed.shape[0],:])**2
+    diff = np.abs(np.subtract(data_reconstructed, data_q[:data_reconstructed.shape[0],:]))
+    # print("Score: ",extractors.get_score(data_q, 0))
     # diff = np.abs(data_reconstructed[:,:900] - data_q[:data_reconstructed.shape[0],:900])
     # diff2 = np.abs(data_reconstructed[:,900:] - data_q[:data_reconstructed.shape[0],1000:])
     # diff = np.concatenate((diff, diff2), axis=1)
-    diff[diff < 0.1] = 0
-    (weights, data) = extractors.get_frequencies(data_q)
-    median = weighted_median(data, weights)
-    f = index_to_frequency(median)
-    print("Index atk:",median)
-    print("Frequency atk:",f)
+    # diff[diff < 0.1] = 0
+    for i in range(3):
+        print("Band",i)
+        (weights, data) = extractors.get_frequencies(data_q, i)
+        median = weighted_median(data, weights) + 1000*i
+        f = index_to_frequency(median)
+        print("Index atk:",median)
+        print("Frequency atk:",f)
 
 # vérification quantification
 if mode == "quant":
@@ -174,6 +186,14 @@ elif mode == "data":
     plt.imshow(data, cmap='hot', interpolation='nearest', aspect='auto')
     plt.title("Original data")
 
+elif mode == "article-data":
+    data = data[:,2000:3000]
+    im=plt.imshow(data.T, cmap='Greys', interpolation='nearest', aspect='auto',extent=[0,data.shape[0]*0.0375,2500,2400])
+    plt.xlabel("Time (s)")
+    plt.ylabel("Frequency (MHz)")
+    cbar = plt.colorbar()
+    cbar.set_label("dBm")
+
 # vérification reconstruction
 elif mode == "autoenc":
     ax[0].imshow(data_q, cmap='hot', interpolation='nearest', aspect='auto')
@@ -183,39 +203,58 @@ elif mode == "autoenc":
     ax[2].imshow(diff, cmap='hot', interpolation='nearest', aspect='auto')
     ax[2].set_title("Difference")
 
-elif mode == "article-data":
+elif mode == "article-preprocess":
+    vminq=0
+    vmaxq=0.90
+    data1q = data_q[:,0:1000]
+    data2q = data_q[:,1000:2000]
+    data3q = data_q[:,2000:3000]
+
     vmin=-105
     vmax=0
     data1 = data[:,0:1000]
     data2 = data[:,1000:2000]
     data3 = data[:,2000:3000]
+
     print(np.max(data1), np.min(data1))
     print(np.max(data2), np.min(data2))
     print(np.max(data3), np.min(data3))
-    ax[0].imshow(data1.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,500,400])
-    ax[0].set_xlabel("Time (s)")
-    ax[0].set_ylabel("Frequency (MHz)")
+    ax[0][0].imshow(data1.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,500,400])
+    ax[0][0].set_xlabel("Time (s)")
+    ax[0][0].set_ylabel("Frequency (MHz)")
 
-    im = ax[1].imshow(data2.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,900,800])
-    ax[1].set_xlabel("Time (s)")
-    # ax[1].set_ylabel("Frequency")
+    im = ax[0][1].imshow(data2.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,900,800])
+    ax[0][1].set_xlabel("Time (s)")
 
-    ax[2].imshow(data3.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,2500,2400])
-    ax[2].set_xlabel("Time (s)")
-    # ax[2].set_ylabel("Frequency")
+    ax[0][2].imshow(data3.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,2500,2400])
+    ax[0][2].set_xlabel("Time (s)")
+
+    ax[1][0].imshow(data1q.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vminq,vmax=vmaxq,extent=[0,data1.shape[0]*0.0375,500,400])
+    ax[1][0].set_xlabel("Time (s)")
+    ax[1][0].set_ylabel("Frequency (MHz)")
+
+    imq = ax[1][1].imshow(data2q.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vminq,vmax=vmaxq,extent=[0,data1.shape[0]*0.0375,900,800])
+    ax[1][1].set_xlabel("Time (s)")
+
+    ax[1][2].imshow(data3q.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vminq,vmax=vmaxq,extent=[0,data1.shape[0]*0.0375,2500,2400])
+    ax[1][2].set_xlabel("Time (s)")
+
 
     fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.15, 0.01, 0.7])
+    cbar_axq = fig.add_axes([0.85, 0.12, 0.01, 0.3])
+
+    cbar_ax = fig.add_axes([0.85, 0.55, 0.01, 0.3])
     cbar_ax.set_xlabel("dBm")
     fig.colorbar(im, cax=cbar_ax)
+    fig.colorbar(imq, cax=cbar_axq)
 
 
 
 elif mode == "article":
     vmax=0.85
-    data_q = data_q[:,0:1000]
-    data_reconstructed = data_reconstructed[:,0:1000]
-    diff = diff[:,0:1000]
+    data_q = data_q[:,band*1000:(band+1)*1000]
+    data_reconstructed = data_reconstructed[:,band*1000:(band+1)*1000]
+    diff = diff[:,band*1000:(band+1)*1000]
     print(np.max(data_q))
     print(np.max(data_reconstructed))
     print(np.max(diff))

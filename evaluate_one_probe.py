@@ -142,6 +142,7 @@ for j in range(len(bands)):
     extractors.load_model(m)
     # else:
         # extractors.add_model(m) # dummy is enough for most cases
+extractors.set_dummy(False)
 
 # évaluation
 if use_cumul:
@@ -167,6 +168,7 @@ if use_autoenc:
 
     threshold_autoencoder = {}
     periods = [multimodels.period_weekend_and_night, multimodels.period_day_not_weekend]
+    # periods = [multimodels.period_always]
     if not train:
         try:
             scores_train = joblib.load(path_examples_train_extractors)

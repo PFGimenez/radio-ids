@@ -23,6 +23,9 @@ from sklearn.externals import joblib
 import math
 from config import Config
 
+def root_mean_squared_error(y_true, y_pred):
+    return K.sqrt(K.mean(K.square(y_pred - y_true)))
+
 class Macro_Batch_Generator(Sequence):
 
     def __init__(self, filenames, batch_size, merge_shape, input_shape, overlap, quant):
@@ -127,7 +130,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # print("expand",out.shape)
         out = np.array(self.squared_diff(out))
         before = np.mean(out)
-        out[out < 0.04] = 0
+        # out[out < 0.04] = 0
         print(before, np.mean(out))
         out = np.mean(out)
         out = np.sqrt(out)
@@ -140,22 +143,24 @@ class CNN(FeatureExtractor, AnomalyDetector):
             Pas de mean
             Utilisé pour la localisation fréquentielle
         """
-        data = self.decompose(data[:,self._i:self._s], self._overlap_test)
+        data = self.decompose(data[:,self._i:self._s], 0)
         out = np.array(self.squared_diff(data))
-        out[out < 0.1] = 0
-        out = np.sqrt(out)
+        # out[out < 0.1] = 0
+        out = np.sqrt(np.sqrt(out))
         return out
 
 
     def get_score_vector(self, data, epoch=None):
         """
             Renvoie un tableau
+            Utilisé pour le calcul du score
         """
         data = self.decompose(data[:,self._i:self._s], self._overlap_test)
         out = np.array(self.squared_diff(data))
-        out[out < 0.1] = 0
+        # out[out < 0.1] = 0
         out = np.mean(out, axis=(1,2))
-        out = np.sqrt(out)
+        out = np.sqrt(np.sqrt(out))
+        # print(out)
         return out
 
     # def get_diff(self, data, epoch=None)
@@ -295,7 +300,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # TODO: 6 filtres (~ autant que de cases 3*5)
         # TODO: taux d'apprentissage
         m = Reshape((self._input_shape[0],self._input_shape[1]))(self._input_tensor)
-        m = Conv1D(500, 5, activation='relu', padding='valid')(m) # TODO: sigmoid a l'air d'être un peu mieux
+        m = Conv1D(500, 5, activation='sigmoid', padding='valid')(m) # TODO: sigmoid a l'air d'être un peu mieux
         # m = Conv1D(500, 5, activation='relu', padding='valid')(m)
         # m = Conv1D(500, 5, activation='sigmoid', padding='valid')(m)
         # m = Conv2D(500, (3, 1000), strides=(1,1000), activation='sigmoid', padding='valid')(m)
@@ -331,7 +336,8 @@ class CNN(FeatureExtractor, AnomalyDetector):
         self._autoencoder = Model(self._input_tensor, decoded)
 
         # self._autoencoder.compile(loss='binary_crossentropy', optimizer='adam')
-        self._autoencoder.compile(loss='mean_squared_error', optimizer='adam')
+#        self._autoencoder.compile(loss='mean_absolute_error', optimizer='adam')
+        self._autoencoder.compile(loss=root_mean_squared_error, optimizer='adam')
 
         self._autoencoder.summary()
 
@@ -418,7 +424,7 @@ class CNN(FeatureExtractor, AnomalyDetector):
 #        data = self.decompose(normalize(data, self._min, self._max), self._overlap_test)
 #        print("squared",data.shape)
 #        print("squeeze",np.squeeze(data).shape)
-        return np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**2
+        return np.subtract(self._autoencoder.predict(data).reshape(-1, self._input_shape[0], self._input_shape[1]), np.squeeze(data))**4
 
 
     # def learn_threshold(self, data, inf, sup):

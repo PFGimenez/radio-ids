@@ -12,6 +12,7 @@ _config = Config()
 _waterfall_dim = _config.get_config_eval('waterfall_dimensions')
 _waterfall_duration = _config.get_config_eval("waterfall_duration")
 _delta_t = int(_waterfall_duration / _waterfall_dim[0])
+_noise_threshold = _config.get_config_eval("noise_threshold")
 
 # _l_high = [-65,-50,-35,-20,-10,0]
 # _l_low= [-65,-50,-35,-20,-10,0]
@@ -49,12 +50,12 @@ def dequantify_old(data):
     # print("Dequantification done")
 
 def dequantify(data):
-    np.multiply(data, 50, data)
-    np.add(data, -50, data)
+    np.multiply(data, -_noise_threshold, data)
+    np.add(data, _noise_threshold, data)
 
 def quantify(data):
-    np.add(data, 50, data)
-    np.multiply(data, 1/50, data)
+    np.add(data, -_noise_threshold, data)
+    np.multiply(data, -1/_noise_threshold, data)
     np.clip(data,0,1,data)
     # data[data <= 0] = 0
     # data[data >= 1] = 1

@@ -54,9 +54,15 @@ merged = evaluate.merge({**merged1, **merged2, **merged3})
 path_output = "merged-intervals.joblib"
 joblib.dump(merged, path_output)
 
-    # out = {k:v for (k,v) in bestProbe.items() if v[1] == number}
-merged_without_frequencies = {t:[v] for (t,(_,v)) in merged.items()}
+
+merged_union = evaluate.merge({**intervals45, **intervals89, **intervals2425})
+path_output_union = "merged-intervals-union.joblib"
+joblib.dump(merged_union, path_output_union)
+
+merged_without_frequencies_union = {t:[v] for (t,(_,v)) in merged_union.items()}
+# merged_without_frequencies = {t:[v] for (t,(_,v)) in merged.items()}
 _,attack,attack_freq = evaluate.load_attacks()
 e = evaluate.Evaluator(attack, attack_freq)
-e.evaluate(merged_without_frequencies)
-e.evaluate_freq(merged)
+e.evaluate(merged_without_frequencies_union)
+# e.evaluate(merged_without_frequencies)
+e.evaluate_freq(merged_union)

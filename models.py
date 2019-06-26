@@ -307,6 +307,7 @@ class MultiExtractors(MultiModels):
         autoenc_dimensions_t = self._config.get_config_eval("autoenc_dimensions")[0][0]
         waterfall_dimensions_t = self._config.get_config_eval("waterfall_dimensions")[0]
         self._delta_t = int(waterfall_duration * autoenc_dimensions_t / waterfall_dimensions_t * (1 - overlap_test))
+        self._is_dummy = True
 
     def add_model(self, model):
         """
@@ -325,8 +326,12 @@ class MultiExtractors(MultiModels):
             m.save(str(m._i)+"-"+str(m._s)+"-")
 
     def load_model(self, model):
-        model.load(str(model._i)+"-"+str(model._s)+"-")
-        self.add_model(model)
+        if self._is_dummy:
+            model.load(str(model._i)+"-"+str(model._s)+"-")
+            self.add_model(model)
+
+    def set_dummy(self, dummy):
+        self._is_dummy = dummy
 
     def extract_features(self, data, initial_timestamp, overlap):
         waterfall_duration = self._config.get_config_eval('waterfall_duration')
