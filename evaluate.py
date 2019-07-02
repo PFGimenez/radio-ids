@@ -457,7 +457,7 @@ class Evaluator:
             for row in ax:
                 for col in row:
                     if i in detected_positive_dico[(t1,t2)]:
-                        col.hlines(-0.0001,
+                        col.hlines(0.01,
                         mdates.date2num(datetime.datetime.fromtimestamp(t1/1000)),
                         mdates.date2num(datetime.datetime.fromtimestamp(t2/1000)),
                         color='green')
@@ -649,12 +649,17 @@ def get_snr(example_pos, folders_list, median):
     snr = {}
     start = time.time()
     for (t1, t2) in example_pos:
+        if t2-t1 > 3600000:
+            print("Attack too long ! Only 10mn")
+            tend = t1 + 600000
+        else:
+            tend = t2
         l = []
         freq = frequency_to_index(example_pos[(t1,t2)][0])
         nb = example_pos[(t1,t2)][1]
         for i in range(3):
             m = median[i][nb]
-            w = read_files_from_timestamp(t1, t2, folders_list[i],quant=False)[:,freq-2:freq+2]
+            w = read_files_from_timestamp(t1, tend, folders_list[i],quant=False)[:,freq-2:freq+2]
             l.append((np.mean(w)-m, np.median(w)-m, np.std(w)))
         l.append(nb)
         snr[(t1,t2)]=l

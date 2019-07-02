@@ -23,6 +23,8 @@ from sklearn.externals import joblib
 import math
 from config import Config
 
+
+
 def root_mean_squared_error(y_true, y_pred):
     return K.sqrt(K.mean(K.square(y_pred - y_true)))
 
@@ -415,9 +417,9 @@ class CNN(FeatureExtractor, AnomalyDetector):
         # self._thresholds = joblib.load(os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")+".thr"))
         # print("Thresholds :",self._thresholds)
         filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename")+".h5")
-        self._coder = load_model(filename_coder)
+        self._coder = load_model(filename_coder, custom_objects={'root_mean_squared_error': root_mean_squared_error})
         filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename")+".h5")
-        self._autoencoder = load_model(filename_autoencoder)
+        self._autoencoder = load_model(filename_autoencoder, custom_objects={'root_mean_squared_error': root_mean_squared_error})
 #        print("Autoencoder loaded!")
 
     def squared_diff(self, data):

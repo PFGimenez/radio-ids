@@ -17,7 +17,7 @@ import evaluate
 #         probe3 = sys.argv[i]
 #     i += 1
 
-path = "merged-intervals.joblib"
+path = "merged-intervals-union.joblib"
 intervals = joblib.load(path)
 
 median = [[-68,-68,-68], [-64,-64,-64], [-65,-65,-64]]
