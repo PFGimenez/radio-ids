@@ -188,7 +188,7 @@ elif mode == "data":
 
 elif mode == "article-data":
     data = data[:,2000:3000]
-    im=plt.imshow(data.T, cmap='Greys', interpolation='nearest', aspect='auto',extent=[0,data.shape[0]*0.0375,2500,2400])
+    im=plt.imshow(data.T, cmap='hot', interpolation='nearest', aspect='auto',extent=[0,data.shape[0]*0.0375,2500,2400])
     plt.xlabel("Time (s)")
     plt.ylabel("Frequency (MHz)")
     cbar = plt.colorbar()
@@ -219,24 +219,24 @@ elif mode == "article-preprocess":
     print(np.max(data1), np.min(data1))
     print(np.max(data2), np.min(data2))
     print(np.max(data3), np.min(data3))
-    ax[0][0].imshow(data1.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,500,400])
+    ax[0][0].imshow(data1.T, cmap='hot', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,500,400])
     ax[0][0].set_xlabel("Time (s)")
     ax[0][0].set_ylabel("Frequency (MHz)")
 
-    im = ax[0][1].imshow(data2.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,900,800])
+    im = ax[0][1].imshow(data2.T, cmap='hot', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,900,800])
     ax[0][1].set_xlabel("Time (s)")
 
-    ax[0][2].imshow(data3.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,2500,2400])
+    ax[0][2].imshow(data3.T, cmap='hot', interpolation='nearest', aspect='auto',vmin=vmin,vmax=vmax,extent=[0,data1.shape[0]*0.0375,2500,2400])
     ax[0][2].set_xlabel("Time (s)")
 
-    ax[1][0].imshow(data1q.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vminq,vmax=vmaxq,extent=[0,data1.shape[0]*0.0375,500,400])
+    ax[1][0].imshow(data1q.T, cmap='hot', interpolation='nearest', aspect='auto',vmin=vminq,vmax=vmaxq,extent=[0,data1.shape[0]*0.0375,500,400])
     ax[1][0].set_xlabel("Time (s)")
     ax[1][0].set_ylabel("Frequency (MHz)")
 
-    imq = ax[1][1].imshow(data2q.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vminq,vmax=vmaxq,extent=[0,data1.shape[0]*0.0375,900,800])
+    imq = ax[1][1].imshow(data2q.T, cmap='hot', interpolation='nearest', aspect='auto',vmin=vminq,vmax=vmaxq,extent=[0,data1.shape[0]*0.0375,900,800])
     ax[1][1].set_xlabel("Time (s)")
 
-    ax[1][2].imshow(data3q.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=vminq,vmax=vmaxq,extent=[0,data1.shape[0]*0.0375,2500,2400])
+    ax[1][2].imshow(data3q.T, cmap='hot', interpolation='nearest', aspect='auto',vmin=vminq,vmax=vmaxq,extent=[0,data1.shape[0]*0.0375,2500,2400])
     ax[1][2].set_xlabel("Time (s)")
 
 
@@ -258,17 +258,17 @@ elif mode == "article":
     print(np.max(data_q))
     print(np.max(data_reconstructed))
     print(np.max(diff))
-    ax[0].imshow(data_q.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=0,vmax=vmax,extent=[0,data_q.shape[0]*0.0375,500,400])
+    ax[0].imshow(data_q.T, cmap='hot', interpolation='nearest', aspect='auto',vmin=0,vmax=vmax,extent=[0,data_q.shape[0]*0.0375,500,400])
     ax[0].set_title("Original data")
     ax[0].set_xlabel("Time (s)")
     ax[0].set_ylabel("Frequency (MHz)")
 
-    im = ax[1].imshow(data_reconstructed.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=0,vmax=vmax,extent=[0,data_q.shape[0]*0.0375,500,400])
+    im = ax[1].imshow(data_reconstructed.T, cmap='hot', interpolation='nearest', aspect='auto',vmin=0,vmax=vmax,extent=[0,data_q.shape[0]*0.0375,500,400])
     ax[1].set_title("Reconstruction")
     ax[1].set_xlabel("Time (s)")
     # ax[1].set_ylabel("Frequency")
 
-    ax[2].imshow(diff.T, cmap='Greys', interpolation='nearest', aspect='auto',vmin=0,vmax=vmax,extent=[0,data_q.shape[0]*0.0375,500,400])
+    ax[2].imshow(diff.T, cmap='hot', interpolation='nearest', aspect='auto',vmin=0,vmax=vmax,extent=[0,data_q.shape[0]*0.0375,500,400])
     ax[2].set_title("Difference")
     ax[2].set_xlabel("Time (s)")
     # ax[2].set_ylabel("Frequency")

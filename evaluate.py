@@ -238,7 +238,6 @@ class Evaluator:
         pass # TODO
 
     def evaluate_freq(self, detected_freq):
-
         identifiers = np.unique(self._all_attack[:,0])
         all_error = []
         for ident in identifiers:
@@ -253,11 +252,16 @@ class Evaluator:
                 a_band = int(a_band)
                 # print(a1,a2,a_band)
                 for d in detected_freq:
+                    (t1,t2)=d
+                    i = intersect((a1,a2),d)
                 # for d in self.true_positive_dates:
                     # we check only the true positive detection
                     (f,d_band) = detected_freq[d]
                     # print(d,f,d_band)
-                    if a_band == d_band and intersect((a1,a2),d) != None:
+                    # if a_band == d_band and intersect((a1,a2),d) != None:
+                    # if ident=="scan433":
+                        # print(f,f1,f2,a1,a2,t1,t2)
+                    if a_band == d_band and i is not None and (i[1] - i[0]) / (t2-t1) > 0.5 and (i[1] - i[0]) / (a2 - a1) > 0.5:
                         (f1,f2) = self.attack_freq[(a1,a2)]
                         if f >= f1 and f <= f2:
                             ok += 1
@@ -511,7 +515,36 @@ def score_extractors(extractors, path_examples, folders_test):
     joblib.dump(scores, path_examples)
     return scores
 
+def get_cumul_threshold(models, scores, all_t):
+    t=[[],[],[]]
+    cumul = get_cumul(models, scores, all_t)
+    for c in cumul:
+        band=cumul[c][0][0]
+        t[band].append(cumul[c][1])
+    # return [np.percentile(t[i],99.9) for i in range(3)]
+    th = np.percentile(t[0]+t[1]+t[2], 99.9)
+    print("0",np.percentile(t[0]+t[1]+t[2], 99.990))
+    print("1",np.percentile(t[0]+t[1]+t[2], 99.991))
+    print("2",np.percentile(t[0]+t[1]+t[2], 99.992))
+    print("3",np.percentile(t[0]+t[1]+t[2], 99.993))
+    print("4",np.percentile(t[0]+t[1]+t[2], 99.994))
+    print("5",np.percentile(t[0]+t[1]+t[2], 99.995))
+    print("6",np.percentile(t[0]+t[1]+t[2], 99.996))
+    print("7",np.percentile(t[0]+t[1]+t[2], 99.997))
+    print("8",np.percentile(t[0]+t[1]+t[2], 99.998))
+    print("9",np.percentile(t[0]+t[1]+t[2], 99.999))
+    return [th,th,th]
+
 def predict_extractors_cumul(models, scores, all_t, cumulated_threshold):
+    print("Prediction from cumulative scores...")
+    out = {}
+    cumul = get_cumul(models, scores, all_t)
+    for c in cumul:
+        if cumul[c][1]>cumulated_threshold[cumul[c][0][0]]:
+            out[c]=cumul[c][0]
+    return out
+
+def get_cumul(models, scores, all_t):
     start = time.time()
     example_pos = {}
     timestamps = sorted(scores.keys())
@@ -533,34 +566,23 @@ def predict_extractors_cumul(models, scores, all_t, cumulated_threshold):
                     found = True
                     threshold_autoencoder = all_t[p]
                     low_threshold_autoencoder = threshold_autoencoder
-                    # low_threshold_autoencoder = [0.8 * t for t in threshold_autoencoder]
             assert found, multimodels.process_unix_time(timestamp)
             score = scores[timestamp].get(m._number)
 
 
             if state == DetectorState.NOT_DETECTING and m.predict_thr(score,threshold=threshold_autoencoder[m._number]):
-            # if state == DetectorState.NOT_DETECTING and extractors.predict_thr(score,optimistic=False,threshold=threshold_autoencoder):
                 state = DetectorState.DETECTING
                 cumul = 0
                 previous_timestamp = timestamp
 
             elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and (not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]) or discontinuity):
-                if state == DetectorState.TRIGGERED:
-                    # End of the attack
-                    # print("New attack !",previous_timestamp,discontinuity_timestamp)
-                    example_pos[(previous_timestamp, discontinuity_timestamp)] = [m._number]
+                example_pos[(previous_timestamp, discontinuity_timestamp)] = ([m._number],cumul)
                 previous_timestamp = timestamp
                 state = DetectorState.NOT_DETECTING
 
-            elif state == DetectorState.DETECTING:
-                if cumul > cumulated_threshold:
-                    state = DetectorState.TRIGGERED
-
-            # elif state == DetectorState.RESTING:
-            #     if m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]):
-            #         previous_timestamp = timestamp
-            #     if timestamp - previous_timestamp > resting_duration:
-            #         state = DetectorState.NOT_DETECTING
+            # elif state == DetectorState.DETECTING:
+                # if cumul > cumulated_threshold:
+                    # state = DetectorState.TRIGGERED
 
             if state == DetectorState.DETECTING:
                 cumul += abs(score - threshold_autoencoder[m._number])
@@ -659,9 +681,10 @@ def get_snr(example_pos, folders_list, median):
         nb = example_pos[(t1,t2)][1]
         for i in range(3):
             m = median[i][nb]
-            w = read_files_from_timestamp(t1, tend, folders_list[i],quant=False)[:,freq-2:freq+2]
+            w = read_files_from_timestamp(t1, tend, folders_list[i],quant=False)[:,freq-3:freq+3]
             l.append((np.mean(w)-m, np.median(w)-m, np.std(w)))
         l.append(nb)
+        l.append(example_pos[(t1,t2)][0])
         snr[(t1,t2)]=l
         print(l)
     end = time.time()
@@ -688,18 +711,36 @@ def predict_frequencies(example_pos, folders, extractors):
         # print("S après",waterfalls.shape)
         (weights, data) = extractors.get_frequencies(waterfalls, number=nb)
         # print(data, weights)
-        if len(data) >= 2:
-            median = weighted_median(data, weights)
-            # print("Median:",median)
-            median += nb*1000
-        elif len(data) == 1:
-            print("Almost no signal!")
-            median = data[0] + nb*1000
+
+        # TODO: cette version utilise le poids max
+        if len(data) >= 1:
+            wmax = None
+            fout = None
+            for i in range(len(data)):
+                w = weights[i]
+                if wmax is None or w > wmax:
+                    wmax = w
+                    fout = data[i]
+            f = index_to_frequency(fout+nb*1000)
         else:
             print("No signal!")
-            median = nb*1000+500 # absence of signal
-            # print(f)
-        f = index_to_frequency(median)
+            f = index_to_frequency(nb*1000+500) # absence of signal
+
+
+
+        if False:
+            if len(data) >= 2:
+                median = weighted_median(data, weights)
+                # print("Median:",median)
+                median += nb*1000
+            elif len(data) == 1:
+                print("Almost no signal!")
+                median = data[0] + nb*1000
+            else:
+                print("No signal!")
+                median = nb*1000+500 # absence of signal
+                # print(f)
+            f = index_to_frequency(median)
         frequencies[(t1, t2)] = (f,nb)
 
     end = time.time()

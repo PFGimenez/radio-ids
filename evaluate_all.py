@@ -56,6 +56,7 @@ joblib.dump(merged, path_output)
 
 
 merged_union = evaluate.merge({**intervals45, **intervals89, **intervals2425})
+merged_union = evaluate.merge(merged_union)
 path_output_union = "merged-intervals-union.joblib"
 joblib.dump(merged_union, path_output_union)
 

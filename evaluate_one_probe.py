@@ -181,7 +181,14 @@ if use_autoenc:
                     assert l == len(t)
                     t.append(thr.get(l)[threshold_autoencoder_number]+0.0001) # TODO
                 threshold_autoencoder[p] = t
-        except:
+            # scores_train_all = {**joblib.load("/data/expe-pf/laas-radiot/cnn-icdm-rp1-noquant-p4/train-cnn-raspi1-results-autoenc.joblib"),**joblib.load("/data/expe-pf/laas-radiot/cnn-icdm-rp2-noquant-p4/train-cnn-raspi2-results-autoenc.joblib"),**joblib.load("/data/expe-pf/laas-radiot/cnn-icdm-rp3-noquant-p4/train-cnn-raspi3-results-autoenc.joblib")}
+
+
+            # cumulated_threshold = evaluate.get_cumul_threshold(extractors._models, scores_train_all, threshold_autoencoder)
+            # print(cumulated_threshold)
+            cumulated_threshold=[1.3295,1.3295,1.3295]
+        except Exception as e:
+            print(e)
             print("No train score loaded")
 
             # threshold_autoencoder = {multimodels.period_always: [0.010, 0.008, 0.03]}
