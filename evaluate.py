@@ -40,7 +40,7 @@ def load_attacks():
     print("Attacks list:",identifiers)
 
     attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0, "old-scan433": 0, "old-strong433": 0, "anomaly": 0, "harmoBruijn": 1}
-    attack_freq_type = {"scan433": [433,433], "strong433": [433,433], "scan868":[868,868], "strong868":[868,868], "tvDOS":[485,499], "bruijnSequenc":[433,433], "bleScan": [2400,2480], "btScan": [2400,2480], "dosHackRF45": [400,500], "dosHackRF89": [800, 900], "floodZigbee": [2475,2485], "injectESB": [2400, 2500], "old-scan433": [433,433], "old-strong433": [433,433], "wifiDeauth": [2451,2473], "wifiRogueAP": [2461,2483], "wifiScan": [2400,2500], "zigbeeScan": [2400,2480], "anomaly":[462,462],
+    attack_freq_type = {"scan433": [433,433], "strong433": [433,433], "scan868":[868,868], "strong868":[868,868], "tvDOS":[485,499], "bruijnSequenc":[433.9,433.9], "bleScan": [2400,2480], "btScan": [2400,2480], "dosHackRF45": [400,500], "dosHackRF89": [800, 900], "floodZigbee": [2475,2485], "injectESB": [2400, 2500], "old-scan433": [433,433], "old-strong433": [433,433], "wifiDeauth": [2451,2473], "wifiRogueAP": [2461,2483], "wifiScan": [2400,2500], "zigbeeScan": [2400,2480], "anomaly":[462,462],
                         "harmoBruijn": [866,866]}
 
 # we add the plot number of the attack
@@ -238,6 +238,7 @@ class Evaluator:
         pass # TODO
 
     def evaluate_freq(self, detected_freq):
+        output={}
         identifiers = np.unique(self._all_attack[:,0])
         all_error = []
         for ident in identifiers:
@@ -265,9 +266,12 @@ class Evaluator:
                         (f1,f2) = self.attack_freq[(a1,a2)]
                         if f >= f1 and f <= f2:
                             ok += 1
-                            errors.append(0)
+                            e = 0
                         else:
-                            errors.append(min(abs(f1-f),abs(f2-f)))
+                            e = min(abs(f1-f),abs(f2-f))
+                        if e<=1:
+                            output[d]=(f,d_band)
+                        errors.append(e)
                         nb += 1
             print("    Results for",ident)
             if nb > 0:
@@ -275,6 +279,7 @@ class Evaluator:
                 print("Proportion in the right band:",ok/nb)
                 print("Mean error:",np.mean(errors))
                 print("Median error:",np.median(errors))
+                print("Number:",len(errors))
                 # print(errors)
                 # print(np.percentile(errors, 50))
                 # print(np.percentile(errors, 80))
@@ -284,7 +289,8 @@ class Evaluator:
             else:
                 print("No attack detected")
             all_error += errors
-        print("All mean:",np.mean(all_error))
+        print("Mean frequency error:",np.mean(all_error))
+        return output
 
     def evaluate(self, detected_positive_dico):
         self._seen_attack = []
@@ -330,7 +336,7 @@ class Evaluator:
                     for (d1,d2) in detected_positive_dico:
                         d_band = detected_positive_dico[(d1,d2)][0]
                         if a_band == d_band:
-                            i = intersect((d1,d2), (a1,a2))
+                            i = intersect((d1-3750,d2-3750), (a1,a2))
                             if i:
                                 detected = True
                                 l_i_tmp[a_band] += i[1] - i[0]
@@ -345,6 +351,7 @@ class Evaluator:
 
 
                 print("Detected for",ident,":",atk_detected,"/",atk_number,"=",atk_detected/atk_number)
+                print("Number:",atk_detected)
 
             l_d = [0,0,0]
             for (d1,d2) in detected_positive_dico:
@@ -681,7 +688,7 @@ def get_snr(example_pos, folders_list, median):
         nb = example_pos[(t1,t2)][1]
         for i in range(3):
             m = median[i][nb]
-            w = read_files_from_timestamp(t1, tend, folders_list[i],quant=False)[:,freq-3:freq+3]
+            w = read_files_from_timestamp(t1, tend, folders_list[i],quant=False)[:,freq-1:freq+1]
             l.append((np.mean(w)-m, np.median(w)-m, np.std(w)))
         l.append(nb)
         l.append(example_pos[(t1,t2)][0])
@@ -712,7 +719,7 @@ def predict_frequencies(example_pos, folders, extractors):
         (weights, data) = extractors.get_frequencies(waterfalls, number=nb)
         # print(data, weights)
 
-        # TODO: cette version utilise le poids max
+        # use the max
         if len(data) >= 1:
             wmax = None
             fout = None
@@ -728,7 +735,7 @@ def predict_frequencies(example_pos, folders, extractors):
 
 
 
-        if False:
+        if False: # use the weighted median
             if len(data) >= 2:
                 median = weighted_median(data, weights)
                 # print("Median:",median)

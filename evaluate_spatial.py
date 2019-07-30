@@ -36,5 +36,5 @@ folders = [f1, f2, f3]
 
 snr = evaluate.get_snr(intervals, folders, median)
 print(snr)
-joblib.dump(snr, "snr3.joblib")
+joblib.dump(snr, "snr9.joblib")
 

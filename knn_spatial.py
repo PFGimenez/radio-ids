@@ -108,8 +108,8 @@ train.append(extract_train("features_400-500", median[0]))
 train.append(extract_train("features_800-900", median[1]))
 train.append(extract_train("features_2400-2500", median[2]))
 train_by_pos = train_by_pos(train)
-snr = joblib.load("snr3.joblib")
-
+snr = joblib.load("snr6.joblib")
+print(len(snr))
 atk = load_atk("logattack2")
 
 attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0, "old-scan433": 0, "old-strong433": 0, "anomaly": 0}
@@ -121,7 +121,7 @@ attack_freq_type = {"scan433": [433,433], "strong433": [433,433], "scan868":[868
 # print(find_nn(train[0], (18,9,0)))
 # exit()
 result = {}
-k = 3
+k = 6
 
 # for i in train[0]:
     # if distance_pos(train[0][i], (12,4))<3:
@@ -183,8 +183,10 @@ s2 = []
 
 for i in result:
     s = result[i]
-    print(i, np.median(s)*.6,"m")
+    print(i, np.median(s)*.6,"m, #points:",len(s))
+    # if(len(s)>100):
     s2.append(np.median(s)*.6)
 print(len(s2))
 print("Mean:",np.mean(s2),"m")
+print("Median:",np.median(s2),"m")
 print("Std:",np.std(s2))
