@@ -517,6 +517,7 @@ def score_extractors(extractors, path_examples, folders_test):
             print(i,"/",len(paths))
         i += 1
         scores = {**scores, **extractors.get_score(data, timestamp)}
+        del data
     end = time.time()
     print("Scoring time:",(end-start),"s")
     joblib.dump(scores, path_examples)
