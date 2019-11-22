@@ -5,7 +5,7 @@ import math
 import numpy as np
 import evaluate
 
-def train_by_pos(train_list):
+def f_train_by_pos(train_list):
     out = []
     for train in train_list:
         pos = {}
@@ -107,7 +107,7 @@ train = []
 train.append(extract_train("features_400-500", median[0]))
 train.append(extract_train("features_800-900", median[1]))
 train.append(extract_train("features_2400-2500", median[2]))
-train_by_pos = train_by_pos(train)
+train_by_pos = f_train_by_pos(train)
 snr = joblib.load("snr6.joblib")
 print(len(snr))
 atk = load_atk("logattack2")
@@ -128,9 +128,9 @@ k = 6
         # print(i, train[0][i])
 for t in snr:
     d = snr[t]
-    nb = d[3]
-    f = d[4]
-    tp = (d[0][1], d[1][1], d[2][1])
+    nb = d[3] # sur quelle plage de fréquence ?
+    f = d[4] # sur quelle fréquence estimée ?
+    tp = (d[0][1], d[1][1], d[2][1]) # le triplet de SNR
     (t1,t2) = t
     # if t2-t1 > 200000:
         # continue
