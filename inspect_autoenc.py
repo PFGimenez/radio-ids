@@ -17,6 +17,8 @@ i = 1
 folders = None
 mode = None
 save = False
+band = None
+title = ""
 while i < len(sys.argv):
     if sys.argv[i] == "-d":
         i += 1
@@ -28,6 +30,9 @@ while i < len(sys.argv):
         date_max = int(time.mktime(datetime.datetime.strptime(sys.argv[i],
             "%d/%m/%Y %H:%M:%S").timetuple()))*1000
         print(date_max)
+    elif sys.argv[i] == "-title":
+        i += 1
+        title = sys.argv[i]
     elif sys.argv[i] == "-D":
         i += 1
         date_min = int(sys.argv[i])
@@ -163,7 +168,8 @@ if load_autoenc:
     # diff2 = np.abs(data_reconstructed[:,900:] - data_q[:data_reconstructed.shape[0],1000:])
     # diff = np.concatenate((diff, diff2), axis=1)
     # diff[diff < 0.1] = 0
-    for i in range(3):
+    l = range(3) if band is None else [band]
+    for i in l:
         print("Band",i)
         (weights, data) = extractors.get_frequencies(data_q, i)
         median = weighted_median(data, weights) + 1000*i
@@ -278,7 +284,7 @@ elif mode == "article":
     # ax[1].set_ylabel("Frequency")
 
     ax[2].imshow(diff.T, cmap='hot', interpolation='nearest', aspect='auto',vmin=0,vmax=vmax,extent=[0,data_q.shape[0]*0.0375,b1,b0])
-    ax[2].set_title("Différence")
+    ax[2].set_title("Différence "+title)
     ax[2].set_xlabel("Temps (s)")
     # ax[2].set_ylabel("Frequency")
 

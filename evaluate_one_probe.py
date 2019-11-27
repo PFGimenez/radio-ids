@@ -202,6 +202,7 @@ if use_autoenc:
 
     try :
         example_pos_extractors = joblib.load(path_detection_intervals)
+        z=1/z
     except:
         if scores_ex == None:
             scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands, directories)

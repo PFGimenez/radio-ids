@@ -31,7 +31,7 @@ attack_freq_type = {"scan433": [433,433], "strong433": [433,433], "scan868":[868
 result = {}
 k = 6
 
-probes_pos = [(8,11),(12,3),(1,5)]
+probes_pos = [(8,11),(12.5,3),(1,5)]
 probes_pos = [(8,11),(1,5),(12,3)]
 all_pos=[]
 for t in snr:

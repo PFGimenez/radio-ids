@@ -39,9 +39,17 @@ def load_attacks():
 
     print("Attacks list:",identifiers)
 
-    attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0, "old-scan433": 0, "old-strong433": 0, "anomaly": 0, "harmoBruijn": 1}
-    attack_freq_type = {"scan433": [433,433], "strong433": [433,433], "scan868":[868,868], "strong868":[868,868], "tvDOS":[485,499], "bruijnSequenc":[433.9,433.9], "bleScan": [2400,2480], "btScan": [2400,2480], "dosHackRF45": [400,500], "dosHackRF89": [800, 900], "floodZigbee": [2475,2485], "injectESB": [2400, 2500], "old-scan433": [433,433], "old-strong433": [433,433], "wifiDeauth": [2451,2473], "wifiRogueAP": [2461,2483], "wifiScan": [2400,2500], "zigbeeScan": [2400,2480], "anomaly":[462,462],
+    attack_plot = {"scan433": 0, "anomaly467":0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0, "old-scan433": 0, "old-strong433": 0, "anomaly": 0, "harmoBruijn": 1}
+    attack_freq_type = {"scan433": [433,433], "strong433": [433,433], "scan868":[868,868], "strong868":[868,868], "tvDOS":[485,499], "bruijnSequenc":[433.9,433.9], "bleScan": [2400,2480], "btScan": [2400,2480], "dosHackRF45": [400,500], "dosHackRF89": [800, 900], "floodZigbee": [2475,2485], "injectESB": [2400, 2500], "old-scan433": [433,433], "old-strong433": [433,433], "anomaly467": [467,467], "wifiDeauth": [2451,2473], "wifiRogueAP": [2461,2483], "wifiScan": [2400,2500], "zigbeeScan": [2400,2480], "anomaly":[462,462],
                         "harmoBruijn": [866,866]}
+
+    for (n,d1,d2) in attack:
+        for(n2,d3,d4) in attack:
+            if d3 != d1 and attack_plot.get(n)==attack_plot.get(n2) :
+                 if intersect((int(d1),int(d2)),(int(d3),int(d4))) is not None:
+                    print("Intersection attaque!",n,d1,d2,n2,d3,d4)
+
+
 
 # we add the plot number of the attack
     attack_tmp = []
@@ -305,10 +313,15 @@ class Evaluator:
         # print(len(true_positive_list))
         # print(len(self.true_positive_dico))
         recall = {}
-        print("Detected : ",len(self._seen_attack),"/",len(self._attack))
+        print("\nDetected : ",len(self._seen_attack),"/",len(self._attack))
 
         # true_positive_score = np.array([detected_positive_dico[t] for t in true_positive_list])
         # false_positive_score = np.array([detected_positive_dico[t] for t in false_positive_list])
+
+        # detection that correspond to at least one attack
+        useful_detection=[{},{},{}]
+        partially_useful_detection=[{},{},{}]
+        all_detection=[{},{},{}]
 
         new_method = True
         if new_method:
@@ -335,32 +348,54 @@ class Evaluator:
                     detected = False
                     for (d1,d2) in detected_positive_dico:
                         d_band = detected_positive_dico[(d1,d2)][0]
+                        all_detection[d_band][(d1,d2)]=True
                         if a_band == d_band:
                             i = intersect((d1-3750,d2-3750), (a1,a2))
                             if i:
+                                useful_detection[d_band][(d1,d2)]=True
+                                if (i[1] - i[0])/(d2-d1) > .5:
+#                                    print(i,(d1,d2),(i[1] - i[0])/(d2-d1))
+                                    partially_useful_detection[d_band][(d1,d2)]=True
                                 detected = True
                                 l_i_tmp[a_band] += i[1] - i[0]
                     if detected:
                         atk_detected += 1
+                    else:
+                        print("Not detected: ",ident,a1,a2)
                 for i in range(3):
                     l_i[i] += l_i_tmp[i]
                     l_a[i] += l_a_tmp[i]
 
+                print("*** Detected for",ident,":",atk_detected,"/",atk_number,"=",atk_detected/atk_number)
+                print("True positive:",sum(l_i_tmp),"ms")
+                print("False negative:",sum(l_a_tmp)-sum(l_i_tmp),"ms")
                 print("Recall for",ident,":",sum(l_i_tmp) / sum(l_a_tmp))
                 recall[ident] = sum(l_i_tmp) / sum(l_a_tmp)
 
 
-                print("Detected for",ident,":",atk_detected,"/",atk_number,"=",atk_detected/atk_number)
-                print("Number:",atk_detected)
+#                print("Number:",atk_detected)
 
+            print("\n=== Result by band")
             l_d = [0,0,0]
             for (d1,d2) in detected_positive_dico:
                 l_d[detected_positive_dico[(d1,d2)][0]] += d2 - d1
 
             for i in range(3):
+                print("Useful detection number on band",str(i),":",len(useful_detection[i]),"/",len(all_detection[i]))
+
+
+                k = sorted(list(all_detection[i].keys()))
+                for (d1,d2) in k:
+                    if (d1,d2) not in useful_detection[i].keys():
+                        print("False positive: ",(d2-d1),(d1,d2))
+#                    if (d1,d2) not in partially_useful_detection[i].keys():
+#                        print("Partial false positive: ",(d2-d1),(d1,d2))
+
                 if l_d[i] > 0:
+                    print("True positive on band "+str(i)+": "+str(l_i[i])+"ms")
+                    print("False positive on band "+str(i)+": "+str(l_d[i]-l_i[i])+"ms")
                     p = l_i[i] / l_d[i]
-                    print("Detected time on band "+str(i)+": "+str(l_d[i]))
+                    print("Detected time on band "+str(i)+": "+str(l_d[i])+"ms")
                     print("Precision for band "+str(i)+": "+str(p))
                 if l_a[i] > 0:
                     r = l_i[i] / l_a[i]
@@ -368,10 +403,17 @@ class Evaluator:
                     print("Recall for band "+str(i)+": "+str(r))
                     if l_d[i] > 0:
                         print("f-measure for band "+str(i)+": "+str(2*p*r/(p+r)))
-            print("Total detected time: "+str(sum(l_d)))
+                print("")
+
+            print("=== Global results")
+            print("Total detected time: "+str(sum(l_d))+"ms")
             p = sum(l_i) / sum(l_d)
             r = sum(l_i) / sum(l_a)
             f = 2*p*r/(p+r)
+            print("Global true positive: ",sum(l_i),"ms")
+            print("Global false positive: ",sum(l_d)-sum(l_i),"ms")
+#            print("Global true negative: ",total_time-(sum(l_d)-sum(l_i)))
+            print("Global false negative: ",sum(l_a)-sum(l_i),"ms")
             print("Precision",p,"Recall",r,"f-measure",f)
 
             precision = p
