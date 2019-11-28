@@ -164,29 +164,35 @@ path_examples_train_extractors = os.path.join(prefix, prefix_result_train+config
 #     print("Prediction for macro…")
 #     scores_macro = scores_micro_macro(models_macro, path_examples_macro, data_macro)
 #     (example_pos_macro, example_neg_macro) = predict(models_macro, scores_macro, threshold_macro)
+
+do_th = False
+if show_time: # pour avoir un affichage correct
+    do_th = True
 if use_autoenc:
 
     threshold_autoencoder = {}
     periods = [multimodels.period_weekend_and_night, multimodels.period_day_not_weekend]
-    # periods = [multimodels.period_always]
-    if not train:
+    # if not train: # décommenter pour un nouveau modèle
+    if True:
         try:
             scores_train = joblib.load(path_examples_train_extractors)
-            for p in periods:
-                print("Period",p.__name__)
-                thr = extractors.learn_threshold_from_scores(scores_train, period=p)
-                t = []
-                for l in thr:
-                    # check the order of the keys
-                    assert l == len(t)
-                    t.append(thr.get(l)[threshold_autoencoder_number]+0.0001) # TODO
-                threshold_autoencoder[p] = t
-            # scores_train_all = {**joblib.load("/data/expe-pf/laas-radiot/cnn-icdm-rp1-noquant-p4/train-cnn-raspi1-results-autoenc.joblib"),**joblib.load("/data/expe-pf/laas-radiot/cnn-icdm-rp2-noquant-p4/train-cnn-raspi2-results-autoenc.joblib"),**joblib.load("/data/expe-pf/laas-radiot/cnn-icdm-rp3-noquant-p4/train-cnn-raspi3-results-autoenc.joblib")}
+            if do_th:
+                for p in periods:
+                    print("Period",p.__name__)
+                    thr = extractors.learn_threshold_from_scores(scores_train, period=p)
+                    t = []
+                    for l in thr:
+                        # check the order of the keys
+                        assert l == len(t)
+                        t.append(thr.get(l)[threshold_autoencoder_number]+0.0001) # TODO
+                    threshold_autoencoder[p] = t
+                # scores_train_all = {**joblib.load("/data/expe-pf/laas-radiot/cnn-icdm-rp1-noquant-p4/train-cnn-raspi1-results-autoenc.joblib"),**joblib.load("/data/expe-pf/laas-radiot/cnn-icdm-rp2-noquant-p4/train-cnn-raspi2-results-autoenc.joblib"),**joblib.load("/data/expe-pf/laas-radiot/cnn-icdm-rp3-noquant-p4/train-cnn-raspi3-results-autoenc.joblib")}
 
 
             # cumulated_threshold = evaluate.get_cumul_threshold(extractors._models, scores_train_all, threshold_autoencoder)
-            # print(cumulated_threshold)
-            cumulated_threshold=[1.3295,1.3295,1.3295]
+            cumulated_threshold = evaluate.get_cumul_threshold(extractors._models, scores_train, threshold_autoencoder)
+            print(cumulated_threshold)
+            # cumulated_threshold=[1.3295,1.3295,1.3295]
         except Exception as e:
             print(e)
             print("No train score loaded")
@@ -202,7 +208,8 @@ if use_autoenc:
 
     try :
         example_pos_extractors = joblib.load(path_detection_intervals)
-        z=1/z
+        # z=0
+        # z=1/z
     except:
         if scores_ex == None:
             scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands, directories)
@@ -232,10 +239,10 @@ for e in evaluators:
 #    print("Results micro and macro")
 #    e.evaluate(list(set(example_pos+example_pos_macro)),
 #               list(set(example_neg+example_neg_macro)))
-    if use_autoenc and not train:
+    if use_autoenc:
         # print("Results autoencoders: ",end='')
         e.evaluate(example_pos_extractors)
-        if predict_freq:
+        if predict_freq and not train:
             e.evaluate_freq(detected_freq)
         if show_time:
             if scores_ex == None:

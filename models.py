@@ -86,7 +86,7 @@ class AnomalyDetector(ABC):
         self._learn_threshold_from_scores(predictions)
 
     def _learn_threshold_from_scores(self, predictions):
-        r = [100,99,98,97,96,95,93,90] if self.anomalies_have_high_score() else [0,1,2,3,4,5,7,10]
+        r = [100,99.5,98,97,96,95,93,90] if self.anomalies_have_high_score() else [0,1,2,3,4,5,7,10]
         self._thresholds = [np.percentile(predictions, p) for p in r]
         print("Thresholds:",self._thresholds)
         # plt.hist(predictions, log=False, bins=100)

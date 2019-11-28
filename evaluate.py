@@ -39,9 +39,9 @@ def load_attacks():
 
     print("Attacks list:",identifiers)
 
-    attack_plot = {"scan433": 0, "anomaly467":0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0, "old-scan433": 0, "old-strong433": 0, "anomaly": 0, "harmoBruijn": 1}
+    attack_plot = {"scan433": 0, "anomaly467":0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0, "old-scan433": 0, "old-strong433": 0, "anomaly": 0, "bruijnHarmo": 1}
     attack_freq_type = {"scan433": [433,433], "strong433": [433,433], "scan868":[868,868], "strong868":[868,868], "tvDOS":[485,499], "bruijnSequenc":[433.9,433.9], "bleScan": [2400,2480], "btScan": [2400,2480], "dosHackRF45": [400,500], "dosHackRF89": [800, 900], "floodZigbee": [2475,2485], "injectESB": [2400, 2500], "old-scan433": [433,433], "old-strong433": [433,433], "anomaly467": [467,467], "wifiDeauth": [2451,2473], "wifiRogueAP": [2461,2483], "wifiScan": [2400,2500], "zigbeeScan": [2400,2480], "anomaly":[462,462],
-                        "harmoBruijn": [866,866]}
+                        "bruijnHarmo": [866,866]}
 
     for (n,d1,d2) in attack:
         for(n2,d3,d4) in attack:
@@ -360,7 +360,7 @@ class Evaluator:
                                 l_i_tmp[a_band] += i[1] - i[0]
                     if detected:
                         atk_detected += 1
-                    else:
+                    elif a_band < 2:
                         print("Not detected: ",ident,a1,a2)
                 for i in range(3):
                     l_i[i] += l_i_tmp[i]
@@ -383,11 +383,11 @@ class Evaluator:
             for i in range(3):
                 print("Useful detection number on band",str(i),":",len(useful_detection[i]),"/",len(all_detection[i]))
 
-
-                k = sorted(list(all_detection[i].keys()))
-                for (d1,d2) in k:
-                    if (d1,d2) not in useful_detection[i].keys():
-                        print("False positive: ",(d2-d1),(d1,d2))
+                if i<2:
+                    k = sorted(list(all_detection[i].keys()))
+                    for (d1,d2) in k:
+                        if (d1,d2) not in useful_detection[i].keys():
+                            print("False positive: ",(d2-d1),(d1,d2))
 #                    if (d1,d2) not in partially_useful_detection[i].keys():
 #                        print("Partial false positive: ",(d2-d1),(d1,d2))
 
@@ -401,21 +401,25 @@ class Evaluator:
                     r = l_i[i] / l_a[i]
                     print("Total attack time on band "+str(i)+": "+str(l_a[i]))
                     print("Recall for band "+str(i)+": "+str(r))
-                    if l_d[i] > 0:
+                    if p+r > 0:
                         print("f-measure for band "+str(i)+": "+str(2*p*r/(p+r)))
                 print("")
 
             print("=== Global results")
             print("Total detected time: "+str(sum(l_d))+"ms")
-            p = sum(l_i) / sum(l_d)
-            r = sum(l_i) / sum(l_a)
-            f = 2*p*r/(p+r)
-            print("Global true positive: ",sum(l_i),"ms")
-            print("Global false positive: ",sum(l_d)-sum(l_i),"ms")
+            if sum(l_a) > 0 and sum(l_d) > 0 and sum(l_i) > 0:
+                p = sum(l_i) / sum(l_d)
+                r = sum(l_i) / sum(l_a)
+                f = 2*p*r/(p+r)
+                print("Global true positive: ",sum(l_i),"ms")
+                print("Global false positive: ",sum(l_d)-sum(l_i),"ms")
 #            print("Global true negative: ",total_time-(sum(l_d)-sum(l_i)))
-            print("Global false negative: ",sum(l_a)-sum(l_i),"ms")
-            print("Precision",p,"Recall",r,"f-measure",f)
-
+                print("Global false negative: ",sum(l_a)-sum(l_i),"ms")
+                print("Precision",p,"Recall",r,"f-measure",f)
+            else:
+                p = 1
+                r = 0
+                f = 0
             precision = p
 
         else:
@@ -583,7 +587,7 @@ def get_cumul_threshold(models, scores, all_t):
     print("7",np.percentile(t[0]+t[1]+t[2], 99.997))
     print("8",np.percentile(t[0]+t[1]+t[2], 99.998))
     print("9",np.percentile(t[0]+t[1]+t[2], 99.999))
-    return [th,th,th]
+    return [np.percentile(t[0]+t[1]+t[2], 99.995),np.percentile(t[0]+t[1]+t[2], 99.995),np.percentile(t[0]+t[1]+t[2], 99.995)]
 
 def predict_extractors_cumul(models, scores, all_t, cumulated_threshold):
     print("Prediction from cumulative scores...")
@@ -598,12 +602,13 @@ def get_cumul(models, scores, all_t):
     start = time.time()
     example_pos = {}
     timestamps = sorted(scores.keys())
-
     for (_,m) in models:
         state = DetectorState.NOT_DETECTING
         # cumulated_threshold = 0.7
         # resting_duration = 0
         cumul = 0
+        somme = 0
+        nbSomme = 0
         # consecutive = 0
         previous_timestamp = None
         discontinuity_timestamp = timestamps[0]
@@ -623,10 +628,12 @@ def get_cumul(models, scores, all_t):
             if state == DetectorState.NOT_DETECTING and m.predict_thr(score,threshold=threshold_autoencoder[m._number]):
                 state = DetectorState.DETECTING
                 cumul = 0
+                somme = 0
+                nbSomme = 0
                 previous_timestamp = timestamp
 
             elif (state == DetectorState.DETECTING or state == DetectorState.TRIGGERED) and (not m.predict_thr(score,threshold=low_threshold_autoencoder[m._number]) or discontinuity):
-                example_pos[(previous_timestamp, discontinuity_timestamp)] = ([m._number],cumul)
+                example_pos[(previous_timestamp, discontinuity_timestamp)] = ([m._number],cumul,somme/nbSomme)
                 previous_timestamp = timestamp
                 state = DetectorState.NOT_DETECTING
 
@@ -636,6 +643,8 @@ def get_cumul(models, scores, all_t):
 
             if state == DetectorState.DETECTING:
                 cumul += abs(score - threshold_autoencoder[m._number])
+                somme += score
+                nbSomme +=1
 
             discontinuity_timestamp = timestamp
 

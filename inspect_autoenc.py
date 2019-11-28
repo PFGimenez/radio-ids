@@ -4,6 +4,7 @@ import numpy as np
 from autoencodercnn import CNN
 from models import MultiExtractors
 from preprocess import *
+from evaluate import intersect
 from config import Config
 import random
 import matplotlib.pyplot as plt
@@ -116,8 +117,15 @@ if False:
         print(fname, datetime.datetime.fromtimestamp(int(fname)/1000))
 print(folders)
 
+attack = np.loadtxt("logattack", dtype='<U13', usecols=(0,1,2))
+for (n,d1,d2) in attack:
+    if intersect((int(d1),int(d2)),(date_min,date_max)) is not None:
+        print("Attaque en cours: ",n,d1,d2)
+
+
+
 if name_attack:
-    all_attack = np.loadtxt(os.path.join(config.get_config("section"), "logattack"), dtype='<U13')
+    all_attack = np.loadtxt("logattack", dtype='<U13')
     print(all_attack.shape)
     # all_attack = np.array([a for a in all_attack if datetime.datetime.fromtimestamp(int(a[1])/1000).day == 16])
     print(all_attack.shape)
