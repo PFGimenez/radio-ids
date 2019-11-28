@@ -44,10 +44,12 @@ def load_attacks():
                         "bruijnHarmo": [866,866]}
 
     for (n,d1,d2) in attack:
+        if int(d1) >= int(d2):
+            print("ERREUR!!! Date à l'envers!",n,d1,d2)
         for(n2,d3,d4) in attack:
             if d3 != d1 and attack_plot.get(n)==attack_plot.get(n2) :
                  if intersect((int(d1),int(d2)),(int(d3),int(d4))) is not None:
-                    print("Intersection attaque!",n,d1,d2,n2,d3,d4)
+                    print("ERREUR!!! Intersection attaque!",n,d1,d2,n2,d3,d4)
 
 
 
