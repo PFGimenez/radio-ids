@@ -578,18 +578,21 @@ def get_cumul_threshold(models, scores, all_t):
         band=cumul[c][0][0]
         t[band].append(cumul[c][1])
     # return [np.percentile(t[i],99.9) for i in range(3)]
-    th = np.percentile(t[0]+t[1]+t[2], 99.9)
-    print("0",np.percentile(t[0]+t[1]+t[2], 99.990))
-    print("1",np.percentile(t[0]+t[1]+t[2], 99.991))
-    print("2",np.percentile(t[0]+t[1]+t[2], 99.992))
-    print("3",np.percentile(t[0]+t[1]+t[2], 99.993))
-    print("4",np.percentile(t[0]+t[1]+t[2], 99.994))
-    print("5",np.percentile(t[0]+t[1]+t[2], 99.995))
-    print("6",np.percentile(t[0]+t[1]+t[2], 99.996))
-    print("7",np.percentile(t[0]+t[1]+t[2], 99.997))
-    print("8",np.percentile(t[0]+t[1]+t[2], 99.998))
-    print("9",np.percentile(t[0]+t[1]+t[2], 99.999))
-    return [np.percentile(t[0]+t[1]+t[2], 99.995),np.percentile(t[0]+t[1]+t[2], 99.995),np.percentile(t[0]+t[1]+t[2], 99.995)]
+    out = []
+    for i in range(3):
+        print("band",i)
+        print("0",np.percentile(t[i], 99.990))
+        print("1",np.percentile(t[i], 99.991))
+        print("2",np.percentile(t[i], 99.992))
+        print("3",np.percentile(t[i], 99.993))
+        print("4",np.percentile(t[i], 99.994))
+        print("5",np.percentile(t[i], 99.995))
+        print("6",np.percentile(t[i], 99.996))
+        print("7",np.percentile(t[i], 99.997))
+        print("8",np.percentile(t[i], 99.998))
+        print("9",np.percentile(t[i], 99.999))
+        out.append(np.percentile(t[i], 99.995))
+    return out
 
 def predict_extractors_cumul(models, scores, all_t, cumulated_threshold):
     print("Prediction from cumulative scores...")

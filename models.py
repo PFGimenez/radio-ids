@@ -368,7 +368,9 @@ class MultiExtractors(MultiModels):
     def learn_threshold_from_scores(self, scores, period=None):
         thr = {}
         for (_,m) in self._models:
-            r = [100,99,98,97,96,95,93,90] if m.anomalies_have_high_score() else [0,1,2,3,4,5,7,10]
+            r = [100,99]
+            if not m.anomalies_have_high_score():
+                r = [100-t for t in r]
             score_model = []
             for s in scores:
                 if period and period(s):
