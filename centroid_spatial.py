@@ -14,25 +14,27 @@ def distance_pos(pos1, pos2):
 
 def load_atk(filename):
     attack = np.loadtxt(filename, dtype='<U13', usecols=(0,1,2,4,5))
+    attack = np.array([a for a in attack if a[3]!="0"])
     # print(attack)
     identifiers = np.unique(attack[:,0])
     # print(identifiers)
     return attack
 
 
-snr = joblib.load("snr6.joblib")
+snr = joblib.load("snr10.joblib")
 print(len(snr))
-atk = load_atk("logattack2")
+atk = load_atk("logattack")
 
-attack_plot = {"scan433": 0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0, "old-scan433": 0, "old-strong433": 0, "anomaly": 0}
+attack_plot = {"scan433": 0, "anomaly467":0, "strong433": 0, "scan868": 1, "dosHackRF45": 0, "dosHackRF89": 1, "strong868": 1, "tvDOS": 0, "bruijnSequenc": 0, "old-scan433": 0, "old-strong433": 0, "anomaly": 0, "bruijnHarmo": 1}
 
-attack_freq_type = {"scan433": [433,433], "strong433": [433,433], "scan868":[868,868], "strong868":[868,868], "tvDOS":[485,499], "bruijnSequenc":[433,433], "bleScan": [2400,2480], "btScan": [2400,2480], "dosHackRF45": [400,500], "dosHackRF89": [800, 900], "floodZigbee": [2475,2485], "injectESB": [2400, 2500], "old-scan433": [433,433], "old-strong433": [433,433], "wifiDeauth": [2451,2473], "wifiRogueAP": [2461,2483], "wifiScan": [2400,2500], "zigbeeScan": [2400,2480], "anomaly":[462,462]}
+attack_freq_type = {"scan433": [433,433], "strong433": [433,433], "scan868":[868,868], "strong868":[868,868], "tvDOS":[485,499], "bruijnSequenc":[433.8,433.8], "bleScan": [2400,2480], "btScan": [2400,2480], "dosHackRF45": [400,500], "dosHackRF89": [800, 900], "floodZigbee": [2475,2485], "injectESB": [2400, 2500], "old-scan433": [433,433], "old-strong433": [433,433], "anomaly467": [467,467], "wifiDeauth": [2451,2473], "wifiRogueAP": [2461,2483], "wifiScan": [2400,2500], "zigbeeScan": [2400,2480], "anomaly":[462,462],
+                        "bruijnHarmo": [867.7,867.7]}
+
 
 result = {}
 k = 6
 
-probes_pos = [(8,11),(12.5,3),(1,5)]
-probes_pos = [(8,11),(1,5),(12,3)]
+probes_pos = [(8,11),(1,5),(12.5,3)]
 all_pos=[]
 for t in snr:
     d = snr[t]
@@ -40,6 +42,8 @@ for t in snr:
     f = d[4] # sur quelle fréquence estimée ?
     tp = (d[0][1], d[1][1], d[2][1]) # le triplet de SNR
     (t1,t2) = t # dates estimées de l'attaque
+    t1 -= 3750
+    t2 -= 3750
     # if t2-t1 > 200000:
         # continue
     # print(train_by_pos)
@@ -60,7 +64,6 @@ for t in snr:
             # if f < f1-10 or f > f2+10:
                 # continue
             # print(f1,f2,a[2])
-
             nbTh = attack_plot.get(a[0])
             # hack : on n'évalue pas sur la bande 2.4-2.5 GHz
             if nbTh == None:
@@ -69,6 +72,7 @@ for t in snr:
             i = evaluate.intersect((int(a[1]),int(a[2])), t)
             if i == None: # on vérifie qu'il y a une intersection non-négligeable et qu'il s'agit de la bonne bande
                 continue
+
             if nb == nbTh and (i[1] - i[0]) / (t2-t1) > 0.5 and (i[1] - i[0]) / (int(a[2]) - int(a[1])) > 0.5:
                 index = (a[0],a[3],a[4])
                 # print(f1,f2,f)

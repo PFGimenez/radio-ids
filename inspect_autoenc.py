@@ -19,6 +19,7 @@ folders = None
 mode = None
 save = False
 band = None
+date_max = None
 title = ""
 while i < len(sys.argv):
     if sys.argv[i] == "-d":
@@ -72,6 +73,9 @@ while i < len(sys.argv):
         print("Erreur:",sys.argv[i])
         exit()
     i += 1
+
+if date_max is None:
+    date_max = date_min + 120000
 
 if mode == None:
     print("Aucun mode ! Utilisez -data, -quant ou -autoenc")

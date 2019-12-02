@@ -165,7 +165,7 @@ path_examples_train_extractors = os.path.join(prefix, prefix_result_train+config
 #     scores_macro = scores_micro_macro(models_macro, path_examples_macro, data_macro)
 #     (example_pos_macro, example_neg_macro) = predict(models_macro, scores_macro, threshold_macro)
 
-do_th = True
+do_th = False
 if show_time: # pour avoir un affichage correct
     do_th = True
 if use_autoenc:
@@ -205,8 +205,8 @@ if use_autoenc:
 
     try :
         example_pos_extractors = joblib.load(path_detection_intervals)
-        z=0
-        z=1/z
+#        z=0
+#        z=1/z
     except:
         if scores_ex == None:
             scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands, directories)
