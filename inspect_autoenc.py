@@ -75,7 +75,7 @@ while i < len(sys.argv):
     i += 1
 
 if date_max is None:
-    date_max = date_min + 120000
+    date_max = date_min + 130000
 
 if mode == None:
     print("Aucun mode ! Utilisez -data, -quant ou -autoenc")

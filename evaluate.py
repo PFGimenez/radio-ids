@@ -281,6 +281,8 @@ class Evaluator:
                             e = min(abs(f1-f),abs(f2-f))
                         if e<=1:
                             output[d]=(f,d_band)
+                        if e >= 3:
+                            print(ident,e,"error frequency: ",t1,(t1,t2))
                         errors.append(e)
                         nb += 1
             print("    Results for",ident)
@@ -324,7 +326,7 @@ class Evaluator:
         useful_detection=[{},{},{}]
         partially_useful_detection=[{},{},{}]
         all_detection=[{},{},{}]
-
+        total_time = 772722500
         new_method = True
         if new_method:
             l_i = [0,0,0]
@@ -344,7 +346,6 @@ class Evaluator:
                     a1 = int(a1)
                     a2 = int(a2)
                     a_band = int(a_band)
-
                     l_a_tmp[a_band] += a2 - a1
 
                     detected = False
@@ -363,7 +364,7 @@ class Evaluator:
                     if detected:
                         atk_detected += 1
                     elif a_band < 2:
-                        print("Not detected: ",ident,a1,a2)
+                        print(ident,"not detected: ",a1,(a1,a2))
                 for i in range(3):
                     l_i[i] += l_i_tmp[i]
                     l_a[i] += l_a_tmp[i]
@@ -394,28 +395,38 @@ class Evaluator:
 #                        print("Partial false positive: ",(d2-d1),(d1,d2))
 
                 if l_d[i] > 0:
-                    print("True positive on band "+str(i)+": "+str(l_i[i])+"ms")
-                    print("False positive on band "+str(i)+": "+str(l_d[i]-l_i[i])+"ms")
+                    tp=l_i[i]
+                    fp=l_d[i]-l_i[i]
+                    fn=l_a[i]-l_i[i]
+                    tn=total_time-fp-tp-fn
+                    print("True positive on band",i,":",tp,"ms")
+                    print("False positive on band",i,":",fp,"ms")
+                    print("True negative on band",i,":",tn,"ms")
+                    print("False negative on band",i,":",fn,"ms")
                     p = l_i[i] / l_d[i]
-                    print("Detected time on band "+str(i)+": "+str(l_d[i])+"ms")
-                    print("Precision for band "+str(i)+": "+str(p))
+                    print("Detected time on band",i,":",l_d[i],"ms")
+                    print("Precision for band",i,": ",p)
+                    print("Recall on band",i,":",tp/(tp+fn),"ms")
+                    print("Specificity for band",i,": ",tn/(tn+fp))
+                    print("FPR for band",i,": ",1-tn/(tn+fp))
+                    print("Accuracy for band",i,":",(tp+tn)/total_time)
                 if l_a[i] > 0:
                     r = l_i[i] / l_a[i]
-                    print("Total attack time on band "+str(i)+": "+str(l_a[i]))
-                    print("Recall for band "+str(i)+": "+str(r))
+                    #print("Total attack time on band "+str(i)+": "+str(l_a[i]))
+                    #print("Recall for band "+str(i)+": "+str(r))
                     if p+r > 0:
                         print("f-measure for band "+str(i)+": "+str(2*p*r/(p+r)))
                 print("")
 
             print("=== Global results")
-            print("Total detected time: "+str(sum(l_d))+"ms")
+            print("Total detected time:",str(sum(l_d)),"ms")
             if sum(l_a) > 0 and sum(l_d) > 0 and sum(l_i) > 0:
                 p = sum(l_i) / sum(l_d)
                 r = sum(l_i) / sum(l_a)
                 f = 2*p*r/(p+r)
                 print("Global true positive: ",sum(l_i),"ms")
                 print("Global false positive: ",sum(l_d)-sum(l_i),"ms")
-#            print("Global true negative: ",total_time-(sum(l_d)-sum(l_i)))
+                print("Global true negative: ",total_time-(sum(l_d)-sum(l_i)),"ms")
                 print("Global false negative: ",sum(l_a)-sum(l_i),"ms")
                 print("Precision",p,"Recall",r,"f-measure",f)
             else:
