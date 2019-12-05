@@ -363,8 +363,8 @@ class Evaluator:
                                 l_i_tmp[a_band] += i[1] - i[0]
                     if detected:
                         atk_detected += 1
-                    elif a_band < 2:
-                        print(ident,"not detected: ",a1,(a1,a2))
+#                    elif a_band < 2:
+#                        print(ident,"not detected: ",a1,(a1,a2))
                 for i in range(3):
                     l_i[i] += l_i_tmp[i]
                     l_a[i] += l_a_tmp[i]
@@ -378,6 +378,7 @@ class Evaluator:
 
 #                print("Number:",atk_detected)
 
+            out_roc = []
             print("\n=== Result by band")
             l_d = [0,0,0]
             for (d1,d2) in detected_positive_dico:
@@ -386,13 +387,11 @@ class Evaluator:
             for i in range(3):
                 print("Useful detection number on band",str(i),":",len(useful_detection[i]),"/",len(all_detection[i]))
 
-                if i<2:
-                    k = sorted(list(all_detection[i].keys()))
-                    for (d1,d2) in k:
-                        if (d1,d2) not in useful_detection[i].keys():
-                            print("False positive: ",(d2-d1),(d1,d2))
-#                    if (d1,d2) not in partially_useful_detection[i].keys():
-#                        print("Partial false positive: ",(d2-d1),(d1,d2))
+#                if i<2:
+#                    k = sorted(list(all_detection[i].keys()))
+#                    for (d1,d2) in k:
+#                        if (d1,d2) not in useful_detection[i].keys():
+#                            print("False positive: ",(d2-d1),(d1,d2))
 
                 if l_d[i] > 0:
                     tp=l_i[i]
@@ -408,9 +407,12 @@ class Evaluator:
                     print("Precision for band",i,": ",p)
                     print("Recall on band",i,":",tp/(tp+fn),"ms")
                     print("Specificity for band",i,": ",tn/(tn+fp))
+                    out_roc.append((fp/(tn+fp),tp/(tp+fn)))# fpr,tpr
                     print("FPR for band",i,": ",1-tn/(tn+fp))
                     print("Accuracy for band",i,":",(tp+tn)/total_time)
-                if l_a[i] > 0:
+                else:
+                    out_roc.append((0,0))
+                if l_a[i] > 0 and l_d[i] > 0:
                     r = l_i[i] / l_a[i]
                     #print("Total attack time on band "+str(i)+": "+str(l_a[i]))
                     #print("Recall for band "+str(i)+": "+str(r))
@@ -426,8 +428,8 @@ class Evaluator:
                 f = 2*p*r/(p+r)
                 print("Global true positive: ",sum(l_i),"ms")
                 print("Global false positive: ",sum(l_d)-sum(l_i),"ms")
-                print("Global true negative: ",total_time-(sum(l_d)-sum(l_i)),"ms")
                 print("Global false negative: ",sum(l_a)-sum(l_i),"ms")
+                print("Global true negative: ",3*total_time-sum(l_d)-sum(l_a)+sum(l_i),"ms")
                 print("Precision",p,"Recall",r,"f-measure",f)
             else:
                 p = 1
@@ -466,7 +468,7 @@ class Evaluator:
         print("tp",true_positive, "fp",false_positive,"precision",precision,"recall",recall,"f-measure",fmeasure)
 
         print("Mean f-measure:", sum(fmeasure.values()) / len(fmeasure))
-
+        return out_roc
         # if show_hist:
         #     plt.hist(true_positive_score, color='red', bins=100, histtype='step', log=True)
         #     # plt.hist(false_negative_score, color='magenta', bins=100, histtype='step', log=True)
@@ -610,6 +612,7 @@ def predict_extractors_cumul(models, scores, all_t, cumulated_threshold):
     out = {}
     cumul = get_cumul(models, scores, all_t)
     for c in cumul:
+        # print(cumul[c][1],cumulated_threshold[cumul[c][0][0]])
         if cumul[c][1]>cumulated_threshold[cumul[c][0][0]]:
             out[c]=cumul[c][0]
     return out

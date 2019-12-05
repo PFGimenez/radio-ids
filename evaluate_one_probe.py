@@ -28,7 +28,7 @@ predict_freq = False
 use_cumul = False
 show_time = True # TODO
 show_hist = False
-
+ROC = None
 i = 1
 while i < len(sys.argv):
     if sys.argv[i] == "-a":
@@ -50,6 +50,8 @@ while i < len(sys.argv):
         # use_macro = True
     elif sys.argv[i] == "-train":
         train = True
+    elif sys.argv[i] == "-ROC":
+        ROC = True
     elif sys.argv[i] == "-mini":
         mini = True
     elif sys.argv[i] == "-freq":
@@ -133,6 +135,10 @@ threshold_autoencoder_number = config.get_config_eval("threshold_autoencoder")
 # autoencoders
 bands = config.get_config_eval('waterfall_frequency_bands')
 dims = config.get_config_eval('autoenc_dimensions')
+# if ROC:
+    # cumulated_threshold = [ROC,ROC,ROC]
+    # print("ROC value: ",ROC)
+# else:
 cumulated_threshold = config.get_config_eval('cumul_threshold')
 extractors = MultiExtractors()
 for j in range(len(bands)):
@@ -166,7 +172,7 @@ path_examples_train_extractors = os.path.join(prefix, prefix_result_train+config
 #     (example_pos_macro, example_neg_macro) = predict(models_macro, scores_macro, threshold_macro)
 
 do_th = False
-if show_time: # pour avoir un affichage correct
+if show_time or ROC: # pour avoir un affichage correct
     do_th = True
 if use_autoenc:
 
@@ -175,6 +181,7 @@ if use_autoenc:
     # if not train: # décommenter pour un nouveau modèle
     if True:
         try:
+            print(path_examples_train_extractors)
             scores_train = joblib.load(path_examples_train_extractors)
             if do_th:
                 for p in periods:
@@ -187,11 +194,11 @@ if use_autoenc:
                         t.append(thr.get(l)[threshold_autoencoder_number]+0.000001) # TODO
                     threshold_autoencoder[p] = t
                     # dictionnaire : {period : [seuil 400-500, seuil 800-900, seuil 2.4-2.5]}
-            cumulated_threshold = evaluate.get_cumul_threshold(extractors._models, scores_train, threshold_autoencoder)
-            print(cumulated_threshold)
-            cumulated_threshold=[1.3295,1.3295,1.3295]
+            # cumulated_threshold = evaluate.get_cumul_threshold(extractors._models, scores_train, threshold_autoencoder)
+            if ROC is None:
+                cumulated_threshold=[1.3295,1.3295,1.3295]
         except Exception as e:
-            print(e)
+            print("Exception",e)
             print("No train score loaded")
 
             # threshold_autoencoder = {multimodels.period_always: [0.010, 0.008, 0.03]}
@@ -204,13 +211,17 @@ if use_autoenc:
     # scores_ex = passe_haut(scores_ex)
 
     try :
+        # print(path_detection_intervals)
         example_pos_extractors = joblib.load(path_detection_intervals)
+#        if ROC:
+#            raise Exception
 #        z=0
 #        z=1/z
     except:
         if scores_ex == None:
             scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands, directories)
         if use_cumul:
+            # print(cumulated_threshold)
             example_pos_extractors = evaluate.predict_extractors_cumul(extractors._models, scores_ex, threshold_autoencoder, cumulated_threshold)
         else:
             example_pos_extractors = evaluate.predict_extractors(extractors._models, scores_ex, threshold_autoencoder)
@@ -238,7 +249,23 @@ for e in evaluators:
 #               list(set(example_neg+example_neg_macro)))
     if use_autoenc:
         # print("Results autoencoders: ",end='')
-        e.evaluate(example_pos_extractors)
+        if ROC:
+            all_tpr = [[],[],[]]
+            all_fpr = [[],[],[]]
+            scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands, directories)
+            for roc_val in [0,0.00001,0.001,0.01,0.1,1,10,100]:
+            #[0,0.00001,0.001,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0, 5,10,30,100,1000,10000,100000,1000000]:
+                cumulated_threshold=[roc_val,roc_val,roc_val]
+                print("ROC:",roc_val)
+                print("Seuil:",threshold_autoencoder)
+                example_pos_extractors = evaluate.predict_extractors_cumul(extractors._models, scores_ex, threshold_autoencoder, cumulated_threshold)
+                out_roc = e.evaluate(example_pos_extractors)
+                for i in range(3):
+                    all_fpr[i].append(out_roc[i][0])
+                    all_tpr[i].append(out_roc[i][1])
+                print((all_fpr,all_tpr))
+        else:
+                e.evaluate(example_pos_extractors)
         if predict_freq and not train:
             e.evaluate_freq(detected_freq)
         if show_time:
