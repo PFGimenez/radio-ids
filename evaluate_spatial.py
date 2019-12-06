@@ -21,6 +21,7 @@ path = "merged-intervals-union.joblib"
 intervals = joblib.load(path)
 
 median = [[-68,-68,-68], [-64,-64,-64], [-65,-65,-64]]
+median = [[0,0,0], [0,0,0], [0,0,0]]
 
 with open("test_folders_rp1") as f:
     f1 = f.readlines()
@@ -36,5 +37,5 @@ folders = [f1, f2, f3]
 
 snr = evaluate.get_snr(intervals, folders, median)
 print(snr)
-joblib.dump(snr, "snr10.joblib")
+joblib.dump(snr, "snr11.joblib")
 

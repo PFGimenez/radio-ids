@@ -5,6 +5,7 @@ import math
 import numpy as np
 import evaluate
 from pylab import *
+import sys
 
 def distance(tp1, tp2):
     return math.sqrt((tp1[0]-tp2[0])**2 + (tp1[1]-tp2[1])**2 + (tp1[2]-tp2[2])**2)
@@ -20,8 +21,8 @@ def load_atk(filename):
     # print(identifiers)
     return attack
 
-
-snr = joblib.load("snr10.joblib")
+smin = float(sys.argv[1]) if len(sys.argv)>1 else -65
+snr = joblib.load("snr11.joblib")
 print(len(snr))
 atk = load_atk("logattack")
 
@@ -49,7 +50,7 @@ for t in snr:
     # print(train_by_pos)
     w = []
     for i in range(3):
-        w.append(tp[i]**2)
+        w.append((tp[i]-smin)**2)
 
     posx=sum([w[i]*probes_pos[i][0] for i in range(3)])/sum(w)
     posy=sum([w[i]*probes_pos[i][1] for i in range(3)])/sum(w)
@@ -101,8 +102,9 @@ print("Mean:",np.mean(s2),"m")
 print("Median:",np.median(s2),"m")
 print("Std:",np.std(s2))
 
-probes_pos_zip=list(zip(*probes_pos))
-all_pos_zip=list(zip(*all_pos))
-scatter(probes_pos_zip[0],probes_pos_zip[1], s=100 ,marker='o',color="red")
-scatter(all_pos_zip[0],all_pos_zip[1], s=100 ,marker='o')
-show()
+if True:
+    probes_pos_zip=list(zip(*probes_pos))
+    all_pos_zip=list(zip(*all_pos))
+    scatter(probes_pos_zip[0],probes_pos_zip[1], s=100 ,marker='o',color="red")
+    scatter(all_pos_zip[0],all_pos_zip[1], s=100 ,marker='o')
+    show()
