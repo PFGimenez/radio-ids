@@ -4,11 +4,8 @@ import traceback
 # reduce TF verbosity
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import tensorflow as tf
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-session = tf.Session(config=config)
 
 from keras.callbacks import EarlyStopping
 from keras.models import Model
@@ -23,6 +20,8 @@ from sklearn.externals import joblib
 import math
 from config import Config
 
+#K.set_floatx('float16')
+#K.set_epsilon(1e-4)
 
 
 def root_mean_squared_error(y_true, y_pred):
@@ -416,8 +415,8 @@ class CNN(FeatureExtractor, AnomalyDetector):
         print("Loading autoencoder from",prefix+"…"+self._config.get_config("autoenc_filename")+".h5")
         # self._thresholds = joblib.load(os.path.join(self._config.get_config("section"), prefix+"thr"+self._config.get_config("autoenc_filename")+".thr"))
         # print("Thresholds :",self._thresholds)
-        filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename")+".h5")
-        self._coder = load_model(filename_coder, custom_objects={'root_mean_squared_error': root_mean_squared_error})
+#        filename_coder = os.path.join(self._config.get_config("section"), prefix+"coder"+self._config.get_config("autoenc_filename")+".h5")
+#        self._coder = load_model(filename_coder, custom_objects={'root_mean_squared_error': root_mean_squared_error})
         filename_autoencoder = os.path.join(self._config.get_config("section"), prefix+"autoenc"+self._config.get_config("autoenc_filename")+".h5")
         self._autoencoder = load_model(filename_autoencoder, custom_objects={'root_mean_squared_error': root_mean_squared_error})
 #        print("Autoencoder loaded!")

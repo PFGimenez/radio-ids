@@ -216,7 +216,7 @@ class Evaluator:
         # print(all_attack)
         self.attack_freq = attack_freq
         self._all_attack = all_attack
-        self._attack = np.array(all_attack[:,1:].astype(np.integer))
+        self._attack = np.array(all_attack[:,1:].astype(np.int64))
         # else:
             # self._attack = np.array(all_attack[all_attack[:,0] == identifier][:,1:].astype(np.integer))
 

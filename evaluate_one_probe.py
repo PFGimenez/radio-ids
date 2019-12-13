@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import time
 from models import MultiModels, MultiExtractors
 import multimodels
 from preprocess import *
@@ -16,6 +17,7 @@ import itertools
 import random
 from enum import Enum
 import evaluate
+#import faulthandler; faulthandler.enable()
 
 # use_micro = False
 # use_macro = False
@@ -30,6 +32,8 @@ show_time = True # TODO
 show_hist = False
 ROC = None
 i = 1
+
+
 while i < len(sys.argv):
     if sys.argv[i] == "-a":
         i += 1
@@ -149,6 +153,7 @@ for j in range(len(bands)):
     # else:
         # extractors.add_model(m) # dummy is enough for most cases
 extractors.set_dummy(False)
+print("Loading done.")
 
 # évaluation
 if use_cumul:
@@ -171,7 +176,7 @@ path_examples_train_extractors = os.path.join(prefix, prefix_result_train+config
 #     scores_macro = scores_micro_macro(models_macro, path_examples_macro, data_macro)
 #     (example_pos_macro, example_neg_macro) = predict(models_macro, scores_macro, threshold_macro)
 
-do_th = False
+do_th = True
 if show_time or ROC: # pour avoir un affichage correct
     do_th = True
 if use_autoenc:
@@ -181,7 +186,7 @@ if use_autoenc:
     # if not train: # décommenter pour un nouveau modèle
     if True:
         try:
-            print(path_examples_train_extractors)
+            print("Chargement de",path_examples_train_extractors)
             scores_train = joblib.load(path_examples_train_extractors)
             if do_th:
                 for p in periods:
@@ -219,10 +224,14 @@ if use_autoenc:
 #        z=1/z
     except:
         if scores_ex == None:
+            start_time = time.time()
             scores_ex = evaluate.load_scores(path_examples_extractors, extractors, bands, directories)
+            print("Score duration:",(time.time()-start_time))
         if use_cumul:
             # print(cumulated_threshold)
+            start_time = time.time()
             example_pos_extractors = evaluate.predict_extractors_cumul(extractors._models, scores_ex, threshold_autoencoder, cumulated_threshold)
+            print("Temporal localization duration:",(time.time()-start_time))
         else:
             example_pos_extractors = evaluate.predict_extractors(extractors._models, scores_ex, threshold_autoencoder)
         joblib.dump(example_pos_extractors, path_detection_intervals)
@@ -233,7 +242,9 @@ if use_autoenc:
             detected_freq = joblib.load(path_frequencies)
             # print(detected_freq)
         except:
+            start_time = time.time()
             detected_freq = evaluate.predict_frequencies(example_pos_extractors, directories, extractors)
+            print("Frequential localization duration:",(time.time()-start_time))
             joblib.dump(detected_freq, path_frequencies)
 
 for e in evaluators:
