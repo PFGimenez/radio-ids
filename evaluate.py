@@ -581,7 +581,8 @@ def score_extractors(extractors, path_examples, folders_test):
         del data
     end = time.time()
     print("Scoring time:",(end-start),"s")
-    joblib.dump(scores, path_examples)
+    if path_examples is not None:
+        joblib.dump(scores, path_examples)
     return scores
 
 def get_cumul_threshold(models, scores, all_t):
