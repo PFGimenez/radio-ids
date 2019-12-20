@@ -98,8 +98,6 @@ if not folders:
 bands = config.get_config_eval('waterfall_frequency_bands')
 waterfall_dimensions = config.get_config_eval('waterfall_dimensions')
 extractors = MultiExtractors()
-dims = config.get_config_eval('autoenc_dimensions')
-epochs = config.get_config_eval('nb_epochs')
 
 new = False
 load_autoenc = (mode == "autoenc" or mode == "diff" or mode =="article")

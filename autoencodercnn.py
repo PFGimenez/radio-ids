@@ -192,11 +192,12 @@ class CNN(FeatureExtractor, AnomalyDetector):
         self._config = Config()
         self._number = number
         (self._i, self._s) = self._config.get_config_eval(suffix+'waterfall_frequency_bands')[number]
-        self._shape = self._config.get_config_eval(suffix+'autoenc_dimensions')[number]
-        self._features_number = self._config.get_config_eval(suffix+'features_number')[number]
-        self._nb_epochs = self._config.get_config_eval(suffix+'nb_epochs')[number]
+        self._shape = self._config.get_config_eval(suffix+'autoenc_dimensions')
+#        self._features_number = self._config.get_config_eval(suffix+'features_number')[number]
+        self._features_number = self._config.get_config_eval(suffix+'features_number')
+#        self._nb_epochs = self._config.get_config_eval(suffix+'nb_epochs')[number]
+        self._nb_epochs = self._config.get_config_eval(suffix+'nb_epochs')
         self._batch_size = self._config.get_config_eval('batch_size')
-#        self._nb_epochs = self._config.get_config_eval('nb_epochs')
         self._original_shape = (self._config.get_config_eval('waterfall_dimensions')[0], self._s - self._i)
         self._quant = self._config.get_config_eval('quantification')
         self._overlap = self._config.get_config_eval(suffix+'window_overlap_training')

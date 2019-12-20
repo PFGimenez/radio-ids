@@ -17,8 +17,6 @@ folders = [x.strip() for x in folders]
 # folders = [folders[0]] # TODO
 bands = config.get_config_eval('waterfall_frequency_bands')
 extractors = MultiExtractors()
-dims = config.get_config_eval('autoenc_dimensions')
-epochs = config.get_config_eval('nb_epochs')
 
 new = False
 

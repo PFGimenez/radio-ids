@@ -138,7 +138,6 @@ threshold_autoencoder_number = config.get_config_eval("threshold_autoencoder")
 
 # autoencoders
 bands = config.get_config_eval('waterfall_frequency_bands')
-dims = config.get_config_eval('autoenc_dimensions')
 # if ROC:
     # cumulated_threshold = [ROC,ROC,ROC]
     # print("ROC value: ",ROC)
@@ -248,16 +247,6 @@ if use_autoenc:
             joblib.dump(detected_freq, path_frequencies)
 
 for e in evaluators:
-    # print("***",e._id)
-    # if use_micro:
-    #     print("Results micro: ",end='')
-    #     e.evaluate(example_pos, scores_micro, models,"micro", colors)
-    # if use_macro:
-    #     print("Results macro: ",end='')
-    #     e.evaluate(example_pos_macro, scores_macro, models_macro,"macro", colors)
-#    print("Results micro and macro")
-#    e.evaluate(list(set(example_pos+example_pos_macro)),
-#               list(set(example_neg+example_neg_macro)))
     if use_autoenc:
         # print("Results autoencoders: ",end='')
         if ROC:

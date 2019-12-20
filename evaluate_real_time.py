@@ -134,7 +134,6 @@ threshold_autoencoder_number = config.get_config_eval("threshold_autoencoder")
 
 # autoencoders
 bands = config.get_config_eval('waterfall_frequency_bands')
-dims = config.get_config_eval('autoenc_dimensions')
 # if ROC:
     # cumulated_threshold = [ROC,ROC,ROC]
     # print("ROC value: ",ROC)
@@ -222,7 +221,7 @@ if use_autoenc:
 #            l = sorted(os.listdir(dir_name))
             print(l)
             time.sleep(5)
-        directory = os.path.join("/tmp/expe",l[0])
+        directory = os.path.join(dir_name,l[0])
         print("Process",directory)
         start_time = time.time()
         scores_ex = evaluate.score_extractors(extractors, None, [directory])

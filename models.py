@@ -304,7 +304,7 @@ class MultiExtractors(MultiModels):
         self._config = Config()
         overlap_test = self._config.get_config_eval('extractors_window_overlap_testing')
         waterfall_duration = self._config.get_config_eval("waterfall_duration")
-        autoenc_dimensions_t = self._config.get_config_eval("autoenc_dimensions")[0][0]
+        autoenc_dimensions_t = self._config.get_config_eval("autoenc_dimensions")[0]
         waterfall_dimensions_t = self._config.get_config_eval("waterfall_dimensions")[0]
         self._delta_t = int(waterfall_duration * autoenc_dimensions_t / waterfall_dimensions_t * (1 - overlap_test))
         self._is_dummy = True
